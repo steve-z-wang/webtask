@@ -1,13 +1,60 @@
-"""Context class for LLM prompts."""
+"""Context and Block classes for LLM prompts."""
 
 from typing import List, Union
+
+
+class Block:
+    """
+    Building block for LLM context.
+
+    Blocks can contain text and nested blocks, allowing composable context construction.
+    """
+
+    def __init__(self, text: str = ""):
+        """
+        Create a Block with optional text.
+
+        Args:
+            text: Text content for this block
+        """
+        self.text = text
+        self.blocks: List['Block'] = []
+
+    def append(self, item: Union['Block', str]) -> 'Block':
+        """
+        Append a nested block or text.
+
+        Args:
+            item: Block or string to append
+
+        Returns:
+            Self for chaining
+        """
+        if isinstance(item, str):
+            item = Block(item)
+        self.blocks.append(item)
+        return self
+
+    def __str__(self) -> str:
+        """
+        Render block and all nested blocks to text.
+
+        Returns:
+            Formatted text with nested blocks separated by double newlines
+        """
+        parts = []
+        if self.text:
+            parts.append(self.text)
+        for block in self.blocks:
+            parts.append(str(block))
+        return "\n\n".join(parts)
 
 
 class Context:
     """
     LLM context with system and user prompts.
 
-    Allows incremental building of user prompt while maintaining system prompt.
+    User prompt is built from composable Blocks.
     """
 
     def __init__(self, system: str = ""):
@@ -18,54 +65,46 @@ class Context:
             system: System prompt text
         """
         self.system = system
-        self.user = ""
+        self.blocks: List[Block] = []
 
-    def append(self, item: Union['Context', str]) -> 'Context':
+    def append(self, item: Union[Block, str]) -> 'Context':
         """
-        Append to user prompt.
+        Append a block or string to user prompt.
 
         Args:
-            item: Context object or string to append
+            item: Block or string to append
 
         Returns:
             Self for chaining
         """
-        if isinstance(item, Context):
-            text = item.user
-        else:
-            text = str(item)
-
-        if self.user:
-            self.user += "\n\n" + text
-        else:
-            self.user = text
-
+        if isinstance(item, str):
+            item = Block(item)
+        self.blocks.append(item)
         return self
 
-    @staticmethod
-    def combine(items: List[Union['Context', str]]) -> str:
-        """
-        Combine multiple contexts/strings into single text.
-
-        Args:
-            items: List of Context objects or strings
-
-        Returns:
-            Combined text string
-        """
-        texts = []
-        for item in items:
-            if isinstance(item, Context):
-                texts.append(item.user)
-            else:
-                texts.append(str(item))
-        return "\n\n".join(texts)
-
-    def __str__(self) -> str:
+    @property
+    def user(self) -> str:
         """
         Get user prompt as string.
 
         Returns:
-            User prompt text
+            Rendered user prompt from all blocks
         """
-        return self.user
+        if not self.blocks:
+            return ""
+        parts = [str(block) for block in self.blocks]
+        return "\n\n".join(parts)
+
+    def __str__(self) -> str:
+        """
+        Get full context (system + user) as string.
+
+        Returns:
+            Formatted context with system and user prompts
+        """
+        parts = []
+        if self.system:
+            parts.append(f"System:\n{self.system}")
+        if self.user:
+            parts.append(f"User:\n{self.user}")
+        return "\n\n".join(parts)

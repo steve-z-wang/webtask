@@ -1,10 +1,11 @@
 """Proposer - proposes next action based on context."""
 
 import json
-from ....llm import LLM, Context
-from ...action import Action, ActionHistory
-from ...llm_browser import LLMBrowser
-from ...tool import ToolRegistry
+from ...llm import LLM, Context
+from ..step import Action
+from ..step_history import StepHistory
+from ..llm_browser import LLMBrowser
+from ..tool import ToolRegistry
 
 
 class Proposer:
@@ -18,7 +19,7 @@ class Proposer:
         self,
         llm: LLM,
         task: str,
-        action_history: ActionHistory,
+        step_history: StepHistory,
         tool_registry: ToolRegistry,
         llm_browser: LLMBrowser,
     ):
@@ -28,13 +29,13 @@ class Proposer:
         Args:
             llm: LLM instance for generating proposals
             task: Task description string
-            action_history: ActionHistory instance
+            step_history: StepHistory instance
             tool_registry: ToolRegistry instance
             llm_browser: LLMBrowser instance
         """
         self.llm = llm
         self.task = task
-        self.action_history = action_history
+        self.step_history = step_history
         self.tool_registry = tool_registry
         self.llm_browser = llm_browser
 
@@ -50,7 +51,7 @@ class Proposer:
 
 You will receive:
 - The task to accomplish
-- Action history (what has been done so far)
+- Step history (what has been done so far with results)
 - Available tools and their schemas
 - Current page state with element IDs
 
@@ -76,24 +77,14 @@ Important:
         # Task
         context.append(f"Task: {self.task}")
 
-        # Action history
-        if not self.action_history._actions:
-            context.append("No actions executed yet.")
-        else:
-            history_lines = ["Action History:"]
-            for i, action in enumerate(self.action_history._actions, 1):
-                history_lines.append(f"{i}. {action.tool_name}")
-                history_lines.append(f"   Reason: {action.reason}")
-                history_lines.append(f"   Parameters: {action.parameters}")
-            context.append("\n".join(history_lines))
+        # Step history
+        context.append(self.step_history.to_context_block())
 
         # Tools
-        import json as json_lib
-        schemas = [tool.to_schema() for tool in self.tool_registry.get_all()]
-        context.append(json_lib.dumps(schemas, indent=2))
+        context.append(self.tool_registry.to_context_block())
 
         # Page
-        context.append(await self.llm_browser.get_context())
+        context.append(await self.llm_browser.to_context_block())
 
         return context
 

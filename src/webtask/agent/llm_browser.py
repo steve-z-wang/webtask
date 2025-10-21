@@ -5,7 +5,7 @@ from ..browser import Page
 from ..dom.filters import apply_visibility_filters, apply_semantic_filters
 from ..dom.utils import add_node_reference
 from ..dom.domnode import DomNode
-from ..llm import Context
+from ..llm import Block
 
 
 class LLMBrowser:
@@ -25,12 +25,12 @@ class LLMBrowser:
         self.page = page
         self.element_map: Dict[str, DomNode] = {}
 
-    async def get_context(self) -> Context:
+    async def to_context_block(self) -> Block:
         """
         Get formatted page context with element IDs for LLM.
 
         Returns:
-            Context with formatted DOM
+            Block with formatted DOM
         """
         # Get raw snapshot from page
         snapshot = await self.page.get_snapshot()
@@ -68,7 +68,7 @@ class LLMBrowser:
 
         lines.append(serialize_to_markdown(root))
 
-        return Context("\n".join(lines))
+        return Block("\n".join(lines))
 
     def _get_selector(self, element_id: str) -> str:
         """

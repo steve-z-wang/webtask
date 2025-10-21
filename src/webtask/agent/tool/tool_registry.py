@@ -1,7 +1,9 @@
 """Tool registry for managing available agent tools."""
 
+import json
 from typing import Dict, List, Any
 from .tool import Tool
+from ...llm import Block
 
 
 class ToolRegistry:
@@ -72,13 +74,12 @@ class ToolRegistry:
         """
         return list(self._tools.values())
 
-    def get_context_string(self) -> str:
+    def to_context_block(self) -> Block:
         """
-        Get context string with all tool schemas for LLM.
+        Convert tool registry to context block for LLM.
 
         Returns:
-            JSON-formatted string of tool schemas
+            Block containing JSON-formatted tool schemas
         """
-        import json
         schemas = [tool.to_schema() for tool in self._tools.values()]
-        return json.dumps(schemas, indent=2)
+        return Block(json.dumps(schemas, indent=2))

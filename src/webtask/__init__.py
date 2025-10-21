@@ -1,5 +1,7 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
+from .agent import Agent
+
 from .dom import (
     DomNode,
     DomNodeData,
@@ -14,8 +16,8 @@ from .dom import (
 )
 
 from .llm import (
-    ContextProvider,
     Context,
+    Block,
     Tokenizer,
     LLM,
 )
@@ -23,6 +25,9 @@ from .llm import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # Agent
+    'Agent',
+
     # DOM types
     'DomNode',
     'DomNodeData',
@@ -42,8 +47,8 @@ __all__ = [
     'serialize_to_markdown',
 
     # LLM
-    'ContextProvider',
     'Context',
+    'Block',
     'Tokenizer',
     'LLM',
 ]
