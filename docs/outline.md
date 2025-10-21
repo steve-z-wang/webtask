@@ -1,0 +1,68 @@
+
+
+- Integration/
+	- Browser
+		- Playwright/ 
+			- PlaywrightBrowser
+				- 
+			- PlaywrightSession
+			- PlaywrightPage
+			- PlaywrightElement
+	- LLM/
+		- OpenAI/ 
+			- GPT4
+		- Google/
+			- Gemini2.5
+- LLM/
+	- Context
+		- `__str__`
+	- ContextProvider
+	- Tokenizer
+		- count_tokens
+	- LLM
+		- generate(Context) -> str
+- Dom/ - pure data structure class
+	- DomNode
+		- get_x_path
+	- DomSnapshot
+	- Parsers/ 
+	- Filters/
+- Browser/ - bridge pure data structure with browser integration
+	- Browser
+		- `__init__`(headless=False)
+		- create_browser
+	- Session
+		- `__init__`(cookies)
+		- create_session
+	- Page(ContextProvider)
+		- select()
+	- Element
+- Agent
+	- Agent
+		- execute_task()
+		- select(format="LANGUAGE|PLAYWRIGHT")
+	- Task(ContextProvider)
+    - Tool/
+        - Tool
+        - ToolRegistry(ContextProvider)
+        - Tools/ 
+            - Page/
+                - NavigateTool()
+            - Element/
+                - ClickTool()
+                - FillTool()
+	- Action/ 
+		- Action()
+            - `__init__`(tool: Tool, parameters: ToolInput)
+		- ActionHistory(ContextProvider)
+	- Role/
+		- Proposer/
+			- ProposerContext
+			- Proposer
+				- `__init__`(LLM, ProposerContext)
+		- Executer(ActionHistory)
+			- execute(action=Action)
+		- Verifier
+			- VerifierContext
+			- Verifier
+				- `__init__`(LLM, VerifierContext)
