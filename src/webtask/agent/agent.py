@@ -57,7 +57,7 @@ class Agent:
         if self.llm_browser is None:
             return
 
-        from .tools.browser import NavigateTool, ClickTool, FillTool
+        from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
 
         # Clear existing tools (keeps same registry instance)
         self.tool_registry.clear()
@@ -66,6 +66,7 @@ class Agent:
         self.tool_registry.register(NavigateTool(self.llm_browser))
         self.tool_registry.register(ClickTool(self.llm_browser))
         self.tool_registry.register(FillTool(self.llm_browser))
+        self.tool_registry.register(TypeTool(self.llm_browser))
 
     # === Tab Management Methods ===
 

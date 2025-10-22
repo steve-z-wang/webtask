@@ -27,6 +27,19 @@ class Element(ABC):
         pass
 
     @abstractmethod
+    async def type(self, text: str, delay: float = None):
+        """
+        Type text into the element character by character.
+
+        Simulates keyboard input with delays between keystrokes for more realistic behavior.
+
+        Args:
+            text: Text to type
+            delay: Delay between keystrokes in milliseconds (None = instant)
+        """
+        pass
+
+    @abstractmethod
     async def upload_file(self, file_path: str):
         """
         Upload a file to a file input element.

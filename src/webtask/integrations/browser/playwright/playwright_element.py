@@ -33,6 +33,16 @@ class PlaywrightElement(Element):
         """
         await self._locator.fill(text)
 
+    async def type(self, text: str, delay: float = None):
+        """
+        Type text into the element character by character.
+
+        Args:
+            text: Text to type
+            delay: Delay between keystrokes in milliseconds (None = instant)
+        """
+        await self._locator.type(text, delay=delay)
+
     async def upload_file(self, file_path: str):
         """
         Upload a file to a file input element.

@@ -132,6 +132,24 @@ class LLMBrowser:
         element = await self.page.select_one(selector)
         await element.fill(value)
 
+    async def type(self, element_id: str, text: str, delay: float = 80) -> None:
+        """
+        Type text into element by ID character by character.
+
+        Simulates realistic keyboard input with delays between keystrokes.
+
+        Args:
+            element_id: Element ID from context (e.g., 'input-0')
+            text: Text to type
+            delay: Delay between keystrokes in milliseconds (default: 80ms)
+
+        Raises:
+            KeyError: If element ID not found
+        """
+        selector = self._get_selector(element_id)
+        element = await self.page.select_one(selector)
+        await element.type(text, delay=delay)
+
     async def select(self, description: str) -> Element:
         """
         Select element by natural language description.

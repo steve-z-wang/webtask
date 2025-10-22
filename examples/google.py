@@ -36,8 +36,7 @@ await agent.navigate("google.com")
 # %%
 
 input = await agent.select("google search input")
-await input.fill("What is the capital of France?")
-
+await input.type("what is the capital of france?")
 await agent.wait(2)
 
 # %%
@@ -45,7 +44,7 @@ await agent.wait(2)
 
 button = await agent.select("google search button")
 await button.click()
-
+await agent.wait(2)
 
 # %%
 
