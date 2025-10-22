@@ -37,6 +37,12 @@ class Agent:
         self.tool_registry = ToolRegistry()
         self.step_history = StepHistory()
 
+        # Task state (for step-by-step execution)
+        self.current_task: Optional[str] = None
+        self.proposer: Optional[Proposer] = None
+        self.executer: Optional[Executer] = None
+        self.verifier: Optional[Verifier] = None
+
     def _register_tools(self) -> None:
         """Register available tools in the registry."""
         from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
@@ -66,43 +72,19 @@ class Agent:
         Returns:
             TaskResult with completion status, steps, and final message
         """
-        # Ensure we have a tab
-        await self._ensure_tab()
+        # Set task (initializes roles and clears history if requested)
+        self.set_task(task, clear_history=clear_history)
 
-        # Clear history if requested
-        if clear_history:
-            self.step_history.clear()
-
-        # Create roles
-        proposer = Proposer(
-            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
-        )
-        executer = Executer(self.tool_registry)
-        verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
-
-        # Agent loop
+        # Execute steps until done or max_steps reached
         for i in range(max_steps):
-            # 1. Propose next actions
-            actions = await proposer.propose()
+            step = await self.execute_step()
 
-            # 2. Execute actions
-            exec_results = await executer.execute(actions)
-
-            # 3. Verify if task complete
-            verify_result = await verifier.verify(actions, exec_results)
-
-            # 4. Create step and add to history
-            step = Step(
-                proposals=actions, executions=exec_results, verification=verify_result
-            )
-            self.step_history.add_step(step)
-
-            # 5. Check if done
-            if verify_result.complete:
+            # Check if done
+            if step.verification.complete:
                 return TaskResult(
                     completed=True,
                     steps=self.step_history.get_all(),
-                    message=verify_result.message,
+                    message=step.verification.message,
                 )
 
         # Max steps reached without completion
@@ -111,7 +93,87 @@ class Agent:
             steps=self.step_history.get_all(),
             message=f"Task not completed after {max_steps} steps",
         )
-        
+
+    def set_task(self, task: str, clear_history: bool = True) -> None:
+        """
+        Set current task for step-by-step execution.
+
+        Args:
+            task: Task description in natural language
+            clear_history: Clear step history before starting (default: True)
+
+        Example:
+            >>> agent.set_task("search for cats")
+            >>> result = await agent.execute_step()
+        """
+        self.current_task = task
+
+        # Clear history if requested
+        if clear_history:
+            self.step_history.clear()
+
+        # Create roles
+        self.proposer = Proposer(
+            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
+        )
+        self.executer = Executer(self.tool_registry)
+        self.verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
+
+    async def execute_step(self) -> Step:
+        """
+        Execute one step of the current task.
+
+        Returns:
+            Step with proposals, executions, and verification result
+
+        Raises:
+            RuntimeError: If no task is set (call set_task first)
+
+        Example:
+            >>> agent.set_task("search for cats")
+            >>> step = await agent.execute_step()
+            >>> print(step.verification.complete)
+        """
+        # Check that task is set
+        if self.current_task is None or self.proposer is None:
+            raise RuntimeError("No task set. Call set_task() first.")
+
+        # Ensure we have a tab
+        await self._ensure_tab()
+
+        # 1. Propose next actions
+        actions = await self.proposer.propose()
+
+        # 2. Execute actions
+        exec_results = await self.executer.execute(actions)
+
+        # 3. Verify if task complete
+        verify_result = await self.verifier.verify(actions, exec_results)
+
+        # 4. Create step and add to history
+        step = Step(
+            proposals=actions, executions=exec_results, verification=verify_result
+        )
+        self.step_history.add_step(step)
+
+        return step
+
+    def clear_history(self) -> None:
+        """
+        Clear step history and task state.
+
+        Resets the agent to a clean state, ready for a new task.
+
+        Example:
+            >>> agent.clear_history()
+            >>> agent.set_task("new task")
+        """
+        self.step_history.clear()
+        self.current_task = None
+        self.proposer = None
+        self.executer = None
+        self.verifier = None
+
     # === Tab Management Methods ===
 
     async def _ensure_tab(self) -> Page:
