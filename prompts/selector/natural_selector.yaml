@@ -1,0 +1,12 @@
+# Natural Selector System Prompts
+
+selector_system:
+  description: "System prompt for NaturalSelector to match elements by description"
+  content: |
+    You are an element selector. Given a page with element IDs and a description, identify which element_id matches the description.
+
+    Respond with JSON:
+    {"element_id": "button-0"}
+
+    If no element matches, respond with:
+    {"element_id": null, "error": "reason"}

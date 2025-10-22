@@ -1,6 +1,7 @@
 """Verifier role - verifies task completion."""
 
 from ...llm import LLM, Context, Block
+from ...prompts import get_prompt
 from ...utils import parse_json
 from ..step import Action, ExecutionResult, VerificationResult
 from ..step_history import StepHistory
@@ -48,26 +49,8 @@ class Verifier:
         Returns:
             Context with system and user prompts
         """
-        # System prompt
-        system = """You are a web automation verification agent. Your task is to verify if a task has been completed.
-
-You will receive:
-- The original task to accomplish
-- Step history (previous completed steps)
-- Current action and execution result
-- Current page state with element IDs
-
-You must respond with a JSON object containing:
-{
-  "complete": true/false,
-  "message": "Explanation of why the task is complete or what still needs to be done"
-}
-
-Important:
-- Carefully check if the task objective has been achieved
-- Consider both the step history and the current action result
-- Provide clear reasoning in your message
-"""
+        # System prompt from library
+        system = get_prompt("verifier_system")
 
         # Build user prompt
         context = Context(system=system)

@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 from ..llm import LLM, Context
+from ..prompts import get_prompt
 from ..utils import parse_json
 from ..browser import Element
 
@@ -44,13 +45,7 @@ class NaturalSelector:
         page_context = await self.llm_browser.to_context_block()
 
         # Build prompt for LLM
-        system = """You are an element selector. Given a page with element IDs and a description, identify which element_id matches the description.
-
-Respond with JSON:
-{"element_id": "button-0"}
-
-If no element matches, respond with:
-{"element_id": null, "error": "reason"}"""
+        system = get_prompt("selector_system")
 
         context = Context(system=system)
         context.append(str(page_context))

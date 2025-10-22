@@ -1,6 +1,7 @@
 """Proposer - proposes next action based on context."""
 
 from ...llm import LLM, Context
+from ...prompts import get_prompt
 from ...utils import parse_json
 from ..step import Action
 from ..step_history import StepHistory
@@ -46,30 +47,8 @@ class Proposer:
         Returns:
             Context with system and user prompts
         """
-        # System prompt
-        system = """You are a web automation agent. Your task is to propose the next action to take.
-
-You will receive:
-- The task to accomplish
-- Step history (what has been done so far with results)
-- Available tools and their schemas
-- Current page state with element IDs
-
-You must respond with a JSON object containing:
-{
-  "reason": "Brief explanation of why you're taking this action",
-  "tool": "tool_name",
-  "parameters": {
-    "param1": "value1",
-    ...
-  }
-}
-
-Important:
-- Use element IDs from the page context (e.g., "button-0", "input-1")
-- Only use tools that are available
-- Provide clear reasoning for your actions
-"""
+        # System prompt from library
+        system = get_prompt("proposer_system")
 
         # Build user prompt
         context = Context(system=system)
