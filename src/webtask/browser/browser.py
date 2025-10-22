@@ -39,6 +39,21 @@ class Browser(ABC):
         pass
 
     @abstractmethod
+    async def create_session(self, **kwargs):
+        """
+        Create a new session/context in this browser.
+
+        Returns:
+            Session instance
+
+        Example:
+            >>> browser = await PlaywrightBrowser.create_browser()
+            >>> session = await browser.create_session()
+            >>> await session.close()
+        """
+        pass
+
+    @abstractmethod
     async def close(self):
         """Close the browser instance."""
         pass

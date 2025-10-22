@@ -47,17 +47,15 @@ class GeminiLLM(LLM):
     @classmethod
     def create(
         cls,
-        tokenizer: Tokenizer,
         model: str = "gemini-2.5-flash",
         api_key: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
     ) -> 'GeminiLLM':
         """
-        Create a GeminiLLM instance with automatic max_tokens detection.
+        Create a GeminiLLM instance with automatic tokenizer and max_tokens detection.
 
         Args:
-            tokenizer: Tokenizer for counting tokens
             model: Model name (e.g., "gemini-2.5-flash", "gemini-1.5-pro")
             api_key: Google API key (if None, uses GOOGLE_API_KEY env var)
             temperature: Temperature for generation (0.0 to 2.0)
@@ -67,9 +65,13 @@ class GeminiLLM(LLM):
             GeminiLLM instance
 
         Example:
-            >>> llm = GeminiLLM.create(tokenizer, model="gemini-2.5-flash")
+            >>> llm = GeminiLLM.create(model="gemini-2.5-flash")
             >>> response = await llm.generate("You are helpful", "Hello!")
         """
+        # Auto-create tokenizer for this model
+        from .gemini_tokenizer import GeminiTokenizer
+        tokenizer = GeminiTokenizer(model)
+
         # Auto-detect max_tokens if not provided
         if max_tokens is None:
             max_tokens = MODEL_MAX_TOKENS.get(model)

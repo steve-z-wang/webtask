@@ -1,5 +1,6 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
+from .webtask import Webtask
 from .agent import Agent
 
 from .dom import (
@@ -25,6 +26,9 @@ from .llm import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # Manager
+    'Webtask',
+
     # Agent
     'Agent',
 

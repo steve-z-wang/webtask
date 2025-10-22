@@ -22,21 +22,18 @@ class Session(ABC):
         """
         self.cookies = cookies or []
 
-    @classmethod
     @abstractmethod
-    async def create_session(cls, **kwargs):
+    async def create_page(self):
         """
-        Create a new browser session/context (async factory method).
-
-        Subclasses should implement this as a classmethod that creates
-        and returns a new session instance.
+        Create a new page/tab in this session.
 
         Returns:
-            Session instance (concrete implementation type)
+            Page instance
 
         Example:
-            >>> session = await PlaywrightSession.create_session(browser, cookies=[...])
-            >>> await session.close()
+            >>> session = await PlaywrightSession.create_session(browser)
+            >>> page1 = await session.create_page()
+            >>> page2 = await session.create_page()
         """
         pass
 

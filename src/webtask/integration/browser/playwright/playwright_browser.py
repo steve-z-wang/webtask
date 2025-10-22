@@ -55,6 +55,34 @@ class PlaywrightBrowser(Browser):
 
         return cls(playwright, browser, headless)
 
+    async def create_session(self, cookies=None):
+        """
+        Create a new session/context in this browser.
+
+        Args:
+            cookies: Optional list of cookies for the session
+
+        Returns:
+            PlaywrightSession instance
+
+        Example:
+            >>> browser = await PlaywrightBrowser.create_browser()
+            >>> session = await browser.create_session()
+            >>> page = await session.create_page()
+        """
+        from .playwright_session import PlaywrightSession
+
+        # Create new browser context
+        context = await self._browser.new_context()
+
+        # Set cookies if provided
+        if cookies:
+            from ....browser.cookies import Cookies
+            cookie_dicts = Cookies.to_dict_list(cookies)
+            await context.add_cookies(cookie_dicts)
+
+        return PlaywrightSession(context, cookies)
+
     async def close(self):
         """Close the Playwright browser instance."""
         if self._browser:

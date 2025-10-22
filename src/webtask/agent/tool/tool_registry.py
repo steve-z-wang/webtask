@@ -74,6 +74,14 @@ class ToolRegistry:
         """
         return list(self._tools.values())
 
+    def clear(self) -> None:
+        """
+        Clear all registered tools from the registry.
+
+        Useful when switching contexts (e.g., switching tabs in agent).
+        """
+        self._tools.clear()
+
     def to_context_block(self) -> Block:
         """
         Convert tool registry to context block for LLM.

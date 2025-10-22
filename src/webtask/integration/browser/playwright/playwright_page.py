@@ -91,3 +91,13 @@ class PlaywrightPage(Page):
     async def close(self):
         """Close the page."""
         await self._page.close()
+
+    @property
+    def url(self) -> str:
+        """
+        Get current page URL.
+
+        Returns:
+            Current URL of the page
+        """
+        return self._page.url

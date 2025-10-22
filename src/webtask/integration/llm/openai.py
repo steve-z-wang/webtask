@@ -48,17 +48,15 @@ class OpenAILLM(LLM):
     @classmethod
     def create(
         cls,
-        tokenizer: Tokenizer,
         model: str = "gpt-4",
         api_key: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
     ) -> 'OpenAILLM':
         """
-        Create an OpenAILLM instance with automatic max_tokens detection.
+        Create an OpenAILLM instance with automatic tokenizer and max_tokens detection.
 
         Args:
-            tokenizer: Tokenizer for counting tokens
             model: Model name (e.g., "gpt-4", "gpt-3.5-turbo")
             api_key: OpenAI API key (if None, uses OPENAI_API_KEY env var)
             temperature: Temperature for generation (0.0 to 2.0)
@@ -68,9 +66,13 @@ class OpenAILLM(LLM):
             OpenAILLM instance
 
         Example:
-            >>> llm = OpenAILLM.create(tokenizer, model="gpt-4")
+            >>> llm = OpenAILLM.create(model="gpt-4")
             >>> response = await llm.generate("You are helpful", "Hello!")
         """
+        # Auto-create tokenizer for this model
+        from .tiktoken_tokenizer import TikTokenizer
+        tokenizer = TikTokenizer.for_model(model)
+
         # Auto-detect max_tokens if not provided
         if max_tokens is None:
             max_tokens = MODEL_MAX_TOKENS.get(model)

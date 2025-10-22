@@ -25,36 +25,22 @@ class PlaywrightSession(Session):
         super().__init__(cookies=cookies)
         self._context = context
 
-    @classmethod
-    async def create_session(
-        cls,
-        browser: PlaywrightBrowser,
-        cookies: Optional[List[Cookie]] = None
-    ) -> 'PlaywrightSession':
+    async def create_page(self) -> 'PlaywrightPage':
         """
-        Create a new Playwright browser session/context.
-
-        Args:
-            browser: PlaywrightBrowser instance
-            cookies: Optional list of cookies to set for this session
+        Create a new page/tab in this session.
 
         Returns:
-            PlaywrightSession instance
+            PlaywrightPage instance
 
         Example:
-            >>> browser = await PlaywrightBrowser.create_browser()
-            >>> session = await PlaywrightSession.create_session(browser, cookies=[...])
-            >>> await session.close()
+            >>> session = await PlaywrightSession.create_session(browser)
+            >>> page1 = await session.create_page()
+            >>> page2 = await session.create_page()  # New tab in same session
         """
-        # Create new browser context
-        context = await browser._browser.new_context()
+        from .playwright_page import PlaywrightPage
 
-        # Set cookies if provided
-        if cookies:
-            cookie_dicts = Cookies.to_dict_list(cookies)
-            await context.add_cookies(cookie_dicts)
-
-        return cls(context, cookies)
+        playwright_page = await self._context.new_page()
+        return PlaywrightPage(playwright_page)
 
     async def close(self):
         """Close the session/context."""
