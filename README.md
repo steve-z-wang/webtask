@@ -40,6 +40,24 @@ agent = await wt.create_agent(llm=llm)
 await agent.execute("search for cats and click the first result")
 ```
 
+**Step-by-step execution (with visibility):**
+```python
+# Execute one step at a time to see what the agent is doing
+step = await agent.execute_step("search for cats and click the first result")
+
+# Inspect what happened
+for action, result in zip(step.proposals, step.executions):
+    print(f"Action: {action.tool_name} - {action.reason}")
+    print(f"Success: {result.success}")
+
+# Check if complete
+if step.verification.complete:
+    print("Task done!")
+else:
+    # Continue with next step
+    step2 = await agent.execute_step("search for cats and click the first result")
+```
+
 **Low-level imperative:**
 ```python
 # You control the steps, agent handles the selectors
@@ -66,6 +84,10 @@ No CSS selectors. No XPath. Just describe what you want.
 2. Executer runs it (click, type, navigate, etc.)
 3. Verifier checks if done (coming soon)
 4. Repeat until task complete
+
+**Two ways to run high-level mode:**
+- `agent.execute(task)` - Runs entire task automatically until completion
+- `agent.execute_step(task)` - Runs one step at a time for better visibility
 
 **Low-level mode** - You call methods directly:
 - `agent.navigate(url)` - Go to a page

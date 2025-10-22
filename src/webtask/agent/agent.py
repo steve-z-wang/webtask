@@ -168,6 +168,58 @@ class Agent:
 
     # === High-Level Autonomous Mode ===
 
+    async def execute_step(self, task: str) -> Step:
+        """
+        Execute a single step of the task autonomously.
+
+        This method runs one iteration of the agent loop:
+        1. Propose next actions based on current state
+        2. Execute the proposed actions
+        3. Verify if task is complete
+
+        Useful for step-by-step execution with better visibility into
+        the agent's decision-making process.
+
+        Args:
+            task: Task description in natural language
+
+        Returns:
+            Step object containing proposals, execution results, and verification
+
+        Example:
+            >>> # Execute task step by step
+            >>> step1 = await agent.execute_step("search for cats")
+            >>> print(f"Step complete: {step1.verification.complete}")
+            >>> if not step1.verification.complete:
+            ...     step2 = await agent.execute_step("search for cats")
+        """
+        # Ensure we have a tab
+        await self._ensure_tab()
+
+        # Create roles
+        proposer = Proposer(
+            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
+        )
+        executer = Executer(self.tool_registry)
+        verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
+
+        # 1. Propose next actions
+        actions = await proposer.propose()
+
+        # 2. Execute actions
+        exec_results = await executer.execute(actions)
+
+        # 3. Verify if task complete
+        verify_result = await verifier.verify(actions, exec_results)
+
+        # 4. Create step and add to history
+        step = Step(
+            proposals=actions, executions=exec_results, verification=verify_result
+        )
+        self.step_history.add_step(step)
+
+        return step
+
     async def execute(
         self, task: str, max_steps: int = 10, clear_history: bool = True
     ) -> TaskResult:
@@ -189,36 +241,17 @@ class Agent:
         if clear_history:
             self.step_history.clear()
 
-        # Create roles
-        proposer = Proposer(
-            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
-        )
-        executer = Executer(self.tool_registry)
-        verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
-
         # Agent loop
         for i in range(max_steps):
-            # 1. Propose next actions
-            actions = await proposer.propose()
+            # Execute one step
+            step = await self.execute_step(task)
 
-            # 2. Execute actions
-            exec_results = await executer.execute(actions)
-
-            # 3. Verify if task complete
-            verify_result = await verifier.verify(actions, exec_results)
-
-            # 4. Create step and add to history
-            step = Step(
-                proposals=actions, executions=exec_results, verification=verify_result
-            )
-            self.step_history.add_step(step)
-
-            # 5. Check if done
-            if verify_result.complete:
+            # Check if done
+            if step.verification.complete:
                 return TaskResult(
                     completed=True,
                     steps=self.step_history.get_all(),
-                    message=verify_result.message,
+                    message=step.verification.message,
                 )
 
         # Max steps reached without completion
