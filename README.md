@@ -86,6 +86,14 @@ Core implementation complete. See [TODO](docs/todo.md) for testing plan and futu
 
 ---
 
+## Benchmarks
+
+Evaluate webtask on standard web agent benchmarks:
+
+**[webtask-benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)** - Evaluation framework for Mind2Web and other benchmarks
+
+---
+
 ## Install
 
 ```bash
