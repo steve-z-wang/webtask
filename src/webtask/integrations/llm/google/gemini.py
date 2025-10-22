@@ -103,10 +103,21 @@ class GeminiLLM(LLM):
         Returns:
             Generated text response from Gemini
         """
+        self.logger.info(f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}")
+
         # Combine system and user prompts for Gemini
         # Gemini doesn't have separate system/user roles like OpenAI
         combined_prompt = f"{system_prompt}\n\n{user_prompt}"
 
         response = await self.model.generate_content_async(combined_prompt)
+
+        # Log token usage if available
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            self.logger.info(
+                f"Gemini API response - "
+                f"prompt_tokens: {response.usage_metadata.prompt_token_count}, "
+                f"completion_tokens: {response.usage_metadata.candidates_token_count}, "
+                f"total_tokens: {response.usage_metadata.total_token_count}"
+            )
 
         return response.text

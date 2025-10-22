@@ -107,6 +107,21 @@ class PlaywrightPage(Page):
 
         return PlaywrightElement(elements[0])
 
+    async def wait_for_idle(self, timeout: int = 30000):
+        """
+        Wait for page to be idle (network and DOM stable).
+
+        Waits for network activity to finish and DOM to stabilize.
+        Useful after navigation, clicks, or dynamic content updates.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 30000ms = 30s)
+
+        Raises:
+            TimeoutError: If page doesn't become idle within timeout
+        """
+        await self._page.wait_for_load_state('networkidle', timeout=timeout)
+
     async def close(self):
         """Close the page."""
         await self._page.close()

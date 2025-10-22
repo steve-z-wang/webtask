@@ -67,6 +67,22 @@ class Page(ABC):
         """Close the page."""
         pass
 
+    @abstractmethod
+    async def wait_for_idle(self, timeout: int = 30000):
+        """
+        Wait for page to be idle (network and DOM stable).
+
+        Waits for network activity to finish and DOM to stabilize.
+        Useful after navigation, clicks, or dynamic content updates.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 30000ms = 30s)
+
+        Raises:
+            TimeoutError: If page doesn't become idle within timeout
+        """
+        pass
+
     @property
     @abstractmethod
     def url(self) -> str:

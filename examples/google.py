@@ -1,9 +1,19 @@
 
-# %% 
+# %%
 
 !pip install -e .
 
-# %% 
+# %%
+
+import logging
+
+# Enable DEBUG logging to see LLM API calls, prompts, and responses
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# %%
 
 from webtask import Webtask
 from webtask.integrations.llm.google import GeminiLLM
@@ -27,4 +37,18 @@ await agent.navigate("google.com")
 
 input = await agent.select("google search input")
 await input.fill("What is the capital of France?")
+
+await agent.wait(2)
+
+# %%
+
+
+button = await agent.select("google search button")
+await button.click()
+
+
+# %%
+
+button = await agent.select("recaptcha checkbox")
+await button.click()
 # %%

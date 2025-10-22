@@ -94,6 +94,8 @@ class OpenAILLM(LLM):
         Returns:
             Generated text response from OpenAI
         """
+        self.logger.info(f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}")
+
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -102,5 +104,14 @@ class OpenAILLM(LLM):
             ],
             temperature=self.temperature,
         )
+
+        # Log token usage if available
+        if response.usage:
+            self.logger.info(
+                f"OpenAI API response - "
+                f"prompt_tokens: {response.usage.prompt_tokens}, "
+                f"completion_tokens: {response.usage.completion_tokens}, "
+                f"total_tokens: {response.usage.total_tokens}"
+            )
 
         return response.choices[0].message.content

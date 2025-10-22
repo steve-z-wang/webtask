@@ -259,6 +259,42 @@ class Agent:
         await self._ensure_tab()
         return await self.llm_browser.select(description)
 
+    async def wait_for_idle(self, timeout: int = 30000):
+        """
+        Wait for page to be idle (network and DOM stable).
+
+        Waits for network activity to finish and DOM to stabilize.
+        Useful after navigation, clicks, or dynamic content updates.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 30000ms = 30s)
+
+        Raises:
+            TimeoutError: If page doesn't become idle within timeout
+
+        Example:
+            >>> await agent.navigate("https://example.com")
+            >>> await agent.wait_for_idle()  # Wait for page to fully load
+        """
+        page = await self._ensure_tab()
+        await page.wait_for_idle(timeout=timeout)
+
+    async def wait(self, seconds: float):
+        """
+        Wait for a specific amount of time.
+
+        Simple delay/sleep. Useful for waiting for animations or timed events.
+
+        Args:
+            seconds: Number of seconds to wait
+
+        Example:
+            >>> await agent.click("submit button")
+            >>> await agent.wait(2)  # Wait 2 seconds for animation
+        """
+        import asyncio
+        await asyncio.sleep(seconds)
+
     # === Cleanup ===
 
     async def close(self) -> None:

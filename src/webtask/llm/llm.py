@@ -1,5 +1,6 @@
 """LLM base class for text generation."""
 
+import logging
 from abc import ABC, abstractmethod
 from .tokenizer import Tokenizer
 from .context import Context
@@ -23,6 +24,7 @@ class LLM(ABC):
         """
         self.tokenizer = tokenizer
         self.max_tokens = max_tokens
+        self.logger = logging.getLogger(__name__)
 
     def _check_token_limit(self, context: Context) -> int:
         """
@@ -64,8 +66,21 @@ class LLM(ABC):
         Raises:
             ValueError: If token count exceeds max_tokens
         """
-        self._check_token_limit(context)
-        return await self._generate(context.system, context.user)
+        # Check token limits
+        total_tokens = self._check_token_limit(context)
+
+        # Log the API call
+        self.logger.debug(f"LLM API call - Total tokens: {total_tokens}")
+        self.logger.debug(f"System prompt: {context.system[:200]}..." if len(context.system) > 200 else f"System prompt: {context.system}")
+        self.logger.debug(f"User prompt: {context.user[:500]}..." if len(context.user) > 500 else f"User prompt: {context.user}")
+
+        # Make the API call
+        response = await self._generate(context.system, context.user)
+
+        # Log the response
+        self.logger.debug(f"LLM response: {response[:500]}..." if len(response) > 500 else f"LLM response: {response}")
+
+        return response
 
     @abstractmethod
     async def _generate(self, system_prompt: str, user_prompt: str) -> str:
