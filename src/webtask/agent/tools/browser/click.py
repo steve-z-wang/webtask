@@ -8,6 +8,7 @@ from ....llm_browser import LLMBrowser
 
 class ClickParams(ToolParams):
     """Parameters for click tool."""
+
     element_id: str = Field(description="ID of the element to click")
 
 

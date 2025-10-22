@@ -8,6 +8,7 @@ from ....llm_browser import LLMBrowser
 
 class NavigateParams(ToolParams):
     """Parameters for navigate tool."""
+
     url: str = Field(description="URL to navigate to")
 
 

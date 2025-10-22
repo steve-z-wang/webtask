@@ -294,6 +294,7 @@ class Agent:
             >>> await agent.wait(2)  # Wait 2 seconds for animation
         """
         import asyncio
+
         await asyncio.sleep(seconds)
 
     # === Cleanup ===

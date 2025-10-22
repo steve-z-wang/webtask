@@ -6,7 +6,7 @@ from .tool_params import ToolParams
 
 
 # Type variable for tool parameters
-TParams = TypeVar('TParams', bound=ToolParams)
+TParams = TypeVar("TParams", bound=ToolParams)
 
 
 class Tool(ABC, Generic[TParams]):

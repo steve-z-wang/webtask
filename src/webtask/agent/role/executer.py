@@ -48,5 +48,5 @@ class Executer:
             except Exception as e:
                 results.append(ExecutionResult(success=False, error=str(e)))
                 # Continue executing remaining actions even if one fails
-        
+
         return results

@@ -89,9 +89,11 @@ class Proposer:
 
         # Extract actions array
         actions_list = action_data.get("actions", [])
-        
+
         if not actions_list:
-            raise ValueError("LLM response missing 'actions' field or empty actions list")
+            raise ValueError(
+                "LLM response missing 'actions' field or empty actions list"
+            )
 
         # Parse each action
         actions = []
@@ -101,12 +103,16 @@ class Proposer:
             parameters = action_dict.get("parameters", {})
 
             if not reason or not tool_name:
-                raise ValueError(f"Action missing 'reason' or 'tool' field: {action_dict}")
+                raise ValueError(
+                    f"Action missing 'reason' or 'tool' field: {action_dict}"
+                )
 
             # Validate tool and parameters
             self.tool_registry.validate_tool_use(tool_name, parameters)
 
             # Create Action
-            actions.append(Action(reason=reason, tool_name=tool_name, parameters=parameters))
+            actions.append(
+                Action(reason=reason, tool_name=tool_name, parameters=parameters)
+            )
 
         return actions

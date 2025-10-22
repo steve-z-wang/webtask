@@ -11,6 +11,7 @@ class Action:
 
     Pure data structure with tool name and parameters.
     """
+
     reason: str
     tool_name: str
     parameters: Dict[str, Any]
@@ -25,6 +26,7 @@ class ExecutionResult:
         success: Whether execution succeeded
         error: Error message if execution failed
     """
+
     success: bool
     error: Optional[str] = None
 
@@ -38,6 +40,7 @@ class VerificationResult:
         complete: Whether the task is complete
         message: Explanation or reasoning for the verification result
     """
+
     complete: bool
     message: str
 
@@ -49,6 +52,7 @@ class Step:
 
     Contains the proposals, execution results, and verification result.
     """
+
     proposals: List[Action]  # Changed from singular to plural
     executions: List[ExecutionResult]  # Changed from singular to plural
     verification: VerificationResult
@@ -64,6 +68,7 @@ class TaskResult:
         steps: List of all steps taken during execution
         message: Final verification message
     """
+
     completed: bool
     steps: List[Step]
     message: str

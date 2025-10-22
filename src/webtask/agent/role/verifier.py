@@ -64,12 +64,16 @@ class Verifier:
 
         # Current actions and results
         current = Block("Current Actions:")
-        for i, (action, execution_result) in enumerate(zip(actions, execution_results), 1):
+        for i, (action, execution_result) in enumerate(
+            zip(actions, execution_results), 1
+        ):
             action_block = Block(f"Action {i}:")
             action_block.append(f"Tool: {action.tool_name}")
             action_block.append(f"Reason: {action.reason}")
             action_block.append(f"Parameters: {action.parameters}")
-            action_block.append(f"Execution: {'Success' if execution_result.success else 'Failed'}")
+            action_block.append(
+                f"Execution: {'Success' if execution_result.success else 'Failed'}"
+            )
             if execution_result.error:
                 action_block.append(f"Error: {execution_result.error}")
             current.append(action_block)
