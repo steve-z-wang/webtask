@@ -139,6 +139,10 @@ class LLMBrowser:
         Returns:
             Block with formatted DOM
         """
+        # Case 1: No page opened yet
+        if self.current_page_id is None:
+            return Block("ERROR: No page opened yet. Please use the navigate tool to navigate to a URL.")
+
         # Get raw snapshot from current page
         page = self.get_current_page()
         snapshot = await page.get_snapshot()
@@ -150,6 +154,29 @@ class LLMBrowser:
         # Apply filters
         root = apply_visibility_filters(root)
         root = apply_semantic_filters(root)
+
+        # Handle case where filtering removes everything
+        if root is None:
+            lines = []
+
+            # Case 2: Page opened but no URL (not navigated)
+            if not snapshot.url or snapshot.url == "about:blank":
+                lines.append("URL: (no page loaded)")
+                lines.append("")
+                lines.append("ERROR: No URL loaded yet.")
+                lines.append("Please use the navigate tool to navigate to a URL.")
+            # Case 3: Navigated to URL but no elements
+            else:
+                lines.append(f"URL: {snapshot.url}")
+                lines.append("")
+                lines.append("ERROR: No visible interactive elements found on this page.")
+                lines.append("")
+                lines.append("Possible causes:")
+                lines.append("- The page is still loading")
+                lines.append("- The page has no interactive elements")
+                lines.append("- All elements were filtered out")
+
+            return Block("\n".join(lines))
 
         # Assign element IDs and build mapping
         self.element_map = {}

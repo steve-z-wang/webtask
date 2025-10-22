@@ -37,6 +37,9 @@ class Agent:
         self.tool_registry = ToolRegistry()
         self.step_history = StepHistory()
 
+        # Register tools immediately
+        self._register_tools()
+
         # Task state (for step-by-step execution)
         self.current_task: Optional[str] = None
         self.proposer: Optional[Proposer] = None
@@ -138,9 +141,6 @@ class Agent:
         if self.current_task is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
-        # Ensure we have a tab
-        await self._ensure_tab()
-
         # 1. Propose next actions
         actions = await self.proposer.propose()
 
@@ -202,11 +202,7 @@ class Agent:
         Example:
             >>> page2 = await agent.open_tab("https://github.com")
         """
-        page = await self.llm_browser.create_page(url)
-        # Register tools on first tab creation
-        if len(self.llm_browser._pages) == 1:
-            self._register_tools()
-        return page
+        return await self.llm_browser.create_page(url)
 
     async def switch_tab(self, page: Page) -> None:
         """
