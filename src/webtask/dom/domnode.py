@@ -196,16 +196,18 @@ class DomNode:
         parts = [node.content for node in self.traverse() if isinstance(node, Text)]
         return separator.join(parts)
 
-    def get_x_path(self) -> str:
+    def get_x_path(self) -> 'XPath':
         """
         Get the absolute XPath from root to this element.
 
         Returns:
-            XPath string (e.g., '/html/body/div[1]/button[2]')
+            XPath object (e.g., XPath('/html/body/div[1]/button[2]'))
         """
+        from .selector import XPath
+
         if self.parent is None:
             # Root element
-            return f'/{self.tag}'
+            return XPath(f'/{self.tag}')
 
         # Find the position among siblings with the same tag
         siblings = [child for child in self.parent.children
@@ -221,7 +223,7 @@ class DomNode:
 
         # Recursively build the path
         parent_path = self.parent.get_x_path()
-        return f'{parent_path}/{self.tag}{position}'
+        return XPath(f'{parent_path.path}/{self.tag}{position}')
 
 
 @dataclass

@@ -81,7 +81,7 @@ class Proposer:
         context = await self._build_context()
 
         # Call LLM
-        response = self.llm.generate(context)
+        response = await self.llm.generate(context)
 
         # Parse JSON response
         action_data = parse_json(response)

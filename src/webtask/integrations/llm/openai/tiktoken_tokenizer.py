@@ -1,7 +1,7 @@
 """TikToken-based tokenizer for OpenAI models."""
 
 import tiktoken
-from ...llm import Tokenizer
+from ....llm import Tokenizer
 
 
 class TikTokenizer(Tokenizer):

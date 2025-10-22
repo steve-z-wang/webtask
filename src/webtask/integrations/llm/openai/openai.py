@@ -2,7 +2,7 @@
 
 from typing import Optional
 from openai import AsyncOpenAI
-from ...llm import LLM, Tokenizer
+from ....llm import LLM, Tokenizer
 
 # Model max token limits
 MODEL_MAX_TOKENS = {

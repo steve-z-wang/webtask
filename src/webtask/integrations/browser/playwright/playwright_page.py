@@ -1,8 +1,10 @@
 """Playwright page implementation."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
+from ....utils import normalize_url
+from ....dom import XPath
 
 
 class PlaywrightPage(Page):
@@ -25,9 +27,12 @@ class PlaywrightPage(Page):
         """
         Navigate to a URL.
 
+        Automatically adds https:// if no protocol is specified.
+
         Args:
-            url: URL to navigate to
+            url: URL to navigate to (e.g., "google.com" or "https://google.com")
         """
+        url = normalize_url(url)
         await self._page.goto(url)
 
     async def get_cdp_snapshot(self) -> Dict[str, Any]:
@@ -49,27 +54,33 @@ class PlaywrightPage(Page):
 
         return snapshot
 
-    async def select(self, selector: str) -> List['PlaywrightElement']:
+    async def select(self, selector: Union[str, XPath]) -> List['PlaywrightElement']:
         """
         Select all elements matching the selector.
 
         Args:
-            selector: CSS selector or XPath string
+            selector: CSS selector string or XPath object
 
         Returns:
             List of PlaywrightElement (may be empty)
         """
         from .playwright_element import PlaywrightElement
 
-        elements = await self._page.query_selector_all(selector)
+        # Handle XPath objects
+        if isinstance(selector, XPath):
+            elements = await self._page.locator(selector.for_playwright()).all()
+        else:
+            # CSS selector string
+            elements = await self._page.query_selector_all(selector)
+
         return [PlaywrightElement(el) for el in elements]
 
-    async def select_one(self, selector: str) -> 'PlaywrightElement':
+    async def select_one(self, selector: Union[str, XPath]) -> 'PlaywrightElement':
         """
         Select a single element matching the selector.
 
         Args:
-            selector: CSS selector or XPath string
+            selector: CSS selector string or XPath object
 
         Returns:
             Single PlaywrightElement
@@ -79,7 +90,15 @@ class PlaywrightPage(Page):
         """
         from .playwright_element import PlaywrightElement
 
-        elements = await self._page.query_selector_all(selector)
+        # Handle XPath objects and XPath strings
+        if isinstance(selector, XPath):
+            elements = await self._page.locator(selector.for_playwright()).all()
+        elif isinstance(selector, str) and selector.startswith('/'):
+            # Use XPath string
+            elements = await self._page.locator(f"xpath={selector}").all()
+        else:
+            # Use CSS selector
+            elements = await self._page.query_selector_all(selector)
 
         if len(elements) == 0:
             raise ValueError(f"No elements found matching selector: {selector}")

@@ -11,50 +11,49 @@ class Webtask:
     Main manager class for web automation.
 
     Manages browser lifecycle and creates agents with sessions.
-    Use the create() factory method to instantiate.
+    Browser is launched lazily on first agent creation.
     """
 
-    def __init__(self, browser: Browser):
+    def __init__(self, headless: bool = False, browser_type: str = "chromium"):
         """
-        Initialize Webtask (use create factory instead).
+        Initialize Webtask.
+
+        Browser is not launched until first agent is created (lazy initialization).
 
         Args:
-            browser: Browser instance to manage
-        """
-        self.browser = browser
-
-    @classmethod
-    async def create(
-        cls,
-        headless: bool = False,
-        browser_type: str = "chromium"
-    ) -> 'Webtask':
-        """
-        Create a Webtask instance with a new browser.
-
-        Args:
-            headless: Whether to run browser in headless mode
-            browser_type: Browser type ("chromium", "firefox", or "webkit")
-
-        Returns:
-            Webtask instance
+            headless: Whether to run browser in headless mode (default: False)
+            browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
 
         Example:
-            >>> webtask = await Webtask.create(headless=False)
+            >>> webtask = Webtask(headless=False)  # No await needed!
             >>> agent = await webtask.create_agent(llm=my_llm)
         """
-        from .integration.browser.playwright import PlaywrightBrowser
+        self.headless = headless
+        self.browser_type = browser_type
+        self.browser: Optional[Browser] = None
 
-        browser = await PlaywrightBrowser.create_browser(
-            headless=headless,
-            browser_type=browser_type
-        )
+    async def _ensure_browser(self) -> Browser:
+        """
+        Ensure browser is launched (lazy initialization).
 
-        return cls(browser)
+        Returns:
+            Browser instance
+        """
+        if self.browser is None:
+            from .integrations.browser.playwright import PlaywrightBrowser
+
+            self.browser = await PlaywrightBrowser.create_browser(
+                headless=self.headless,
+                browser_type=self.browser_type
+            )
+
+        return self.browser
 
     async def create_agent(self, llm: LLM, cookies=None) -> Agent:
         """
         Create a new agent with a new session.
+
+        Launches browser on first call (lazy initialization).
 
         Args:
             llm: LLM instance for reasoning
@@ -65,12 +64,16 @@ class Webtask:
 
         Example:
             >>> from webtask.integration.llm import OpenAILLM
+            >>> webtask = Webtask()  # No await needed!
             >>> llm = OpenAILLM.create(model="gpt-4")
             >>> agent = await webtask.create_agent(llm=llm)
             >>> await agent.execute("Search for Python tutorials")
         """
+        # Ensure browser is launched (lazy initialization)
+        browser = await self._ensure_browser()
+
         # Create a new session
-        session = await self.browser.create_session(cookies=cookies)
+        session = await browser.create_session(cookies=cookies)
 
         # Create agent with session and LLM
         agent = Agent(llm, session)
@@ -83,4 +86,5 @@ class Webtask:
 
         Closes the browser and all associated sessions/pages.
         """
-        await self.browser.close()
+        if self.browser is not None:
+            await self.browser.close()

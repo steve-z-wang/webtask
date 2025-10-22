@@ -2,7 +2,7 @@
 
 from typing import Optional
 import google.generativeai as genai
-from ...llm import LLM, Tokenizer
+from ....llm import LLM, Tokenizer
 
 # Model max token limits
 MODEL_MAX_TOKENS = {

@@ -96,7 +96,7 @@ class Verifier:
         context = await self._build_context(action, execution_result)
 
         # Call LLM
-        response = self.llm.generate(context)
+        response = await self.llm.generate(context)
 
         # Parse JSON response
         verification_data = parse_json(response)

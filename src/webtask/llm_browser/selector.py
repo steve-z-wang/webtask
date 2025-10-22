@@ -52,7 +52,7 @@ class NaturalSelector:
         context.append(f"\nWhich element_id matches this description: \"{description}\"?")
 
         # Call LLM
-        response = self.llm.generate(context)
+        response = await self.llm.generate(context)
 
         # Parse response
         data = parse_json(response)

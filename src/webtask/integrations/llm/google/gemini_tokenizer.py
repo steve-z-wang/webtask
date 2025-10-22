@@ -1,7 +1,7 @@
 """Gemini-based tokenizer for Google Gemini models."""
 
 import google.generativeai as genai
-from ...llm import Tokenizer
+from ....llm import Tokenizer
 
 
 class GeminiTokenizer(Tokenizer):

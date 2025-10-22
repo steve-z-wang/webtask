@@ -49,7 +49,7 @@ class LLM(ABC):
 
         return total_tokens
 
-    def generate(self, context: Context) -> str:
+    async def generate(self, context: Context) -> str:
         """
         Generate text based on context.
 
@@ -65,10 +65,10 @@ class LLM(ABC):
             ValueError: If token count exceeds max_tokens
         """
         self._check_token_limit(context)
-        return self._generate(context.system, context.user)
+        return await self._generate(context.system, context.user)
 
     @abstractmethod
-    def _generate(self, system_prompt: str, user_prompt: str) -> str:
+    async def _generate(self, system_prompt: str, user_prompt: str) -> str:
         """
         Internal method for actual text generation.
 

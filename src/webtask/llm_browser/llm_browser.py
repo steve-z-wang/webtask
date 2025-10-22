@@ -72,15 +72,15 @@ class LLMBrowser:
 
         return Block("\n".join(lines))
 
-    def _get_selector(self, element_id: str) -> str:
+    def _get_selector(self, element_id: str):
         """
-        Convert element ID to CSS selector or XPath.
+        Convert element ID to selector (XPath or CSS).
 
         Args:
             element_id: Element ID (e.g., 'div-0', 'button-1')
 
         Returns:
-            CSS selector or XPath string
+            XPath object or CSS selector string
 
         Raises:
             KeyError: If element ID not found
@@ -89,8 +89,10 @@ class LLMBrowser:
             raise KeyError(f"Element ID '{element_id}' not found")
 
         node = self.element_map[element_id]
-        # Use XPath for now (could be CSS selector)
-        return node.get_x_path()
+        # Get the original unfiltered node to compute XPath from the full DOM tree
+        original_node = node.metadata.get('original_node', node)
+        # Use XPath for now (could be CSS selector in future)
+        return original_node.get_x_path()
 
     async def navigate(self, url: str) -> None:
         """
