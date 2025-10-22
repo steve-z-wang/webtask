@@ -30,10 +30,18 @@
 - [ ] Analyze failure cases
 - [ ] Document findings
 
+## Recently Completed
+- [x] Add logging/tracing for debugging (LLM calls, token usage)
+- [x] Support for multi-tab tasks (new_tab, switch_tab, close_tab)
+- [x] Add wait methods (wait, wait_for_idle)
+- [x] Webtask manager for browser lifecycle management
+- [x] XPath-based element selection using original DOM
+- [x] Multi-provider LLM support (OpenAI, Gemini) with logging
+
 ## Future Work
 - [ ] Add more browser actions (scroll, hover, upload_file)
 - [ ] Implement retry logic for failed actions
 - [ ] Add screenshot capture on errors
-- [ ] Support for multi-page tasks
 - [ ] Optimize token usage
-- [ ] Add logging/tracing for debugging
+- [ ] Vision-based element selection (Set-of-Marks approach)
+- [ ] CAPTCHA handling strategies

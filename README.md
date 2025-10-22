@@ -19,26 +19,40 @@ Uses LLMs to understand pages, plan actions, and select elements. Built with Pla
 
 ## Quick look
 
+**Setup:**
+```python
+from webtask import Webtask
+from webtask.integrations.llm import GeminiLLM
+
+# Create Webtask manager (browser launches lazily)
+wt = Webtask()
+
+# Choose your LLM (Gemini or OpenAI)
+llm = GeminiLLM.create(model="gemini-2.5-flash")
+
+# Create agent
+agent = await wt.create_agent(llm=llm)
+```
+
 **High-level autonomous:**
 ```python
-from webtask import Agent
-
-agent = Agent()
-
 # Agent figures out the steps
-agent.execute("search for cats and click the first result")
+await agent.execute("search for cats and click the first result")
 ```
 
 **Low-level imperative:**
 ```python
-from webtask import Agent
-
-agent = Agent()
-
 # You control the steps, agent handles the selectors
-agent.navigate("https://google.com")
-agent.select("search box").type("cats")
-agent.select("search button").click()
+await agent.navigate("https://google.com")
+
+search_box = await agent.select("search box")
+await search_box.fill("cats")
+
+button = await agent.select("search button")
+await button.click()
+
+# Wait for page to stabilize
+await agent.wait_for_idle()
 ```
 
 No CSS selectors. No XPath. Just describe what you want.
@@ -56,27 +70,11 @@ No CSS selectors. No XPath. Just describe what you want.
 **Low-level mode** - You call methods directly:
 - `agent.navigate(url)` - Go to a page
 - `agent.select(description)` - Find element by natural language
-- `.click()`, `.type()`, `.fill()` - Do stuff with it
+- `element.click()`, `element.fill(text)` - Interact with elements
+- `agent.wait(seconds)` - Wait for specific duration
+- `agent.wait_for_idle()` - Wait for network/DOM to stabilize
 
 Both modes use the same core: LLM sees cleaned DOM with element IDs like `button-0` instead of raw HTML. Clean input, clean output.
-
----
-
-## Architecture
-
-```
-Agent                # Main interface (execute + select/navigate/etc)
-├── Proposer         # Plans next action (high-level mode)
-├── Executer         # Runs actions
-├── LLMBrowser       # Maps element IDs ↔ selectors
-└── Tools            # navigate, click, fill, etc.
-
-Browser Layer        # Playwright wrapper
-DOM Processing       # Filters, serializers
-LLM Integration      # Context builder, token counting
-```
-
-Clean separation: DOM layer doesn't know about LLMs. Browser doesn't know about element IDs. Agent exposes both autonomous and imperative interfaces.
 
 ---
 
