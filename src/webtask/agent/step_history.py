@@ -51,12 +51,18 @@ class StepHistory:
         history = Block("Step History:")
         for i, step in enumerate(self._steps, 1):
             step_block = Block(f"Step {i}:")
-            step_block.append(f"Action: {step.proposal.tool_name}")
-            step_block.append(f"Reason: {step.proposal.reason}")
-            step_block.append(f"Parameters: {step.proposal.parameters}")
-            step_block.append(f"Execution: {'Success' if step.execution.success else 'Failed'}")
-            if step.execution.error:
-                step_block.append(f"Error: {step.execution.error}")
+            
+            # Display all actions in this step
+            for j, (action, execution) in enumerate(zip(step.proposals, step.executions), 1):
+                action_block = Block(f"  Action {j}:")
+                action_block.append(f"  Tool: {action.tool_name}")
+                action_block.append(f"  Reason: {action.reason}")
+                action_block.append(f"  Parameters: {action.parameters}")
+                action_block.append(f"  Execution: {'Success' if execution.success else 'Failed'}")
+                if execution.error:
+                    action_block.append(f"  Error: {execution.error}")
+                step_block.append(action_block)
+            
             step_block.append(f"Verification: {'Complete' if step.verification.complete else 'Incomplete'}")
             step_block.append(f"Message: {step.verification.message}")
             history.append(step_block)

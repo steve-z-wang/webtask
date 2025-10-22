@@ -13,15 +13,25 @@ proposer_system:
 
     You must respond with a JSON object containing:
     {
-      "reason": "Brief explanation of why you're taking this action",
-      "tool": "tool_name",
-      "parameters": {
-        "param1": "value1",
+      "actions": [
+        {
+          "reason": "Brief explanation of why you're taking this action",
+          "tool": "tool_name",
+          "parameters": {
+            "param1": "value1",
+            ...
+          }
+        },
         ...
-      }
+      ]
     }
+
+    You can propose multiple actions to be executed sequentially in a single step.
+    For example, you can fill a form field and then click a button.
 
     Important:
     - Use element IDs from the page context (e.g., "button-0", "input-1")
     - Only use tools that are available
-    - Provide clear reasoning for your actions
+    - Provide clear reasoning for each action
+    - Actions will be executed in the order specified
+    - Each action in the list should be independent and not rely on side effects from previous actions in the same list

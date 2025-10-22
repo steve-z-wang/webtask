@@ -1,5 +1,6 @@
 """Verifier role - verifies task completion."""
 
+from typing import List
 from ...llm import LLM, Context, Block
 from ...prompts import get_prompt
 from ...utils import parse_json
@@ -37,14 +38,14 @@ class Verifier:
         self.llm_browser = llm_browser
 
     async def _build_context(
-        self, action: Action, execution_result: ExecutionResult
+        self, actions: List[Action], execution_results: List[ExecutionResult]
     ) -> Context:
         """
         Build context for verifier.
 
         Args:
-            action: Current action that was executed
-            execution_result: Result of current action execution
+            actions: Current actions that were executed
+            execution_results: Results of current actions execution
 
         Returns:
             Context with system and user prompts
@@ -61,14 +62,17 @@ class Verifier:
         # Step history (completed steps)
         context.append(self.step_history.to_context_block())
 
-        # Current action and result
-        current = Block("Current Action:")
-        current.append(f"Action: {action.tool_name}")
-        current.append(f"Reason: {action.reason}")
-        current.append(f"Parameters: {action.parameters}")
-        current.append(f"Execution: {'Success' if execution_result.success else 'Failed'}")
-        if execution_result.error:
-            current.append(f"Error: {execution_result.error}")
+        # Current actions and results
+        current = Block("Current Actions:")
+        for i, (action, execution_result) in enumerate(zip(actions, execution_results), 1):
+            action_block = Block(f"Action {i}:")
+            action_block.append(f"Tool: {action.tool_name}")
+            action_block.append(f"Reason: {action.reason}")
+            action_block.append(f"Parameters: {action.parameters}")
+            action_block.append(f"Execution: {'Success' if execution_result.success else 'Failed'}")
+            if execution_result.error:
+                action_block.append(f"Error: {execution_result.error}")
+            current.append(action_block)
         context.append(current)
 
         # Page
@@ -77,14 +81,14 @@ class Verifier:
         return context
 
     async def verify(
-        self, action: Action, execution_result: ExecutionResult
+        self, actions: List[Action], execution_results: List[ExecutionResult]
     ) -> VerificationResult:
         """
         Verify if the task is complete.
 
         Args:
-            action: Current action that was executed
-            execution_result: Result of current action execution
+            actions: Current actions that were executed
+            execution_results: Results of current actions execution
 
         Returns:
             VerificationResult with completion status and message
@@ -93,7 +97,7 @@ class Verifier:
             Exception: If LLM fails to provide valid verification
         """
         # Build context
-        context = await self._build_context(action, execution_result)
+        context = await self._build_context(actions, execution_results)
 
         # Call LLM
         response = await self.llm.generate(context)

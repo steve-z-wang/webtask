@@ -47,10 +47,10 @@ class Step:
     """
     Represents one complete agent cycle.
 
-    Contains the proposal, execution result, and verification result.
+    Contains the proposals, execution results, and verification result.
     """
-    proposal: Action
-    execution: ExecutionResult
+    proposals: List[Action]  # Changed from singular to plural
+    executions: List[ExecutionResult]  # Changed from singular to plural
     verification: VerificationResult
 
 
