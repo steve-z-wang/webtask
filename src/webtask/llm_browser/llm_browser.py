@@ -1,11 +1,11 @@
 """LLMBrowser - bridges LLM text interface with browser operations."""
 
 from typing import Dict
-from ..browser import Page
+from ..browser import Page, Element
 from ..dom.filters import apply_visibility_filters, apply_semantic_filters
 from ..dom.utils import add_node_reference
 from ..dom.domnode import DomNode
-from ..llm import Block
+from ..llm import Block, LLM
 
 
 class LLMBrowser:
@@ -15,14 +15,16 @@ class LLMBrowser:
     Provides context with element IDs and executes actions by converting IDs to selectors.
     """
 
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, llm: LLM):
         """
-        Initialize with Page.
+        Initialize with Page and LLM.
 
         Args:
             page: Page instance to wrap
+            llm: LLM instance for natural language selection
         """
         self.page = page
+        self.llm = llm
         self.element_map: Dict[str, DomNode] = {}
 
     async def to_context_block(self) -> Block:
@@ -127,3 +129,24 @@ class LLMBrowser:
         selector = self._get_selector(element_id)
         element = await self.page.select_one(selector)
         await element.fill(value)
+
+    async def select(self, description: str) -> Element:
+        """
+        Select element by natural language description.
+
+        Uses LLM to find the element_id that matches the description,
+        then converts it to a selector and returns the browser Element.
+
+        Args:
+            description: Natural language description of element
+
+        Returns:
+            Browser Element instance
+
+        Raises:
+            ValueError: If LLM fails to find a matching element
+        """
+        from .selector import NaturalSelector
+
+        selector = NaturalSelector(self.llm, self)
+        return await selector.select(description)

@@ -1,10 +1,10 @@
 """Proposer - proposes next action based on context."""
 
-import json
 from ...llm import LLM, Context
+from ...utils import parse_json
 from ..step import Action
 from ..step_history import StepHistory
-from ..llm_browser import LLMBrowser
+from ...llm_browser import LLMBrowser
 from ..tool import ToolRegistry
 
 
@@ -105,10 +105,7 @@ Important:
         response = self.llm.generate(context)
 
         # Parse JSON response
-        try:
-            action_data = json.loads(response)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse LLM response as JSON: {e}")
+        action_data = parse_json(response)
 
         # Extract fields
         reason = action_data.get("reason")

@@ -2,7 +2,7 @@
 
 from ..llm import LLM
 from ..browser import Page
-from .llm_browser import LLMBrowser
+from ..llm_browser import LLMBrowser
 from .tool import ToolRegistry
 from .step_history import StepHistory
 from .step import Step, TaskResult
@@ -29,7 +29,7 @@ class Agent:
         self.page = page
 
         # Create infrastructure
-        self.llm_browser = LLMBrowser(page)
+        self.llm_browser = LLMBrowser(page, llm)
         self.tool_registry = ToolRegistry()
         self.step_history = StepHistory()
 
@@ -44,17 +44,24 @@ class Agent:
         self.tool_registry.register(ClickTool(self.llm_browser))
         self.tool_registry.register(FillTool(self.llm_browser))
 
-    async def execute(self, task: str, max_steps: int = 10) -> TaskResult:
+    async def execute(
+        self, task: str, max_steps: int = 10, clear_history: bool = True
+    ) -> TaskResult:
         """
         Execute a task autonomously.
 
         Args:
             task: Task description in natural language
             max_steps: Maximum number of steps before giving up
+            clear_history: Clear step history before starting (default: True)
 
         Returns:
             TaskResult with completion status, steps, and final message
         """
+        # Clear history if requested
+        if clear_history:
+            self.step_history.clear()
+
         # Create roles
         proposer = Proposer(
             self.llm, task, self.step_history, self.tool_registry, self.llm_browser
@@ -101,9 +108,9 @@ class Agent:
         Args:
             url: URL to navigate to
         """
-        pass
+        await self.llm_browser.navigate(url)
 
-    def select(self, description: str):
+    async def select(self, description: str):
         """
         Select element by natural language description (low-level imperative mode).
 
@@ -111,6 +118,6 @@ class Agent:
             description: Natural language description of element
 
         Returns:
-            Element proxy with .click(), .type(), .fill() methods
+            Browser Element with .click(), .fill() methods
         """
-        pass
+        return await self.llm_browser.select(description)

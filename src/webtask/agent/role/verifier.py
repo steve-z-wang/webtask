@@ -1,10 +1,10 @@
 """Verifier role - verifies task completion."""
 
-import json
 from ...llm import LLM, Context, Block
+from ...utils import parse_json
 from ..step import Action, ExecutionResult, VerificationResult
 from ..step_history import StepHistory
-from ..llm_browser import LLMBrowser
+from ...llm_browser import LLMBrowser
 
 
 class Verifier:
@@ -116,10 +116,7 @@ Important:
         response = self.llm.generate(context)
 
         # Parse JSON response
-        try:
-            verification_data = json.loads(response)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse LLM response as JSON: {e}")
+        verification_data = parse_json(response)
 
         # Extract fields
         complete = verification_data.get("complete")

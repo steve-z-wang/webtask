@@ -3,7 +3,7 @@
 from typing import Type
 from pydantic import Field
 from ...tool import Tool, ToolParams
-from ...llm_browser import LLMBrowser
+from ....llm_browser import LLMBrowser
 
 
 class ClickParams(ToolParams):
