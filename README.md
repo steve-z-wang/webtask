@@ -84,17 +84,7 @@ Clean separation: DOM layer doesn't know about LLMs. Browser doesn't know about 
 
 🚧 Work in progress
 
-What's done:
-- Basic agent architecture
-- Tool system (navigate, click, fill)
-- DOM filtering and element mapping
-- Proposer and Executer roles
-
-What's next:
-- Verifier role
-- Error recovery
-- More tools
-- Real testing on Mind2Web
+Core implementation complete. See [TODO](docs/todo.md) for testing plan and future work.
 
 ---
 
