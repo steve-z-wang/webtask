@@ -1,7 +1,7 @@
 """LLMBrowser - bridges LLM text interface with browser operations."""
 
-from typing import Dict
-from ..browser import Page, Element
+from typing import Dict, Optional
+from ..browser import Page, Element, Session
 from ..dom.filters import apply_visibility_filters, apply_semantic_filters
 from ..dom.utils import add_node_reference
 from ..dom.domnode import DomNode
@@ -12,20 +12,125 @@ class LLMBrowser:
     """
     Bridges LLM text interface with browser operations.
 
-    Provides context with element IDs and executes actions by converting IDs to selectors.
+    Manages multiple pages internally and provides context with element IDs.
     """
 
-    def __init__(self, page: Page, llm: LLM):
+    def __init__(self, llm: LLM, session: Session):
         """
-        Initialize with Page and LLM.
+        Initialize with LLM and Session.
 
         Args:
-            page: Page instance to wrap
             llm: LLM instance for natural language selection
+            session: Session instance for creating pages
         """
-        self.page = page
         self.llm = llm
+        self.session = session
+        self._pages: Dict[str, Page] = {}  # page_id -> Page
+        self._page_counter = 0
+        self.current_page_id: Optional[str] = None
         self.element_map: Dict[str, DomNode] = {}
+
+    def get_current_page(self) -> Page:
+        """
+        Get current page.
+
+        Returns:
+            Current Page instance
+
+        Raises:
+            RuntimeError: If no page is active
+        """
+        if self.current_page_id is None:
+            raise RuntimeError("No active page. Create a page first.")
+        return self._pages[self.current_page_id]
+
+    def _get_page_id(self, page: Page) -> Optional[str]:
+        """
+        Get page_id from Page object.
+
+        Args:
+            page: Page instance
+
+        Returns:
+            Page ID string or None if not found
+        """
+        for page_id, p in self._pages.items():
+            if p == page:
+                return page_id
+        return None
+
+    async def create_page(self, url: Optional[str] = None) -> Page:
+        """
+        Create new page and switch to it.
+
+        Args:
+            url: Optional URL to navigate to
+
+        Returns:
+            Page instance
+        """
+        page = await self.session.create_page()
+        page_id = f"page-{self._page_counter}"
+        self._page_counter += 1
+        self._pages[page_id] = page
+        self.current_page_id = page_id
+        self.element_map.clear()
+
+        if url:
+            await page.navigate(url)
+
+        return page
+
+    def switch_page(self, page: Page) -> None:
+        """
+        Switch to existing page.
+
+        Args:
+            page: Page instance to switch to
+
+        Raises:
+            ValueError: If page is not managed by this LLMBrowser
+        """
+        page_id = self._get_page_id(page)
+        if page_id is None:
+            raise ValueError("Page not managed by LLMBrowser")
+
+        self.current_page_id = page_id
+        self.element_map.clear()
+
+    async def close_page(self, page: Optional[Page] = None) -> None:
+        """
+        Close page (closes current page if None).
+
+        Args:
+            page: Page to close (defaults to current page)
+
+        Raises:
+            ValueError: If page is not managed by this LLMBrowser
+        """
+        # Get page to close
+        if page is None:
+            if self.current_page_id is None:
+                return  # No pages to close
+            page = self._pages[self.current_page_id]
+
+        # Find page_id
+        page_id = self._get_page_id(page)
+        if page_id is None:
+            raise ValueError("Page not managed by LLMBrowser")
+
+        # Close and remove
+        await page.close()
+        del self._pages[page_id]
+
+        # If closed current page, switch to another or None
+        if self.current_page_id == page_id:
+            if self._pages:
+                self.current_page_id = next(iter(self._pages.keys()))
+                self.element_map.clear()
+            else:
+                self.current_page_id = None
+                self.element_map.clear()
 
     async def to_context_block(self) -> Block:
         """
@@ -34,8 +139,9 @@ class LLMBrowser:
         Returns:
             Block with formatted DOM
         """
-        # Get raw snapshot from page
-        snapshot = await self.page.get_snapshot()
+        # Get raw snapshot from current page
+        page = self.get_current_page()
+        snapshot = await page.get_snapshot()
         root = snapshot.root
 
         # Add node references (before filtering)
@@ -101,7 +207,8 @@ class LLMBrowser:
         Args:
             url: URL to navigate to
         """
-        await self.page.navigate(url)
+        page = self.get_current_page()
+        await page.navigate(url)
 
     async def click(self, element_id: str) -> None:
         """
@@ -113,8 +220,9 @@ class LLMBrowser:
         Raises:
             KeyError: If element ID not found
         """
+        page = self.get_current_page()
         selector = self._get_selector(element_id)
-        element = await self.page.select_one(selector)
+        element = await page.select_one(selector)
         await element.click()
 
     async def fill(self, element_id: str, value: str) -> None:
@@ -128,8 +236,9 @@ class LLMBrowser:
         Raises:
             KeyError: If element ID not found
         """
+        page = self.get_current_page()
         selector = self._get_selector(element_id)
-        element = await self.page.select_one(selector)
+        element = await page.select_one(selector)
         await element.fill(value)
 
     async def type(self, element_id: str, text: str, delay: float = 80) -> None:
@@ -146,8 +255,9 @@ class LLMBrowser:
         Raises:
             KeyError: If element ID not found
         """
+        page = self.get_current_page()
         selector = self._get_selector(element_id)
-        element = await self.page.select_one(selector)
+        element = await page.select_one(selector)
         await element.type(text, delay=delay)
 
     async def select(self, description: str) -> Element:

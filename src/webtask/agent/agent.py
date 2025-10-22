@@ -30,33 +30,15 @@ class Agent:
         self.llm = llm
         self.session = session
 
-        # Tab management
-        self.tabs: List[Page] = []
-        self.current_tab: Optional[Page] = None
+        # LLMBrowser manages pages internally
+        self.llm_browser = LLMBrowser(llm, session)
 
-        # Infrastructure (rebuilt when switching tabs)
-        self.llm_browser: Optional[LLMBrowser] = None
+        # Infrastructure
         self.tool_registry = ToolRegistry()
         self.step_history = StepHistory()
 
-    async def _ensure_tab(self) -> Page:
-        """
-        Ensure we have a current tab, creating one if needed.
-
-        Returns:
-            Current Page instance
-        """
-        if self.current_tab is None:
-            # Auto-create first tab
-            await self.new_tab()
-
-        return self.current_tab
-
     def _register_tools(self) -> None:
         """Register available tools in the registry."""
-        if self.llm_browser is None:
-            return
-
         from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
 
         # Clear existing tools (keeps same registry instance)
@@ -67,104 +49,6 @@ class Agent:
         self.tool_registry.register(ClickTool(self.llm_browser))
         self.tool_registry.register(FillTool(self.llm_browser))
         self.tool_registry.register(TypeTool(self.llm_browser))
-
-    # === Tab Management Methods ===
-
-    async def new_tab(self, url: Optional[str] = None) -> Page:
-        """
-        Create and switch to a new tab.
-
-        Args:
-            url: Optional URL to navigate to
-
-        Returns:
-            The new Page instance
-
-        Example:
-            >>> page2 = await agent.new_tab("https://github.com")
-        """
-        # Create new page
-        page = await self.session.create_page()
-        self.tabs.append(page)
-
-        # Switch to new tab
-        self.current_tab = page
-        self.llm_browser = LLMBrowser(page, self.llm)
-        self._register_tools()
-
-        # Navigate if URL provided
-        if url:
-            await page.navigate(url)
-
-        return page
-
-    async def switch_tab(self, page: Page) -> None:
-        """
-        Switch to a different tab.
-
-        Args:
-            page: Page to switch to
-
-        Raises:
-            ValueError: If page is not managed by this agent
-
-        Example:
-            >>> await agent.switch_tab(page1)
-        """
-        if page not in self.tabs:
-            raise ValueError("Tab not managed by this agent")
-
-        self.current_tab = page
-        self.llm_browser = LLMBrowser(page, self.llm)
-        self._register_tools()
-
-    async def close_tab(self, page: Optional[Page] = None) -> None:
-        """
-        Close a tab (closes current tab if page=None).
-
-        Args:
-            page: Page to close (defaults to current tab)
-
-        Raises:
-            ValueError: If page is not managed by this agent
-
-        Example:
-            >>> await agent.close_tab(page2)
-            >>> await agent.close_tab()  # Close current tab
-        """
-        page = page or self.current_tab
-
-        if page is None:
-            return  # No tabs to close
-
-        if page not in self.tabs:
-            raise ValueError("Tab not managed by this agent")
-
-        await page.close()
-        self.tabs.remove(page)
-
-        # If closed current tab, switch to another or None
-        if self.current_tab == page:
-            self.current_tab = self.tabs[0] if self.tabs else None
-            if self.current_tab:
-                self.llm_browser = LLMBrowser(self.current_tab, self.llm)
-                self._register_tools()
-            else:
-                self.llm_browser = None
-
-    def get_tabs(self) -> List[Page]:
-        """
-        Get all open tabs.
-
-        Returns:
-            List of Page instances
-        """
-        return self.tabs.copy()
-
-    @property
-    def tab_count(self) -> int:
-        """Number of open tabs."""
-        return len(self.tabs)
 
     # === High-Level Autonomous Mode ===
 
@@ -227,6 +111,85 @@ class Agent:
             steps=self.step_history.get_all(),
             message=f"Task not completed after {max_steps} steps",
         )
+        
+    # === Tab Management Methods ===
+
+    async def _ensure_tab(self) -> Page:
+        """
+        Ensure we have a current tab, creating one if needed.
+
+        Returns:
+            Current Page instance
+        """
+        if self.llm_browser.current_page_id is None:
+            # Auto-create first tab
+            await self.open_tab()
+
+        return self.llm_browser.get_current_page()
+
+    async def open_tab(self, url: Optional[str] = None) -> Page:
+        """
+        Open a new tab and switch to it.
+
+        Args:
+            url: Optional URL to navigate to
+
+        Returns:
+            The new Page instance
+
+        Example:
+            >>> page2 = await agent.open_tab("https://github.com")
+        """
+        page = await self.llm_browser.create_page(url)
+        # Register tools on first tab creation
+        if len(self.llm_browser._pages) == 1:
+            self._register_tools()
+        return page
+
+    async def switch_tab(self, page: Page) -> None:
+        """
+        Switch to a different tab.
+
+        Args:
+            page: Page to switch to
+
+        Raises:
+            ValueError: If page is not managed by this agent
+
+        Example:
+            >>> await agent.switch_tab(page1)
+        """
+        self.llm_browser.switch_page(page)
+
+    async def close_tab(self, page: Optional[Page] = None) -> None:
+        """
+        Close a tab (closes current tab if page=None).
+
+        Args:
+            page: Page to close (defaults to current tab)
+
+        Raises:
+            ValueError: If page is not managed by this agent
+
+        Example:
+            >>> await agent.close_tab(page2)
+            >>> await agent.close_tab()  # Close current tab
+        """
+        await self.llm_browser.close_page(page)
+
+    def get_tabs(self) -> List[Page]:
+        """
+        Get all open tabs.
+
+        Returns:
+            List of Page instances
+        """
+        return list(self.llm_browser._pages.values())
+
+    @property
+    def tab_count(self) -> int:
+        """Number of open tabs."""
+        return len(self.llm_browser._pages)
 
     # === Low-Level Imperative Mode ===
 
@@ -305,12 +268,9 @@ class Agent:
 
         Closes all tabs and the session.
         """
-        # Close all tabs
-        for page in self.tabs[:]:
-            await page.close()
-        self.tabs.clear()
-        self.current_tab = None
-        self.llm_browser = None
+        # Close all pages via LLMBrowser
+        for page in list(self.llm_browser._pages.values()):
+            await self.llm_browser.close_page(page)
 
         # Close session
         await self.session.close()
