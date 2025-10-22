@@ -8,6 +8,7 @@ from ....llm_browser import LLMBrowser
 
 class FillParams(ToolParams):
     """Parameters for fill tool."""
+
     element_id: str = Field(description="ID of the element to fill")
     value: str = Field(description="Value to fill into the element")
 

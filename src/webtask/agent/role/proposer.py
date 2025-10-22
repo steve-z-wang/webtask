@@ -1,5 +1,6 @@
 """Proposer - proposes next action based on context."""
 
+from typing import List
 from ...llm import LLM, Context
 from ...prompts import get_prompt
 from ...utils import parse_json
@@ -67,15 +68,15 @@ class Proposer:
 
         return context
 
-    async def propose(self) -> Action:
+    async def propose(self) -> List[Action]:
         """
-        Propose the next action to take.
+        Propose the next actions to take.
 
         Returns:
-            Action to execute
+            List of Actions to execute
 
         Raises:
-            Exception: If LLM fails to propose a valid action
+            Exception: If LLM fails to propose valid actions
         """
         # Build context
         context = await self._build_context()
@@ -86,16 +87,32 @@ class Proposer:
         # Parse JSON response
         action_data = parse_json(response)
 
-        # Extract fields
-        reason = action_data.get("reason")
-        tool_name = action_data.get("tool")
-        parameters = action_data.get("parameters", {})
+        # Extract actions array
+        actions_list = action_data.get("actions", [])
 
-        if not reason or not tool_name:
-            raise ValueError("LLM response missing 'reason' or 'tool' field")
+        if not actions_list:
+            raise ValueError(
+                "LLM response missing 'actions' field or empty actions list"
+            )
 
-        # Validate tool and parameters
-        self.tool_registry.validate_tool_use(tool_name, parameters)
+        # Parse each action
+        actions = []
+        for action_dict in actions_list:
+            reason = action_dict.get("reason")
+            tool_name = action_dict.get("tool")
+            parameters = action_dict.get("parameters", {})
 
-        # Create and return Action
-        return Action(reason=reason, tool_name=tool_name, parameters=parameters)
+            if not reason or not tool_name:
+                raise ValueError(
+                    f"Action missing 'reason' or 'tool' field: {action_dict}"
+                )
+
+            # Validate tool and parameters
+            self.tool_registry.validate_tool_use(tool_name, parameters)
+
+            # Create Action
+            actions.append(
+                Action(reason=reason, tool_name=tool_name, parameters=parameters)
+            )
+
+        return actions

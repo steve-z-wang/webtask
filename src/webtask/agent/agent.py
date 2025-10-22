@@ -198,18 +198,18 @@ class Agent:
 
         # Agent loop
         for i in range(max_steps):
-            # 1. Propose next action
-            action = await proposer.propose()
+            # 1. Propose next actions
+            actions = await proposer.propose()
 
-            # 2. Execute action
-            exec_result = await executer.execute(action)
+            # 2. Execute actions
+            exec_results = await executer.execute(actions)
 
             # 3. Verify if task complete
-            verify_result = await verifier.verify(action, exec_result)
+            verify_result = await verifier.verify(actions, exec_results)
 
             # 4. Create step and add to history
             step = Step(
-                proposal=action, execution=exec_result, verification=verify_result
+                proposals=actions, executions=exec_results, verification=verify_result
             )
             self.step_history.add_step(step)
 
@@ -294,6 +294,7 @@ class Agent:
             >>> await agent.wait(2)  # Wait 2 seconds for animation
         """
         import asyncio
+
         await asyncio.sleep(seconds)
 
     # === Cleanup ===

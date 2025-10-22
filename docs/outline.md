@@ -11,7 +11,7 @@ webtask/
 │   ├── step.py           # Action, ExecutionResult, VerificationResult, Step, TaskResult
 │   ├── step_history.py   # Tracks completed agent cycles
 │   ├── role/             # Agent roles for propose-execute-verify loop
-│   │   ├── proposer.py   # Proposes next action using LLM
+│   │   ├── proposer.py   # Proposes next action(s) using LLM
 │   │   ├── executer.py   # Executes actions and returns results
 │   │   └── verifier.py   # Verifies task completion
 │   ├── tool/             # Tool infrastructure
@@ -107,8 +107,8 @@ webtask/
 
 ### Roles
 **Three specialized agents** working together:
-- **Proposer**: Analyzes task + history + page → proposes Action
-- **Executer**: Executes Action → returns ExecutionResult
+- **Proposer**: Analyzes task + history + page → proposes Action(s)
+- **Executer**: Executes Action(s) → returns ExecutionResult(s)
 - **Verifier**: Checks if task complete → returns VerificationResult
 
 ### Block System

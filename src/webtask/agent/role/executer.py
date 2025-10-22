@@ -1,5 +1,6 @@
 """Executer role - executes proposed actions."""
 
+from typing import List
 from ..step import Action, ExecutionResult
 from ..tool import ToolRegistry
 
@@ -20,27 +21,32 @@ class Executer:
         """
         self.tool_registry = tool_registry
 
-    async def execute(self, action: Action) -> ExecutionResult:
+    async def execute(self, actions: List[Action]) -> List[ExecutionResult]:
         """
-        Execute an action.
+        Execute a list of actions.
 
         Args:
-            action: Action to execute
+            actions: List of Actions to execute
 
         Returns:
-            ExecutionResult with success status and optional error
+            List of ExecutionResults with success status and optional errors
         """
-        try:
-            # Get tool from registry
-            tool = self.tool_registry.get(action.tool_name)
+        results = []
+        for action in actions:
+            try:
+                # Get tool from registry
+                tool = self.tool_registry.get(action.tool_name)
 
-            # Validate and parse parameters
-            params = tool.validate_parameters(action.parameters)
+                # Validate and parse parameters
+                params = tool.validate_parameters(action.parameters)
 
-            # Execute tool
-            await tool.execute(params)
+                # Execute tool
+                await tool.execute(params)
 
-            return ExecutionResult(success=True)
+                results.append(ExecutionResult(success=True))
 
-        except Exception as e:
-            return ExecutionResult(success=False, error=str(e))
+            except Exception as e:
+                results.append(ExecutionResult(success=False, error=str(e)))
+                # Continue executing remaining actions even if one fails
+
+        return results

@@ -8,6 +8,7 @@ from ....llm_browser import LLMBrowser
 
 class TypeParams(ToolParams):
     """Parameters for type tool."""
+
     element_id: str = Field(description="ID of the element to type into")
     text: str = Field(description="Text to type into the element")
 
