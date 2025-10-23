@@ -141,7 +141,7 @@ class LLMBrowser:
         """
         # Case 1: No page opened yet
         if self.current_page_id is None:
-            return Block("ERROR: No page opened yet. Please use the navigate tool to navigate to a URL.")
+            return Block("Page:\nERROR: No page opened yet. Please use the navigate tool to navigate to a URL.")
 
         # Get raw snapshot from current page
         page = self.get_current_page()
@@ -157,17 +157,17 @@ class LLMBrowser:
 
         # Handle case where filtering removes everything
         if root is None:
-            lines = []
+            lines = ["Page:"]
 
             # Case 2: Page opened but no URL (not navigated)
             if not snapshot.url or snapshot.url == "about:blank":
-                lines.append("URL: (no page loaded)")
+                lines.append("  URL: (no page loaded)")
                 lines.append("")
                 lines.append("ERROR: No URL loaded yet.")
                 lines.append("Please use the navigate tool to navigate to a URL.")
             # Case 3: Navigated to URL but no elements
             else:
-                lines.append(f"URL: {snapshot.url}")
+                lines.append(f"  URL: {snapshot.url}")
                 lines.append("")
                 lines.append("ERROR: No visible interactive elements found on this page.")
                 lines.append("")
@@ -195,10 +195,10 @@ class LLMBrowser:
 
         # Serialize to markdown
         from ..dom.serializers import serialize_to_markdown
-        lines = []
+        lines = ["Page:"]
 
         if snapshot.url:
-            lines.append(f"URL: {snapshot.url}")
+            lines.append(f"  URL: {snapshot.url}")
             lines.append("")
 
         lines.append(serialize_to_markdown(root))
@@ -231,9 +231,15 @@ class LLMBrowser:
         """
         Navigate to URL.
 
+        Auto-creates a page if none exists yet.
+
         Args:
             url: URL to navigate to
         """
+        # Auto-create page if none exists
+        if self.current_page_id is None:
+            await self.create_page()
+
         page = self.get_current_page()
         await page.navigate(url)
 

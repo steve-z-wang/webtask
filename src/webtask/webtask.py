@@ -49,7 +49,7 @@ class Webtask:
 
         return self.browser
 
-    async def create_agent(self, llm: LLM, cookies=None) -> Agent:
+    async def create_agent(self, llm: LLM, cookies=None, action_delay: float = 1.0) -> Agent:
         """
         Create a new agent with a new session.
 
@@ -58,6 +58,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             cookies: Optional list of cookies for the session
+            action_delay: Minimum delay in seconds between actions (default: 1.0)
 
         Returns:
             Agent instance ready to use
@@ -66,7 +67,7 @@ class Webtask:
             >>> from webtask.integration.llm import OpenAILLM
             >>> webtask = Webtask()  # No await needed!
             >>> llm = OpenAILLM.create(model="gpt-4")
-            >>> agent = await webtask.create_agent(llm=llm)
+            >>> agent = await webtask.create_agent(llm=llm, action_delay=2.0)
             >>> await agent.execute("Search for Python tutorials")
         """
         # Ensure browser is launched (lazy initialization)
@@ -76,7 +77,7 @@ class Webtask:
         session = await browser.create_session(cookies=cookies)
 
         # Create agent with session and LLM
-        agent = Agent(llm, session)
+        agent = Agent(llm, session, action_delay)
 
         return agent
 

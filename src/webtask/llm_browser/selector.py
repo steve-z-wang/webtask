@@ -72,5 +72,6 @@ class NaturalSelector:
             raise ValueError(f"Element ID '{element_id}' not found in page context")
 
         # Select and return element
-        element = await self.llm_browser.page.select_one(selector)
+        page = self.llm_browser.get_current_page()
+        element = await page.select_one(selector)
         return element

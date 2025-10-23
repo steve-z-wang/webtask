@@ -90,4 +90,4 @@ class ToolRegistry:
             Block containing JSON-formatted tool schemas
         """
         schemas = [tool.to_schema() for tool in self._tools.values()]
-        return Block(json.dumps(schemas, indent=2))
+        return Block(f"Tools:\n{json.dumps(schemas, indent=2)}")

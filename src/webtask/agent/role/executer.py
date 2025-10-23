@@ -1,8 +1,10 @@
 """Executer role - executes proposed actions."""
 
-from typing import List
+import time
+from typing import List, Optional
 from ..step import Action, ExecutionResult
 from ..tool import ToolRegistry
+from ...utils import wait
 
 
 class Executer:
@@ -12,14 +14,17 @@ class Executer:
     Returns execution result for step history.
     """
 
-    def __init__(self, tool_registry: ToolRegistry):
+    def __init__(self, tool_registry: ToolRegistry, action_delay: float = 1.0):
         """
         Initialize executer.
 
         Args:
             tool_registry: Registry of available tools
+            action_delay: Minimum delay in seconds between actions (default: 1.0)
         """
         self.tool_registry = tool_registry
+        self.action_delay = action_delay
+        self.last_action_time: Optional[float] = None
 
     async def execute(self, actions: List[Action]) -> List[ExecutionResult]:
         """
@@ -33,6 +38,12 @@ class Executer:
         """
         results = []
         for action in actions:
+            # Ensure minimum delay between actions
+            if self.last_action_time is not None:
+                elapsed = time.time() - self.last_action_time
+                if elapsed < self.action_delay:
+                    await wait(self.action_delay - elapsed)
+
             try:
                 # Get tool from registry
                 tool = self.tool_registry.get(action.tool_name)
@@ -42,6 +53,9 @@ class Executer:
 
                 # Execute tool
                 await tool.execute(params)
+
+                # Record action time
+                self.last_action_time = time.time()
 
                 results.append(ExecutionResult(success=True))
 

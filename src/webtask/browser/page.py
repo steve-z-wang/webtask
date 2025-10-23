@@ -1,7 +1,8 @@
 """Page base class for browser page management."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Union
+from pathlib import Path
 from .element import Element
 
 
@@ -80,6 +81,34 @@ class Page(ABC):
 
         Raises:
             TimeoutError: If page doesn't become idle within timeout
+        """
+        pass
+
+    @abstractmethod
+    async def screenshot(
+        self,
+        path: Optional[Union[str, Path]] = None,
+        full_page: bool = False
+    ) -> bytes:
+        """
+        Take a screenshot of the current page.
+
+        Args:
+            path: Optional file path to save screenshot. If None, doesn't save to disk.
+            full_page: Whether to screenshot the full scrollable page (default: False)
+
+        Returns:
+            Screenshot as bytes (PNG format)
+
+        Example:
+            >>> # Just get bytes
+            >>> screenshot_bytes = await page.screenshot()
+            >>>
+            >>> # Save to file
+            >>> await page.screenshot("step1.png")
+            >>>
+            >>> # Full page screenshot
+            >>> await page.screenshot("fullpage.png", full_page=True)
         """
         pass
 

@@ -1,6 +1,7 @@
 """Playwright page implementation."""
 
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
+from pathlib import Path
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
 from ....utils import normalize_url
@@ -125,6 +126,23 @@ class PlaywrightPage(Page):
     async def close(self):
         """Close the page."""
         await self._page.close()
+
+    async def screenshot(
+        self,
+        path: Optional[Union[str, Path]] = None,
+        full_page: bool = False
+    ) -> bytes:
+        """
+        Take a screenshot of the current page.
+
+        Args:
+            path: Optional file path to save screenshot. If None, doesn't save to disk.
+            full_page: Whether to screenshot the full scrollable page (default: False)
+
+        Returns:
+            Screenshot as bytes (PNG format)
+        """
+        return await self._page.screenshot(path=path, full_page=full_page)
 
     @property
     def url(self) -> str:

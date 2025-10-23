@@ -46,31 +46,30 @@ class StepHistory:
             Block containing formatted step history
         """
         if not self._steps:
-            return Block("No steps executed yet.")
+            return Block("Step History:\nNo steps executed yet.")
 
-        history = Block("Step History:")
+        lines = ["Step History:"]
         for i, step in enumerate(self._steps, 1):
-            step_block = Block(f"Step {i}:")
+            lines.append("")  # Single blank line before each step
+            lines.append(f"Step {i}:")
 
             # Display all actions in this step
             for j, (action, execution) in enumerate(
                 zip(step.proposals, step.executions), 1
             ):
-                action_block = Block(f"  Action {j}:")
-                action_block.append(f"  Tool: {action.tool_name}")
-                action_block.append(f"  Reason: {action.reason}")
-                action_block.append(f"  Parameters: {action.parameters}")
-                action_block.append(
-                    f"  Execution: {'Success' if execution.success else 'Failed'}"
+                lines.append(f"  Action {j}:")
+                lines.append(f"    Tool: {action.tool_name}")
+                lines.append(f"    Reason: {action.reason}")
+                lines.append(f"    Parameters: {action.parameters}")
+                lines.append(
+                    f"    Execution: {'Success' if execution.success else 'Failed'}"
                 )
                 if execution.error:
-                    action_block.append(f"  Error: {execution.error}")
-                step_block.append(action_block)
+                    lines.append(f"    Error: {execution.error}")
 
-            step_block.append(
-                f"Verification: {'Complete' if step.verification.complete else 'Incomplete'}"
+            lines.append(
+                f"  Verification: {'Complete' if step.verification.complete else 'Incomplete'}"
             )
-            step_block.append(f"Message: {step.verification.message}")
-            history.append(step_block)
+            lines.append(f"  Message: {step.verification.message}")
 
-        return history
+        return Block("\n".join(lines))

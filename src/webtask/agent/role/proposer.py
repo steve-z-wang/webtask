@@ -1,7 +1,7 @@
 """Proposer - proposes next action based on context."""
 
 from typing import List
-from ...llm import LLM, Context
+from ...llm import LLM, Context, Block
 from ...prompts import get_prompt
 from ...utils import parse_json
 from ..step import Action
@@ -55,7 +55,7 @@ class Proposer:
         context = Context(system=system)
 
         # Task
-        context.append(f"Task: {self.task}")
+        context.append(Block(f"Task:\n{self.task}"))
 
         # Step history
         context.append(self.step_history.to_context_block())
@@ -90,10 +90,10 @@ class Proposer:
         # Extract actions array
         actions_list = action_data.get("actions", [])
 
+        # If no actions (task might be complete), return empty list
+        # Verifier will determine if task is actually complete
         if not actions_list:
-            raise ValueError(
-                "LLM response missing 'actions' field or empty actions list"
-            )
+            return []
 
         # Parse each action
         actions = []
@@ -107,8 +107,22 @@ class Proposer:
                     f"Action missing 'reason' or 'tool' field: {action_dict}"
                 )
 
+            # Skip invalid tool names like "none"
+            if tool_name.lower() in ["none", "null", ""]:
+                # LLM indicated no action should be taken
+                continue
+
             # Validate tool and parameters
-            self.tool_registry.validate_tool_use(tool_name, parameters)
+            try:
+                self.tool_registry.validate_tool_use(tool_name, parameters)
+            except ValueError as e:
+                # Provide better error message with available tools
+                available_tools = [t.name for t in self.tool_registry.get_all()]
+                raise ValueError(
+                    f"Invalid tool '{tool_name}': {e}\n"
+                    f"Available tools: {', '.join(available_tools)}\n"
+                    f"LLM response: {response}"
+                )
 
             # Create Action
             actions.append(

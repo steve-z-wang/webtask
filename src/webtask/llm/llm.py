@@ -71,14 +71,14 @@ class LLM(ABC):
 
         # Log the API call
         self.logger.debug(f"LLM API call - Total tokens: {total_tokens}")
-        self.logger.debug(f"System prompt: {context.system[:200]}..." if len(context.system) > 200 else f"System prompt: {context.system}")
-        self.logger.debug(f"User prompt: {context.user[:500]}..." if len(context.user) > 500 else f"User prompt: {context.user}")
+        self.logger.debug(f"System prompt: {context.system}")
+        self.logger.debug(f"User prompt: {context.user}")
 
         # Make the API call
         response = await self._generate(context.system, context.user)
 
         # Log the response
-        self.logger.debug(f"LLM response: {response[:500]}..." if len(response) > 500 else f"LLM response: {response}")
+        self.logger.debug(f"LLM response: {response}")
 
         return response
 

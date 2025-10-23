@@ -12,6 +12,9 @@ MODEL_MAX_TOKENS = {
     "gpt-4-turbo-preview": 128000,
     "gpt-3.5-turbo": 4096,
     "gpt-3.5-turbo-16k": 16384,
+    "gpt-4.1": 128000,
+    "gpt-4.1-mini": 128000,
+    "gpt-5-nano": 400000,
 }
 
 
@@ -50,7 +53,7 @@ class OpenAILLM(LLM):
         cls,
         model: str = "gpt-4",
         api_key: Optional[str] = None,
-        temperature: float = 0.7,
+        temperature: float = 1,
         max_tokens: Optional[int] = None,
     ) -> 'OpenAILLM':
         """

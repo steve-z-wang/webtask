@@ -57,27 +57,26 @@ class Verifier:
         context = Context(system=system)
 
         # Task
-        context.append(f"Task: {self.task}")
+        context.append(Block(f"Task:\n{self.task}"))
 
-        # Step history (completed steps)
-        context.append(self.step_history.to_context_block())
-
-        # Current actions and results
-        current = Block("Current Actions:")
+        # Current actions and results (most recent, comes first)
+        lines = ["Current Actions:"]
         for i, (action, execution_result) in enumerate(
             zip(actions, execution_results), 1
         ):
-            action_block = Block(f"Action {i}:")
-            action_block.append(f"Tool: {action.tool_name}")
-            action_block.append(f"Reason: {action.reason}")
-            action_block.append(f"Parameters: {action.parameters}")
-            action_block.append(
-                f"Execution: {'Success' if execution_result.success else 'Failed'}"
+            lines.append(f"  Action {i}:")
+            lines.append(f"    Tool: {action.tool_name}")
+            lines.append(f"    Reason: {action.reason}")
+            lines.append(f"    Parameters: {action.parameters}")
+            lines.append(
+                f"    Execution: {'Success' if execution_result.success else 'Failed'}"
             )
             if execution_result.error:
-                action_block.append(f"Error: {execution_result.error}")
-            current.append(action_block)
-        context.append(current)
+                lines.append(f"    Error: {execution_result.error}")
+        context.append(Block("\n".join(lines)))
+
+        # Step history (completed steps)
+        context.append(self.step_history.to_context_block())
 
         # Page
         context.append(await self.llm_browser.to_context_block())

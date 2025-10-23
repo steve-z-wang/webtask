@@ -19,16 +19,18 @@ class Agent:
     and low-level methods for imperative control.
     """
 
-    def __init__(self, llm: LLM, session: Session):
+    def __init__(self, llm: LLM, session: Session, action_delay: float = 1.0):
         """
         Initialize agent.
 
         Args:
             llm: LLM instance for reasoning
             session: Session instance (manages multiple tabs/pages)
+            action_delay: Delay in seconds after actions like click/navigate (default: 1.0)
         """
         self.llm = llm
         self.session = session
+        self.action_delay = action_delay
 
         # LLMBrowser manages pages internally
         self.llm_browser = LLMBrowser(llm, session)
@@ -80,7 +82,7 @@ class Agent:
 
         # Execute steps until done or max_steps reached
         for i in range(max_steps):
-            step = await self.execute_step()
+            step = await self.run_step()
 
             # Check if done
             if step.verification.complete:
@@ -119,10 +121,10 @@ class Agent:
         self.proposer = Proposer(
             self.llm, task, self.step_history, self.tool_registry, self.llm_browser
         )
-        self.executer = Executer(self.tool_registry)
+        self.executer = Executer(self.tool_registry, self.action_delay)
         self.verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
 
-    async def execute_step(self) -> Step:
+    async def run_step(self) -> Step:
         """
         Execute one step of the current task.
 
@@ -137,6 +139,8 @@ class Agent:
             >>> step = await agent.execute_step()
             >>> print(step.verification.complete)
         """
+        from ..utils import wait
+
         # Check that task is set
         if self.current_task is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
@@ -147,10 +151,14 @@ class Agent:
         # 2. Execute actions
         exec_results = await self.executer.execute(actions)
 
-        # 3. Verify if task complete
+        # 3. Wait for page to stabilize before verification
+        if actions:  # Only wait if actions were executed
+            await wait(self.action_delay)
+
+        # 4. Verify if task complete
         verify_result = await self.verifier.verify(actions, exec_results)
 
-        # 4. Create step and add to history
+        # 5. Create step and add to history
         step = Step(
             proposals=actions, executions=exec_results, verification=verify_result
         )
@@ -175,19 +183,6 @@ class Agent:
         self.verifier = None
 
     # === Tab Management Methods ===
-
-    async def _ensure_tab(self) -> Page:
-        """
-        Ensure we have a current tab, creating one if needed.
-
-        Returns:
-            Current Page instance
-        """
-        if self.llm_browser.current_page_id is None:
-            # Auto-create first tab
-            await self.open_tab()
-
-        return self.llm_browser.get_current_page()
 
     async def open_tab(self, url: Optional[str] = None) -> Page:
         """
@@ -255,14 +250,15 @@ class Agent:
         """
         Navigate to URL (low-level imperative mode).
 
+        Auto-creates a page if none exists.
+
         Args:
             url: URL to navigate to
 
         Example:
             >>> await agent.navigate("https://google.com")
         """
-        page = await self._ensure_tab()
-        await page.navigate(url)
+        await self.llm_browser.navigate(url)
 
     async def select(self, description: str):
         """
@@ -274,11 +270,13 @@ class Agent:
         Returns:
             Browser Element with .click(), .fill() methods
 
+        Raises:
+            RuntimeError: If no page is opened
+
         Example:
             >>> elem = await agent.select("the search button")
             >>> await elem.click()
         """
-        await self._ensure_tab()
         return await self.llm_browser.select(description)
 
     async def wait_for_idle(self, timeout: int = 30000):
@@ -292,13 +290,14 @@ class Agent:
             timeout: Maximum time to wait in milliseconds (default: 30000ms = 30s)
 
         Raises:
+            RuntimeError: If no page is opened
             TimeoutError: If page doesn't become idle within timeout
 
         Example:
             >>> await agent.navigate("https://example.com")
             >>> await agent.wait_for_idle()  # Wait for page to fully load
         """
-        page = await self._ensure_tab()
+        page = self.llm_browser.get_current_page()
         await page.wait_for_idle(timeout=timeout)
 
     async def wait(self, seconds: float):
@@ -317,6 +316,37 @@ class Agent:
         import asyncio
 
         await asyncio.sleep(seconds)
+
+    async def screenshot(
+        self,
+        path: Optional[str] = None,
+        full_page: bool = False
+    ) -> bytes:
+        """
+        Take a screenshot of the current page.
+
+        Args:
+            path: Optional file path to save screenshot. If None, doesn't save to disk.
+            full_page: Whether to screenshot the full scrollable page (default: False)
+
+        Returns:
+            Screenshot as bytes (PNG format)
+
+        Raises:
+            RuntimeError: If no page is opened
+
+        Example:
+            >>> # Save screenshot to file
+            >>> await agent.screenshot("step1.png")
+            >>>
+            >>> # Get screenshot bytes
+            >>> screenshot_bytes = await agent.screenshot()
+            >>>
+            >>> # Full page screenshot
+            >>> await agent.screenshot("fullpage.png", full_page=True)
+        """
+        page = self.llm_browser.get_current_page()
+        return await page.screenshot(path=path, full_page=full_page)
 
     # === Cleanup ===
 

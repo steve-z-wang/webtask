@@ -29,9 +29,15 @@ proposer_system:
     You can propose multiple actions to be executed sequentially in a single step.
     For example, you can fill a form field and then click a button.
 
+    If the task cannot be completed (e.g., product not found, impossible to proceed),
+    return an empty actions array: {"actions": []}
+    The verifier will then determine if the task is complete or failed.
+
     Important:
     - Use element IDs from the page context (e.g., "button-0", "input-1")
-    - Only use tools that are available
+    - Only use tools that are available in the tools list
+    - Do NOT use tools that are not in the available tools list
     - Provide clear reasoning for each action
     - Actions will be executed in the order specified
     - Each action in the list should be independent and not rely on side effects from previous actions in the same list
+    - If you cannot proceed or the required element is not on the page, return empty actions array
