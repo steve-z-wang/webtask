@@ -89,7 +89,8 @@ webtask/
 **Main user interface** - Provides dual interaction modes:
 - **High-level**: `execute(task)` - Autonomous agent loop (propose → execute → verify)
 - **Low-level**: `navigate()`, `select()`, `wait()`, `wait_for_idle()` - Direct control with natural language
-- **Multi-tab support**: `new_tab()`, `switch_tab()`, `close_tab()` - Manage multiple pages
+- **Multi-page support**: `open_page()`, `close_page()`, `set_page()`, `get_pages()` - Manage multiple pages
+- **Flexible initialization**: Support both session-based (multi-page) and page-based (single-page) modes
 
 ### LLMBrowser
 **Bridge between LLM and browser** - Handles element ID abstraction:

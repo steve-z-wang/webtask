@@ -14,19 +14,44 @@ class Agent:
     """
     Main agent interface for web automation.
 
-    Works with a Session to manage multiple tabs/pages.
+    Supports two modes:
+    - Multi-page mode: Works with a Session to manage multiple pages
+    - Single-page mode: Works with an injected Page (no session required)
+
     Provides high-level execute() for autonomous task completion
     and low-level methods for imperative control.
     """
 
-    def __init__(self, llm: LLM, session: Session, action_delay: float = 1.0):
+    def __init__(
+        self,
+        llm: LLM,
+        session: Optional[Session] = None,
+        page: Optional[Page] = None,
+        action_delay: float = 1.0
+    ):
         """
         Initialize agent.
 
         Args:
             llm: LLM instance for reasoning
-            session: Session instance (manages multiple tabs/pages)
+            session: Optional Session instance for multi-page support.
+                     If None, agent works in single-page mode.
+            page: Optional Page instance to use as initial page.
+                  Can be set later with set_page().
             action_delay: Delay in seconds after actions like click/navigate (default: 1.0)
+
+        Examples:
+            >>> # Multi-page mode with session
+            >>> agent = Agent(llm, session=my_session)
+            >>> await agent.open_page("https://google.com")
+            >>>
+            >>> # Single-page mode with existing page
+            >>> agent = Agent(llm, page=my_page)
+            >>> await agent.execute("click login")
+            >>>
+            >>> # Start empty, configure later
+            >>> agent = Agent(llm)
+            >>> agent.set_page(my_page)
         """
         self.llm = llm
         self.session = session
@@ -34,6 +59,10 @@ class Agent:
 
         # LLMBrowser manages pages internally
         self.llm_browser = LLMBrowser(llm, session)
+
+        # Set initial page if provided
+        if page is not None:
+            self.llm_browser.set_page(page)
 
         # Infrastructure
         self.tool_registry = ToolRegistry()
@@ -182,11 +211,13 @@ class Agent:
         self.executer = None
         self.verifier = None
 
-    # === Tab Management Methods ===
+    # === Page Management Methods ===
 
-    async def open_tab(self, url: Optional[str] = None) -> Page:
+    async def open_page(self, url: Optional[str] = None) -> Page:
         """
-        Open a new tab and switch to it.
+        Open a new page and switch to it.
+
+        Requires a session. Raises error if no session available.
 
         Args:
             url: Optional URL to navigate to
@@ -194,54 +225,43 @@ class Agent:
         Returns:
             The new Page instance
 
+        Raises:
+            RuntimeError: If no session is available
+
         Example:
-            >>> page2 = await agent.open_tab("https://github.com")
+            >>> page2 = await agent.open_page("https://github.com")
         """
         return await self.llm_browser.create_page(url)
 
-    async def switch_tab(self, page: Page) -> None:
+    async def close_page(self, page: Optional[Page] = None) -> None:
         """
-        Switch to a different tab.
+        Close a page (closes current page if page=None).
 
         Args:
-            page: Page to switch to
-
-        Raises:
-            ValueError: If page is not managed by this agent
+            page: Page to close (defaults to current page)
 
         Example:
-            >>> await agent.switch_tab(page1)
-        """
-        self.llm_browser.switch_page(page)
-
-    async def close_tab(self, page: Optional[Page] = None) -> None:
-        """
-        Close a tab (closes current tab if page=None).
-
-        Args:
-            page: Page to close (defaults to current tab)
-
-        Raises:
-            ValueError: If page is not managed by this agent
-
-        Example:
-            >>> await agent.close_tab(page2)
-            >>> await agent.close_tab()  # Close current tab
+            >>> await agent.close_page(page2)
+            >>> await agent.close_page()  # Close current page
         """
         await self.llm_browser.close_page(page)
 
-    def get_tabs(self) -> List[Page]:
+    def get_pages(self) -> List[Page]:
         """
-        Get all open tabs.
+        Get all open pages.
 
         Returns:
             List of Page instances
+
+        Example:
+            >>> pages = agent.get_pages()
+            >>> print(f"Open pages: {len(pages)}")
         """
         return list(self.llm_browser._pages.values())
 
     @property
-    def tab_count(self) -> int:
-        """Number of open tabs."""
+    def page_count(self) -> int:
+        """Number of open pages."""
         return len(self.llm_browser._pages)
 
     # === Low-Level Imperative Mode ===
@@ -297,7 +317,7 @@ class Agent:
             >>> await agent.navigate("https://example.com")
             >>> await agent.wait_for_idle()  # Wait for page to fully load
         """
-        page = self.llm_browser.get_current_page()
+        page = self.llm_browser._require_page()
         await page.wait_for_idle(timeout=timeout)
 
     async def wait(self, seconds: float):
@@ -345,8 +365,53 @@ class Agent:
             >>> # Full page screenshot
             >>> await agent.screenshot("fullpage.png", full_page=True)
         """
-        page = self.llm_browser.get_current_page()
+        page = self.llm_browser._require_page()
         return await page.screenshot(path=path, full_page=full_page)
+
+    # === Configuration Methods ===
+
+    def set_page(self, page: Page) -> None:
+        """
+        Set/switch/inject a page as the current page.
+
+        This method handles multiple use cases:
+        - Inject an external page into the agent
+        - Switch focus to an existing managed page
+        - Set a new page to work with
+
+        Args:
+            page: Page instance to set as current
+
+        Examples:
+            >>> # Inject existing Playwright page
+            >>> from webtask.integrations.browser.playwright import PlaywrightPage
+            >>> wrapped_page = PlaywrightPage(my_playwright_page)
+            >>> agent.set_page(wrapped_page)
+            >>>
+            >>> # Switch between managed pages
+            >>> page1 = await agent.open_page("https://google.com")
+            >>> page2 = await agent.open_page("https://github.com")
+            >>> agent.set_page(page1)  # Switch back to google
+        """
+        self.llm_browser.set_page(page)
+
+    def set_session(self, session: Session) -> None:
+        """
+        Set or update the session.
+
+        Enables multi-page operations after initialization.
+
+        Args:
+            session: Session instance for creating pages
+
+        Example:
+            >>> # Start with single page, upgrade to multi-page
+            >>> agent = Agent(llm, page=my_page)
+            >>> agent.set_session(my_session)
+            >>> await agent.open_page("https://github.com")  # Now works!
+        """
+        self.session = session
+        self.llm_browser.set_session(session)
 
     # === Cleanup ===
 
@@ -354,11 +419,12 @@ class Agent:
         """
         Close the agent and cleanup all resources.
 
-        Closes all tabs and the session.
+        Closes all pages and the session (if available).
         """
         # Close all pages via LLMBrowser
         for page in list(self.llm_browser._pages.values()):
             await self.llm_browser.close_page(page)
 
-        # Close session
-        await self.session.close()
+        # Close session if available
+        if self.session is not None:
+            await self.session.close()

@@ -15,13 +15,14 @@ class LLMBrowser:
     Manages multiple pages internally and provides context with element IDs.
     """
 
-    def __init__(self, llm: LLM, session: Session):
+    def __init__(self, llm: LLM, session: Optional[Session] = None):
         """
-        Initialize with LLM and Session.
+        Initialize with LLM and optional Session.
 
         Args:
             llm: LLM instance for natural language selection
-            session: Session instance for creating pages
+            session: Optional Session instance for creating pages.
+                     If None, use set_session() or set_page() to configure.
         """
         self.llm = llm
         self.session = session
@@ -30,9 +31,11 @@ class LLMBrowser:
         self.current_page_id: Optional[str] = None
         self.element_map: Dict[str, DomNode] = {}
 
-    def get_current_page(self) -> Page:
+    def _require_page(self) -> Page:
         """
-        Get current page.
+        Get current page or raise error.
+
+        Internal method for operations that require a page.
 
         Returns:
             Current Page instance
@@ -41,7 +44,21 @@ class LLMBrowser:
             RuntimeError: If no page is active
         """
         if self.current_page_id is None:
-            raise RuntimeError("No active page. Create a page first.")
+            raise RuntimeError(
+                "No active page. Use set_page() to inject a page, "
+                "or create_page() with a session."
+            )
+        return self._pages[self.current_page_id]
+
+    def get_current_page(self) -> Optional[Page]:
+        """
+        Get current page.
+
+        Returns:
+            Current Page instance or None if no page is active
+        """
+        if self.current_page_id is None:
+            return None
         return self._pages[self.current_page_id]
 
     def _get_page_id(self, page: Page) -> Optional[str]:
@@ -59,16 +76,43 @@ class LLMBrowser:
                 return page_id
         return None
 
+    def set_session(self, session: Session) -> None:
+        """
+        Set or update the session.
+
+        Enables multi-tab operations via create_page().
+
+        Args:
+            session: Session instance for creating pages
+
+        Example:
+            >>> agent = Agent(llm, page=my_page)  # Single page mode
+            >>> agent.llm_browser.set_session(my_session)  # Enable multi-page
+            >>> await agent.open_page("https://google.com")  # Now works!
+        """
+        self.session = session
+
     async def create_page(self, url: Optional[str] = None) -> Page:
         """
         Create new page and switch to it.
+
+        Requires a session. Use set_session() if not provided at init.
 
         Args:
             url: Optional URL to navigate to
 
         Returns:
             Page instance
+
+        Raises:
+            RuntimeError: If no session is available
         """
+        if self.session is None:
+            raise RuntimeError(
+                "Cannot create page: no session available. "
+                "Use set_session() first, or inject a page with set_page()."
+            )
+
         page = await self.session.create_page()
         page_id = f"page-{self._page_counter}"
         self._page_counter += 1
@@ -81,20 +125,36 @@ class LLMBrowser:
 
         return page
 
-    def switch_page(self, page: Page) -> None:
+    def set_page(self, page: Page) -> None:
         """
-        Switch to existing page.
+        Set/inject/switch to a page as the current page.
+
+        Handles multiple use cases:
+        - If page is already managed, switches to it
+        - If page is new, adds it to managed pages and switches to it
 
         Args:
-            page: Page instance to switch to
+            page: Page instance to set as current
 
-        Raises:
-            ValueError: If page is not managed by this LLMBrowser
+        Examples:
+            >>> # Inject external Playwright page
+            >>> from webtask.integrations.browser.playwright import PlaywrightPage
+            >>> wrapped_page = PlaywrightPage(my_playwright_page)
+            >>> llm_browser.set_page(wrapped_page)
+            >>>
+            >>> # Switch between managed pages
+            >>> llm_browser.set_page(page1)
         """
+        # Check if page is already managed
         page_id = self._get_page_id(page)
-        if page_id is None:
-            raise ValueError("Page not managed by LLMBrowser")
 
+        if page_id is None:
+            # New page - add it to managed pages
+            page_id = f"page-{self._page_counter}"
+            self._page_counter += 1
+            self._pages[page_id] = page
+
+        # Switch to this page
         self.current_page_id = page_id
         self.element_map.clear()
 
@@ -141,10 +201,10 @@ class LLMBrowser:
         """
         # Case 1: No page opened yet
         if self.current_page_id is None:
-            return Block("Page:\nERROR: No page opened yet. Please use the navigate tool to navigate to a URL.")
+            return Block("Page:\nERROR: No page opened yet. Use set_page() to inject a page or navigate to a URL.")
 
         # Get raw snapshot from current page
-        page = self.get_current_page()
+        page = self._require_page()
         snapshot = await page.get_snapshot()
         root = snapshot.root
 
@@ -231,16 +291,24 @@ class LLMBrowser:
         """
         Navigate to URL.
 
-        Auto-creates a page if none exists yet.
+        Auto-creates a page if none exists yet and session is available.
 
         Args:
             url: URL to navigate to
+
+        Raises:
+            RuntimeError: If no page exists and no session to create one
         """
-        # Auto-create page if none exists
+        # Auto-create page if none exists (requires session)
         if self.current_page_id is None:
+            if self.session is None:
+                raise RuntimeError(
+                    "Cannot navigate: no page available and no session to create one. "
+                    "Use set_page() to inject a page, or set_session() to enable page creation."
+                )
             await self.create_page()
 
-        page = self.get_current_page()
+        page = self._require_page()
         await page.navigate(url)
 
     async def click(self, element_id: str) -> None:
@@ -252,8 +320,9 @@ class LLMBrowser:
 
         Raises:
             KeyError: If element ID not found
+            RuntimeError: If no page is active
         """
-        page = self.get_current_page()
+        page = self._require_page()
         selector = self._get_selector(element_id)
         element = await page.select_one(selector)
         await element.click()
@@ -268,8 +337,9 @@ class LLMBrowser:
 
         Raises:
             KeyError: If element ID not found
+            RuntimeError: If no page is active
         """
-        page = self.get_current_page()
+        page = self._require_page()
         selector = self._get_selector(element_id)
         element = await page.select_one(selector)
         await element.fill(value)
@@ -287,8 +357,9 @@ class LLMBrowser:
 
         Raises:
             KeyError: If element ID not found
+            RuntimeError: If no page is active
         """
-        page = self.get_current_page()
+        page = self._require_page()
         selector = self._get_selector(element_id)
         element = await page.select_one(selector)
         await element.type(text, delay=delay)

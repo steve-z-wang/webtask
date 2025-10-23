@@ -100,7 +100,8 @@
 - [x] Support for new OpenAI models (gpt-4.1, gpt-4.1-mini, gpt-5-nano)
 - [x] Jupyter notebook examples with screenshots
 - [x] Add logging/tracing for debugging (LLM calls, token usage)
-- [x] Support for multi-tab tasks (new_tab, switch_tab, close_tab)
+- [x] Support for multi-page tasks (open_page, close_page, set_page, get_pages)
+- [x] Flexible page/session initialization (support existing browsers)
 - [x] Add wait methods (wait, wait_for_idle)
 - [x] Webtask manager for browser lifecycle management
 - [x] XPath-based element selection using original DOM
