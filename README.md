@@ -1,8 +1,6 @@
 # webtask
 
-Tell it what to do. Watch it work.
-
-A web agent that runs browser tasks from plain English descriptions.
+LLM-powered web automation library with autonomous agents and natural language selectors.
 
 ---
 
@@ -125,11 +123,9 @@ Evaluate webtask on standard web agent benchmarks:
 ## Install
 
 ```bash
-pip install webtask[playwright]
+pip install pywebtask
 playwright install chromium
 ```
-
-(Not actually published yet, clone the repo)
 
 ---
 
