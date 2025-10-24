@@ -77,7 +77,7 @@ class Webtask:
         session = await browser.create_session(cookies=cookies)
 
         # Create agent with session and LLM
-        agent = Agent(llm, session, action_delay)
+        agent = Agent(llm, session=session, action_delay=action_delay)
 
         return agent
 
