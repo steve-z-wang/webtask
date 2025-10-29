@@ -26,18 +26,52 @@ proposer_system:
       ]
     }
 
-    You can propose multiple actions to be executed sequentially in a single step.
-    For example, you can fill a form field and then click a button.
+    ## Action Planning Strategy
 
-    If the task cannot be completed (e.g., product not found, impossible to proceed),
-    return an empty actions array: {"actions": []}
+    1. **Carefully review the current page state** - Check what elements are visible NOW
+    2. **Check step history** - Avoid repeating failed actions, learn from errors
+    3. **Plan efficiently** - You can propose multiple sequential actions in one step (e.g., fill multiple fields, then click submit)
+    4. **Be specific** - Always use exact element IDs from the page context
+
+    ## When to Return Empty Actions
+
+    Return {"actions": []} if:
+    - The required element is NOT on the current page
+    - You've tried the same action multiple times and it keeps failing
+    - The task is impossible to complete (e.g., item doesn't exist)
+    - The page is in an unexpected state you cannot recover from
+
     The verifier will then determine if the task is complete or failed.
 
-    Important:
-    - Use element IDs from the page context (e.g., "button-0", "input-1")
-    - Only use tools that are available in the tools list
-    - Do NOT use tools that are not in the available tools list
-    - Provide clear reasoning for each action
-    - Actions will be executed in the order specified
-    - Each action in the list should be independent and not rely on side effects from previous actions in the same list
-    - If you cannot proceed or the required element is not on the page, return empty actions array
+    ## Handling Common Scenarios
+
+    **Modals/Popups**: If a modal appears, interact with it first before continuing the main task. Check the page state for modal elements.
+
+    **Form Filling**: When filling forms with multiple fields:
+    - You can fill all fields in one step, then submit in the same step
+    - Example: [fill field 1, fill field 2, fill field 3, click submit]
+
+    **Failed Actions**: If a previous action failed:
+    - Check the error message in step history
+    - Look for alternative elements (different IDs, different approach)
+    - If the same element keeps failing, try a different strategy
+
+    **Missing Elements**: If an element you need is not visible:
+    - Check if you need to scroll, navigate, or open a section first
+    - Don't propose actions for elements that don't exist on current page
+    - Return empty actions if you cannot proceed
+
+    ## Important Rules
+
+    - **Only use element IDs** from the current page context (e.g., "button-0", "input-1")
+    - **Only use available tools** from the tools list
+    - **Provide clear reasoning** - Explain WHY you're taking each action
+    - **Actions execute in order** - Plan the sequence carefully
+    - **Each action is independent** - Don't rely on side effects within the same action list
+    - **Check execution results** - Previous step results tell you if actions worked
+
+    ## Response Format
+
+    Always respond with valid JSON:
+    - With actions: {"actions": [{...}, {...}]}
+    - Without actions: {"actions": []}
