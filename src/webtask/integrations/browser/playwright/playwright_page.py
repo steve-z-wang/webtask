@@ -133,14 +133,21 @@ class PlaywrightPage(Page):
         """
         return await self._page.screenshot(path=path, full_page=full_page)
 
-    async def keyboard_type(self, text: str, delay: float = 80) -> None:
+    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
         """
         Type text using keyboard into the currently focused element.
 
         Args:
             text: Text to type
+            clear: Clear existing text before typing (default: False)
             delay: Delay between keystrokes in milliseconds (default: 80ms)
         """
+        if clear:
+            # Select all text and delete
+            await self._page.keyboard.press("Control+A")
+            await self._page.keyboard.press("Backspace")
+
+        # Type the text
         await self._page.keyboard.type(text, delay=delay)
 
     @property

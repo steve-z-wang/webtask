@@ -76,15 +76,14 @@ class PromptLibrary:
     def _load_prompts(self) -> None:
         """Load all prompts from YAML files in prompts directory."""
         # Find prompts directory relative to this file
-        # src/webtask/prompts/prompt_library.py -> ../../../prompts/
+        # src/webtask/prompts/prompt_library.py -> ../prompts_data/
         current_file = Path(__file__)
-        project_root = current_file.parent.parent.parent.parent
-        prompts_dir = project_root / "prompts"
+        prompts_dir = current_file.parent.parent / "prompts_data"
 
         if not prompts_dir.exists():
             raise RuntimeError(
                 f"Prompts directory not found at {prompts_dir}. "
-                "Please ensure the prompts/ directory exists at project root."
+                "Please ensure the prompts_data/ directory exists in the webtask package."
             )
 
         # Recursively load all .yaml and .yml files

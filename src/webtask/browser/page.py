@@ -113,12 +113,13 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def keyboard_type(self, text: str, delay: float = 80) -> None:
+    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
         """
         Type text using keyboard into the currently focused element.
 
         Args:
             text: Text to type
+            clear: Clear existing text before typing (default: False)
             delay: Delay between keystrokes in milliseconds (default: 80ms)
 
         Example:
@@ -127,6 +128,9 @@ class Page(ABC):
             >>> await element.click()
             >>> # Type into focused element
             >>> await page.keyboard_type("Hello World")
+            >>>
+            >>> # Clear and type
+            >>> await page.keyboard_type("New text", clear=True)
         """
         pass
 

@@ -335,7 +335,7 @@ class LLMBrowser:
         element = await page.select_one(selector)
         await element.click()
 
-    async def keyboard_type(self, text: str, delay: float = 80) -> None:
+    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
         """
         Type text using keyboard into the currently focused element.
 
@@ -344,6 +344,7 @@ class LLMBrowser:
 
         Args:
             text: Text to type
+            clear: Clear existing text before typing (default: False)
             delay: Delay between keystrokes in milliseconds (default: 80ms)
 
         Raises:
@@ -354,9 +355,13 @@ class LLMBrowser:
             >>> await llm_browser.click("input-0")
             >>> # Type into focused element
             >>> await llm_browser.keyboard_type("Hello World")
+            >>>
+            >>> # Clear and type
+            >>> await llm_browser.click("input-1")
+            >>> await llm_browser.keyboard_type("New text", clear=True)
         """
         page = self._require_page()
-        await page.keyboard_type(text, delay=delay)
+        await page.keyboard_type(text, clear=clear, delay=delay)
 
     async def select(self, description: str) -> Element:
         """
