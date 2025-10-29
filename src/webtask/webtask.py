@@ -4,6 +4,7 @@ from typing import Optional
 from .browser import Browser, Session
 from .llm import LLM
 from .agent import Agent
+from .dom.dom_context_config import DomContextConfig
 
 
 class Webtask:
@@ -49,7 +50,13 @@ class Webtask:
 
         return self.browser
 
-    async def create_agent(self, llm: LLM, cookies=None, action_delay: float = 1.0) -> Agent:
+    async def create_agent(
+        self,
+        llm: LLM,
+        cookies=None,
+        action_delay: float = 1.0,
+        dom_context_config: Optional[DomContextConfig] = None,
+    ) -> Agent:
         """
         Create a new agent with a new session.
 
@@ -59,6 +66,7 @@ class Webtask:
             llm: LLM instance for reasoning
             cookies: Optional list of cookies for the session
             action_delay: Minimum delay in seconds between actions (default: 1.0)
+            dom_context_config: Configuration for DOM filtering. If None, uses defaults.
 
         Returns:
             Agent instance ready to use
@@ -69,6 +77,10 @@ class Webtask:
             >>> llm = OpenAILLM.create(model="gpt-4")
             >>> agent = await webtask.create_agent(llm=llm, action_delay=2.0)
             >>> await agent.execute("Search for Python tutorials")
+
+            >>> # With custom DOM config for Poshmark
+            >>> config = DomContextConfig(kept_attributes={"role", "type", "data-test"})
+            >>> agent = await webtask.create_agent(llm=llm, dom_context_config=config)
         """
         # Ensure browser is launched (lazy initialization)
         browser = await self._ensure_browser()
@@ -77,7 +89,12 @@ class Webtask:
         session = await browser.create_session(cookies=cookies)
 
         # Create agent with session and LLM
-        agent = Agent(llm, session=session, action_delay=action_delay)
+        agent = Agent(
+            llm,
+            session=session,
+            action_delay=action_delay,
+            dom_context_config=dom_context_config,
+        )
 
         return agent
 

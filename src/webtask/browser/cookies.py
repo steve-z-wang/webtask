@@ -134,7 +134,7 @@ class Cookies:
         Convert list of cookies to list of dictionaries.
 
         Args:
-            cookies: List of Cookie objects
+            cookies: List of Cookie objects or dictionaries
 
         Returns:
             List of cookie dictionaries
@@ -144,7 +144,16 @@ class Cookies:
             >>> Cookies.to_dict_list(cookies)
             [{'name': 'session', 'value': '123', 'path': '/', 'httpOnly': False, 'secure': False}]
         """
-        return [cookie.to_dict() for cookie in cookies]
+        # Handle both Cookie objects and dictionaries
+        result = []
+        for cookie in cookies:
+            if isinstance(cookie, dict):
+                # Already a dictionary, use as-is
+                result.append(cookie)
+            else:
+                # Cookie object, convert to dict
+                result.append(cookie.to_dict())
+        return result
 
     @staticmethod
     def from_dict_list(data: List[Dict[str, Any]]) -> List[Cookie]:

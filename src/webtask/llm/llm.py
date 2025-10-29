@@ -69,16 +69,11 @@ class LLM(ABC):
         # Check token limits
         total_tokens = self._check_token_limit(context)
 
-        # Log the API call
+        # Log the API call (token count only, not full context to reduce noise)
         self.logger.debug(f"LLM API call - Total tokens: {total_tokens}")
-        self.logger.debug(f"System prompt: {context.system}")
-        self.logger.debug(f"User prompt: {context.user}")
 
         # Make the API call
         response = await self._generate(context.system, context.user)
-
-        # Log the response
-        self.logger.debug(f"LLM response: {response}")
 
         return response
 

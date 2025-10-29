@@ -3,49 +3,24 @@
 from typing import Set
 from ...domnode import DomNode, Text
 
-# Semantic attributes to preserve
-SEMANTIC_ATTRIBUTES: Set[str] = {
-    "role",
-    "aria-label",
-    "aria-labelledby",
-    "aria-describedby",
-    "aria-checked",
-    "aria-selected",
-    "aria-expanded",
-    "aria-hidden",
-    "aria-disabled",
-    "type",
-    "name",
-    "placeholder",
-    "value",
-    "alt",
-    "title",
-    "href",
-    "disabled",
-    "checked",
-    "selected",
-}
 
-
-def filter_attributes(node: DomNode, keep: Set[str] = None) -> DomNode:
+def filter_attributes(node: DomNode, keep: Set[str]) -> DomNode:
     """
     Keep only semantic attributes, remove all others.
 
     Args:
         node: DomNode to filter
-        keep: Set of attributes to keep (defaults to SEMANTIC_ATTRIBUTES)
+        keep: Set of attributes to keep
 
     Returns:
         New DomNode with only semantic attributes
 
     Example:
         >>> node = DomNode(tag='div', attrib={'class': 'foo', 'role': 'button'})
-        >>> filtered = filter_attributes(node)
+        >>> filtered = filter_attributes(node, keep={'role', 'type'})
         >>> filtered.attrib
         {'role': 'button'}
     """
-    if keep is None:
-        keep = SEMANTIC_ATTRIBUTES
 
     # Create new node with copied data (since we'll modify attributes)
     new_node = node.deepcopy()

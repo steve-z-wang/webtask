@@ -67,11 +67,9 @@ class PlaywrightPage(Page):
         """
         from .playwright_element import PlaywrightElement
 
-        # Handle XPath objects
         if isinstance(selector, XPath):
             elements = await self._page.locator(selector.for_playwright()).all()
         else:
-            # CSS selector string
             elements = await self._page.query_selector_all(selector)
 
         return [PlaywrightElement(el) for el in elements]
@@ -89,24 +87,15 @@ class PlaywrightPage(Page):
         Raises:
             ValueError: If no elements match or multiple elements match
         """
-        from .playwright_element import PlaywrightElement
-
-        # Handle XPath objects and XPath strings
-        if isinstance(selector, XPath):
-            elements = await self._page.locator(selector.for_playwright()).all()
-        elif isinstance(selector, str) and selector.startswith('/'):
-            # Use XPath string
-            elements = await self._page.locator(f"xpath={selector}").all()
-        else:
-            # Use CSS selector
-            elements = await self._page.query_selector_all(selector)
+        # Use the existing select() method
+        elements = await self.select(selector)
 
         if len(elements) == 0:
             raise ValueError(f"No elements found matching selector: {selector}")
         elif len(elements) > 1:
             raise ValueError(f"Multiple elements ({len(elements)}) found matching selector: {selector}")
 
-        return PlaywrightElement(elements[0])
+        return elements[0]
 
     async def wait_for_idle(self, timeout: int = 30000):
         """

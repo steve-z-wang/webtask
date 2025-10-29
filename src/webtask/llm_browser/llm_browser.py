@@ -5,6 +5,7 @@ from ..browser import Page, Element, Session
 from ..dom.filters import apply_visibility_filters, apply_semantic_filters
 from ..dom.utils import add_node_reference
 from ..dom.domnode import DomNode
+from ..dom.dom_context_config import DomContextConfig
 from ..llm import Block, LLM
 
 
@@ -15,7 +16,12 @@ class LLMBrowser:
     Manages multiple pages internally and provides context with element IDs.
     """
 
-    def __init__(self, llm: LLM, session: Optional[Session] = None):
+    def __init__(
+        self,
+        llm: LLM,
+        session: Optional[Session] = None,
+        dom_context_config: Optional[DomContextConfig] = None,
+    ):
         """
         Initialize with LLM and optional Session.
 
@@ -23,9 +29,11 @@ class LLMBrowser:
             llm: LLM instance for natural language selection
             session: Optional Session instance for creating pages.
                      If None, use set_session() or set_page() to configure.
+            dom_context_config: Configuration for DOM filtering. If None, uses defaults.
         """
         self.llm = llm
         self.session = session
+        self.dom_context_config = dom_context_config or DomContextConfig()
         self._pages: Dict[str, Page] = {}  # page_id -> Page
         self._page_counter = 0
         self.current_page_id: Optional[str] = None
@@ -211,9 +219,9 @@ class LLMBrowser:
         # Add node references (before filtering)
         root = add_node_reference(root)
 
-        # Apply filters
-        root = apply_visibility_filters(root)
-        root = apply_semantic_filters(root)
+        # Apply filters with config
+        root = apply_visibility_filters(root, self.dom_context_config)
+        root = apply_semantic_filters(root, self.dom_context_config)
 
         # Handle case where filtering removes everything
         if root is None:

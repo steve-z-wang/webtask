@@ -1,9 +1,11 @@
 """Agent - main interface for web automation."""
 
+import logging
 from typing import List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
+from ..dom.dom_context_config import DomContextConfig
 from .tool import ToolRegistry
 from .step_history import StepHistory
 from .step import Step, TaskResult
@@ -27,7 +29,8 @@ class Agent:
         llm: LLM,
         session: Optional[Session] = None,
         page: Optional[Page] = None,
-        action_delay: float = 1.0
+        action_delay: float = 1.0,
+        dom_context_config: Optional[DomContextConfig] = None,
     ):
         """
         Initialize agent.
@@ -39,6 +42,7 @@ class Agent:
             page: Optional Page instance to use as initial page.
                   Can be set later with set_page().
             action_delay: Delay in seconds after actions like click/navigate (default: 1.0)
+            dom_context_config: Configuration for DOM filtering. If None, uses defaults.
 
         Examples:
             >>> # Multi-page mode with session
@@ -52,13 +56,19 @@ class Agent:
             >>> # Start empty, configure later
             >>> agent = Agent(llm)
             >>> agent.set_page(my_page)
+            >>>
+            >>> # With custom DOM filtering for Poshmark
+            >>> config = DomContextConfig.for_platform("poshmark")
+            >>> agent = Agent(llm, page=my_page, dom_context_config=config)
         """
         self.llm = llm
         self.session = session
         self.action_delay = action_delay
+        self.dom_context_config = dom_context_config
+        self.logger = logging.getLogger(__name__)
 
         # LLMBrowser manages pages internally
-        self.llm_browser = LLMBrowser(llm, session)
+        self.llm_browser = LLMBrowser(llm, session, dom_context_config)
 
         # Set initial page if provided
         if page is not None:
@@ -174,24 +184,42 @@ class Agent:
         if self.current_task is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
+        step_num = len(self.step_history.get_all()) + 1
+        self.logger.debug(f"=== Starting Step {step_num} ===")
+
         # 1. Propose next actions
+        self.logger.debug("Phase 1: Proposing actions...")
         actions = await self.proposer.propose()
+        self.logger.debug(f"Proposed {len(actions)} action(s)")
+        for i, action in enumerate(actions, 1):
+            self.logger.debug(f"  Action {i}: {action.tool_name}")
+            self.logger.debug(f"    Reason: {action.reason}")
+            self.logger.debug(f"    Parameters: {action.parameters}")
 
         # 2. Execute actions
+        self.logger.debug("Phase 2: Executing actions...")
         exec_results = await self.executer.execute(actions)
+        success_count = sum(1 for r in exec_results if r.success)
+        self.logger.debug(f"Execution complete: {success_count}/{len(exec_results)} successful")
 
         # 3. Wait for page to stabilize before verification
         if actions:  # Only wait if actions were executed
+            self.logger.debug(f"Phase 3: Waiting {self.action_delay}s for page to stabilize...")
             await wait(self.action_delay)
 
         # 4. Verify if task complete
+        self.logger.debug("Phase 4: Verifying task completion...")
         verify_result = await self.verifier.verify(actions, exec_results)
+        self.logger.debug(f"Verification result: {'Complete' if verify_result.complete else 'Incomplete'}")
+        self.logger.debug(f"Verification message: {verify_result.message}")
 
         # 5. Create step and add to history
         step = Step(
             proposals=actions, executions=exec_results, verification=verify_result
         )
         self.step_history.add_step(step)
+
+        self.logger.debug(f"=== Step {step_num} Complete ===\n")
 
         return step
 

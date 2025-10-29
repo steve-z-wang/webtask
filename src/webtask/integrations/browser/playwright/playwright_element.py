@@ -22,7 +22,7 @@ class PlaywrightElement(Element):
 
     async def click(self):
         """Click the element."""
-        await self._locator.click()
+        await self._locator.click(timeout=100)
 
     async def fill(self, text: str):
         """
@@ -31,7 +31,7 @@ class PlaywrightElement(Element):
         Args:
             text: Text to fill
         """
-        await self._locator.fill(text)
+        await self._locator.fill(text, timeout=100)
 
     async def type(self, text: str, delay: float = None):
         """
@@ -41,7 +41,7 @@ class PlaywrightElement(Element):
             text: Text to type
             delay: Delay between keystrokes in milliseconds (None = instant)
         """
-        await self._locator.type(text, delay=delay)
+        await self._locator.type(text, delay=delay, timeout=100)
 
     async def upload_file(self, file_path: str):
         """
@@ -50,4 +50,4 @@ class PlaywrightElement(Element):
         Args:
             file_path: Path to the file to upload
         """
-        await self._locator.set_input_files(file_path)
+        await self._locator.set_input_files(file_path, timeout=100)

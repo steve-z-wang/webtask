@@ -14,6 +14,7 @@ from .dom import (
     apply_semantic_filters,
     DomSnapshot,
     serialize_to_markdown,
+    DomContextConfig,
 )
 
 from .llm import (
@@ -49,6 +50,9 @@ __all__ = [
     # Snapshot
     'DomSnapshot',
     'serialize_to_markdown',
+
+    # Config
+    'DomContextConfig',
 
     # LLM
     'Context',
