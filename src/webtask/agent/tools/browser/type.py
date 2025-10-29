@@ -1,4 +1,4 @@
-"""Type tool for typing text into form elements."""
+"""Type tool for typing text using keyboard (no selector needed)."""
 
 from typing import Type
 from pydantic import Field
@@ -9,16 +9,25 @@ from ....llm_browser import LLMBrowser
 class TypeParams(ToolParams):
     """Parameters for type tool."""
 
-    element_id: str = Field(description="ID of the element to type into")
-    text: str = Field(description="Text to type into the element")
+    text: str = Field(description="Text to type into the currently focused element")
 
 
 class TypeTool(Tool[TypeParams]):
     """
-    Tool for typing text into a form element character by character.
+    Tool for typing text into the currently focused element.
 
-    Types into the element identified by the given ID with realistic keystroke delays.
-    Uses 80ms delay between keystrokes for human-like behavior.
+    Types text using keyboard without needing to select an element.
+    The element must be focused first (usually by clicking it).
+
+    Workflow:
+    1. Click element to focus it
+    2. Type text into the focused element
+
+    Example:
+        # Click input field first
+        click(element_id="input-1")
+        # Then type into it
+        type(text="Hello World")
     """
 
     def __init__(self, llm_browser: LLMBrowser):
@@ -36,7 +45,7 @@ class TypeTool(Tool[TypeParams]):
 
     @property
     def description(self) -> str:
-        return "Type text into an element character by character with realistic delays"
+        return "Type text into the currently focused element using keyboard (must click element first to focus)"
 
     @property
     def params_class(self) -> Type[TypeParams]:
@@ -44,12 +53,12 @@ class TypeTool(Tool[TypeParams]):
 
     async def execute(self, params: TypeParams):
         """
-        Execute type on element.
+        Execute type using keyboard.
 
         Args:
-            params: TypeParams with element_id and text
+            params: TypeParams with text to type
 
         Returns:
             None
         """
-        await self.llm_browser.type(params.element_id, params.text)
+        await self.llm_browser.keyboard_type(params.text)

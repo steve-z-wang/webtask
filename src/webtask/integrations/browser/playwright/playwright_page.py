@@ -133,6 +133,16 @@ class PlaywrightPage(Page):
         """
         return await self._page.screenshot(path=path, full_page=full_page)
 
+    async def keyboard_type(self, text: str, delay: float = 80) -> None:
+        """
+        Type text using keyboard into the currently focused element.
+
+        Args:
+            text: Text to type
+            delay: Delay between keystrokes in milliseconds (default: 80ms)
+        """
+        await self._page.keyboard.type(text, delay=delay)
+
     @property
     def url(self) -> str:
         """

@@ -335,42 +335,28 @@ class LLMBrowser:
         element = await page.select_one(selector)
         await element.click()
 
-    async def fill(self, element_id: str, value: str) -> None:
+    async def keyboard_type(self, text: str, delay: float = 80) -> None:
         """
-        Fill element by ID with value.
+        Type text using keyboard into the currently focused element.
+
+        Does not require selecting an element. The element must be focused first
+        (usually by clicking it).
 
         Args:
-            element_id: Element ID from context (e.g., 'input-0')
-            value: Value to fill
-
-        Raises:
-            KeyError: If element ID not found
-            RuntimeError: If no page is active
-        """
-        page = self._require_page()
-        selector = self._get_selector(element_id)
-        element = await page.select_one(selector)
-        await element.fill(value)
-
-    async def type(self, element_id: str, text: str, delay: float = 80) -> None:
-        """
-        Type text into element by ID character by character.
-
-        Simulates realistic keyboard input with delays between keystrokes.
-
-        Args:
-            element_id: Element ID from context (e.g., 'input-0')
             text: Text to type
             delay: Delay between keystrokes in milliseconds (default: 80ms)
 
         Raises:
-            KeyError: If element ID not found
             RuntimeError: If no page is active
+
+        Example:
+            >>> # Click to focus input
+            >>> await llm_browser.click("input-0")
+            >>> # Type into focused element
+            >>> await llm_browser.keyboard_type("Hello World")
         """
         page = self._require_page()
-        selector = self._get_selector(element_id)
-        element = await page.select_one(selector)
-        await element.type(text, delay=delay)
+        await page.keyboard_type(text, delay=delay)
 
     async def select(self, description: str) -> Element:
         """

@@ -89,7 +89,7 @@ class Agent:
 
     def _register_tools(self) -> None:
         """Register available tools in the registry."""
-        from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
+        from .tools.browser import NavigateTool, ClickTool, TypeTool
 
         # Clear existing tools (keeps same registry instance)
         self.tool_registry.clear()
@@ -97,7 +97,6 @@ class Agent:
         # Re-register tools with current LLMBrowser
         self.tool_registry.register(NavigateTool(self.llm_browser))
         self.tool_registry.register(ClickTool(self.llm_browser))
-        self.tool_registry.register(FillTool(self.llm_browser))
         self.tool_registry.register(TypeTool(self.llm_browser))
 
     # === High-Level Autonomous Mode ===

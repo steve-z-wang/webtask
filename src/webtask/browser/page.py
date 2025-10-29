@@ -112,6 +112,24 @@ class Page(ABC):
         """
         pass
 
+    @abstractmethod
+    async def keyboard_type(self, text: str, delay: float = 80) -> None:
+        """
+        Type text using keyboard into the currently focused element.
+
+        Args:
+            text: Text to type
+            delay: Delay between keystrokes in milliseconds (default: 80ms)
+
+        Example:
+            >>> # Click to focus element first
+            >>> element = await page.select_one("#input")
+            >>> await element.click()
+            >>> # Type into focused element
+            >>> await page.keyboard_type("Hello World")
+        """
+        pass
+
     @property
     @abstractmethod
     def url(self) -> str:
