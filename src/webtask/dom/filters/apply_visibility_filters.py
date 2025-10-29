@@ -3,7 +3,7 @@
 from typing import Optional
 from ..domnode import DomNode
 from ..dom_context_config import DomContextConfig
-from .visibility import filter_non_visible_tags, filter_css_hidden, filter_zero_dimensions
+from .visibility import filter_non_visible_tags, filter_css_hidden, filter_no_layout, filter_zero_dimensions
 
 
 def apply_visibility_filters(
@@ -15,6 +15,7 @@ def apply_visibility_filters(
     Removes:
     - Non-visible tags (script, style, head, meta, etc.)
     - CSS-hidden elements (display:none, visibility:hidden, opacity:0)
+    - Elements not in layout tree (no styles, no bounds from CDP)
     - Zero-dimension elements (except positioned popups)
 
     Args:
@@ -44,6 +45,9 @@ def apply_visibility_filters(
 
     if config.filter_css_hidden and result is not None:
         result = filter_css_hidden(result)
+
+    if config.filter_no_layout and result is not None:
+        result = filter_no_layout(result)
 
     if config.filter_zero_dimensions and result is not None:
         result = filter_zero_dimensions(result)

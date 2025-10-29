@@ -3,9 +3,11 @@
 from .non_visible_tags import filter_non_visible_tags
 from .css_hidden import filter_css_hidden
 from .zero_dimensions import filter_zero_dimensions
+from .no_layout import filter_no_layout
 
 __all__ = [
     'filter_non_visible_tags',
     'filter_css_hidden',
     'filter_zero_dimensions',
+    'filter_no_layout',
 ]

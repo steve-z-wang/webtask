@@ -46,6 +46,9 @@ class DomContextConfig:
     filter_css_hidden: bool = True
     """Remove elements with display:none, visibility:hidden, or opacity:0."""
 
+    filter_no_layout: bool = True
+    """Remove elements not in layout tree (no styles, no bounds). Catches display:none that CSS filter misses."""
+
     filter_zero_dimensions: bool = True
     """Remove elements with zero width or height (except positioned popups)."""
 

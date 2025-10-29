@@ -67,13 +67,16 @@ def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
 
         styles = {}
         if i < len(layout_styles):
-            style_pairs = layout_styles[i]
-            for j in range(0, len(style_pairs), 2):
-                if j + 1 < len(style_pairs):
-                    name = get_string(style_pairs[j])
-                    value = get_string(style_pairs[j + 1])
-                    if name:
-                        styles[name] = value
+            style_values = layout_styles[i]
+            # CDP returns computed styles in the same order as requested
+            # See playwright_page.py: computedStyles: ['display', 'visibility', 'opacity']
+            requested_properties = ['display', 'visibility', 'opacity']
+            for j, value_idx in enumerate(style_values):
+                if j < len(requested_properties):
+                    prop_name = requested_properties[j]
+                    prop_value = get_string(value_idx)
+                    if prop_value:  # Only add non-empty values
+                        styles[prop_name] = prop_value
 
         layout_map[node_idx] = (bounds, styles)
 
