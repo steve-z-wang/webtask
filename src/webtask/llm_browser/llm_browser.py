@@ -1,37 +1,34 @@
-"""LLMBrowser - bridges LLM text interface with browser operations."""
+"""LLMBrowser - bridges text interface with browser operations."""
 
 from typing import Dict, Optional
-from ..browser import Page, Element, Session
-from ..dom.filters import apply_visibility_filters, apply_semantic_filters
-from ..dom.utils import add_node_reference
+from ..browser import Page, Session
 from ..dom.domnode import DomNode
 from ..dom.dom_context_config import DomContextConfig
-from ..llm import Block, LLM
+from ..llm import Block
+from .web_context_builder import WebContextBuilder
 
 
 class LLMBrowser:
     """
-    Bridges LLM text interface with browser operations.
+    Bridges text interface with browser operations.
 
     Manages multiple pages internally and provides context with element IDs.
+    Does NOT depend on LLM - pure page management and context building.
     """
 
     def __init__(
         self,
-        llm: LLM,
         session: Optional[Session] = None,
         dom_context_config: Optional[DomContextConfig] = None,
     ):
         """
-        Initialize with LLM and optional Session.
+        Initialize with optional Session.
 
         Args:
-            llm: LLM instance for natural language selection
             session: Optional Session instance for creating pages.
                      If None, use set_session() or set_page() to configure.
             dom_context_config: Configuration for DOM filtering. If None, uses defaults.
         """
-        self.llm = llm
         self.session = session
         self.dom_context_config = dom_context_config or DomContextConfig()
         self._pages: Dict[str, Page] = {}  # page_id -> Page
@@ -200,78 +197,45 @@ class LLMBrowser:
                 self.current_page_id = None
                 self.element_map.clear()
 
+    async def build_context(self) -> Block:
+        """
+        Build formatted page context with element IDs for LLM.
+
+        Returns:
+            Block with formatted DOM and updates self.element_map
+
+        Raises:
+            RuntimeError: If no page is active
+        """
+        # Case 1: No page opened yet
+        if self.current_page_id is None:
+            self.element_map = {}
+            return Block("Page:\nERROR: No page opened yet. Use set_page() to inject a page or navigate to a URL.")
+
+        # Use WebContextBuilder to build context
+        page = self._require_page()
+        context_str, element_map = await WebContextBuilder.build_context(
+            page=page,
+            dom_context_config=self.dom_context_config
+        )
+
+        # Update element map
+        self.element_map = element_map
+
+        # Wrap in Block and return
+        return Block(context_str)
+
     async def to_context_block(self) -> Block:
         """
         Get formatted page context with element IDs for LLM.
 
+        DEPRECATED: Use build_context() instead.
+        Kept for backwards compatibility.
+
         Returns:
             Block with formatted DOM
         """
-        # Case 1: No page opened yet
-        if self.current_page_id is None:
-            return Block("Page:\nERROR: No page opened yet. Use set_page() to inject a page or navigate to a URL.")
-
-        # Get raw snapshot from current page
-        page = self._require_page()
-        snapshot = await page.get_snapshot()
-        root = snapshot.root
-
-        # Add node references (before filtering)
-        root = add_node_reference(root)
-
-        # Apply filters with config
-        root = apply_visibility_filters(root, self.dom_context_config)
-        root = apply_semantic_filters(root, self.dom_context_config)
-
-        # Handle case where filtering removes everything
-        if root is None:
-            lines = ["Page:"]
-
-            # Case 2: Page opened but no URL (not navigated)
-            if not snapshot.url or snapshot.url == "about:blank":
-                lines.append("  URL: (no page loaded)")
-                lines.append("")
-                lines.append("ERROR: No URL loaded yet.")
-                lines.append("Please use the navigate tool to navigate to a URL.")
-            # Case 3: Navigated to URL but no elements
-            else:
-                lines.append(f"  URL: {snapshot.url}")
-                lines.append("")
-                lines.append("ERROR: No visible interactive elements found on this page.")
-                lines.append("")
-                lines.append("Possible causes:")
-                lines.append("- The page is still loading")
-                lines.append("- The page has no interactive elements")
-                lines.append("- All elements were filtered out")
-
-            return Block("\n".join(lines))
-
-        # Assign element IDs and build mapping
-        self.element_map = {}
-        tag_counters: Dict[str, int] = {}
-
-        for node in root.traverse():
-            if isinstance(node, DomNode):
-                tag = node.tag
-                count = tag_counters.get(tag, 0)
-                element_id = f"{tag}-{count}"
-
-                node.metadata['element_id'] = element_id
-                self.element_map[element_id] = node
-
-                tag_counters[tag] = count + 1
-
-        # Serialize to markdown
-        from ..dom.serializers import serialize_to_markdown
-        lines = ["Page:"]
-
-        if snapshot.url:
-            lines.append(f"  URL: {snapshot.url}")
-            lines.append("")
-
-        lines.append(serialize_to_markdown(root))
-
-        return Block("\n".join(lines))
+        return await self.build_context()
 
     def _get_selector(self, element_id: str):
         """
@@ -362,24 +326,3 @@ class LLMBrowser:
         """
         page = self._require_page()
         await page.keyboard_type(text, clear=clear, delay=delay)
-
-    async def select(self, description: str) -> Element:
-        """
-        Select element by natural language description.
-
-        Uses LLM to find the element_id that matches the description,
-        then converts it to a selector and returns the browser Element.
-
-        Args:
-            description: Natural language description of element
-
-        Returns:
-            Browser Element instance
-
-        Raises:
-            ValueError: If LLM fails to find a matching element
-        """
-        from .selector import NaturalSelector
-
-        selector = NaturalSelector(self.llm, self)
-        return await selector.select(description)

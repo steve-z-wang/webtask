@@ -67,8 +67,8 @@ class Agent:
         self.dom_context_config = dom_context_config
         self.logger = logging.getLogger(__name__)
 
-        # LLMBrowser manages pages internally
-        self.llm_browser = LLMBrowser(llm, session, dom_context_config)
+        # LLMBrowser manages pages internally (no LLM dependency!)
+        self.llm_browser = LLMBrowser(session, dom_context_config)
 
         # Set initial page if provided
         if page is not None:
@@ -311,6 +311,8 @@ class Agent:
         """
         Select element by natural language description (low-level imperative mode).
 
+        Uses LLM to find element matching the description.
+
         Args:
             description: Natural language description of element
 
@@ -319,12 +321,16 @@ class Agent:
 
         Raises:
             RuntimeError: If no page is opened
+            ValueError: If LLM fails to find a matching element
 
         Example:
             >>> elem = await agent.select("the search button")
             >>> await elem.click()
         """
-        return await self.llm_browser.select(description)
+        from ..llm_browser.selector import NaturalSelector
+
+        selector = NaturalSelector(self.llm, self.llm_browser)
+        return await selector.select(description)
 
     async def wait_for_idle(self, timeout: int = 30000):
         """
