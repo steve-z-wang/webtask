@@ -1,7 +1,7 @@
 """Remove empty nodes."""
 
 from typing import Optional, Set
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_empty(node: DomNode, interactive_tags: Set[str]) -> Optional[DomNode]:

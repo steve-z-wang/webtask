@@ -1,7 +1,7 @@
 """Remove zero-dimension elements."""
 
 from typing import Optional
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_zero_dimensions(node: DomNode) -> Optional[DomNode]:

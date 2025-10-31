@@ -1,8 +1,8 @@
 """Apply all semantic filters."""
 
 from typing import Optional
-from ..domnode import DomNode
-from ..dom_context_config import DomContextConfig
+from ...dom.domnode import DomNode
+from ..dom_filter_config import DomFilterConfig
 from .semantic import (
     filter_attributes,
     filter_empty,
@@ -12,11 +12,11 @@ from .semantic import (
 
 
 def apply_semantic_filters(
-    node: DomNode, config: Optional[DomContextConfig] = None
+    node: DomNode, config: Optional[DomFilterConfig] = None
 ) -> Optional[DomNode]:
     """Apply all semantic filters based on config."""
     if config is None:
-        config = DomContextConfig()
+        config = DomFilterConfig()
 
     result = node
 

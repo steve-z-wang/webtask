@@ -1,6 +1,6 @@
 """Collapse single-child wrapper elements."""
 
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def collapse_single_child_wrappers(node: DomNode) -> DomNode:

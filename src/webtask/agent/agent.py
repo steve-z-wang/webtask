@@ -5,7 +5,7 @@ from typing import List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
-from ..dom.dom_context_config import DomContextConfig
+from ..llm_browser.dom_filter_config import DomFilterConfig
 from .tool import ToolRegistry
 from .step_history import StepHistory
 from .step import Step, TaskResult
@@ -26,7 +26,7 @@ class Agent:
         session: Optional[Session] = None,
         page: Optional[Page] = None,
         action_delay: float = 1.0,
-        dom_context_config: Optional[DomContextConfig] = None,
+        dom_filter_config: Optional[DomFilterConfig] = None,
     ):
         """
         Initialize agent.
@@ -36,15 +36,15 @@ class Agent:
             session: Optional Session instance for multi-page support
             page: Optional Page instance to use as initial page
             action_delay: Delay in seconds after actions (default: 1.0)
-            dom_context_config: Configuration for DOM filtering
+            dom_filter_config: Configuration for DOM filtering
         """
         self.llm = llm
         self.session = session
         self.action_delay = action_delay
-        self.dom_context_config = dom_context_config
+        self.dom_filter_config = dom_filter_config
         self.logger = logging.getLogger(__name__)
 
-        self.llm_browser = LLMBrowser(session, dom_context_config)
+        self.llm_browser = LLMBrowser(session, dom_filter_config)
 
         if page is not None:
             self.llm_browser.set_page(page)

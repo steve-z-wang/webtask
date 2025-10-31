@@ -1,7 +1,7 @@
 """Remove CSS-hidden elements."""
 
 from typing import Optional
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_css_hidden(node: DomNode) -> Optional[DomNode]:

@@ -1,7 +1,7 @@
 """Remove non-visible tags."""
 
 from typing import Optional, Set
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_non_visible_tags(

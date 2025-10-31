@@ -1,17 +1,17 @@
 """Apply all visibility filters."""
 
 from typing import Optional
-from ..domnode import DomNode
-from ..dom_context_config import DomContextConfig
+from ...dom.domnode import DomNode
+from ..dom_filter_config import DomFilterConfig
 from .visibility import filter_non_visible_tags, filter_css_hidden, filter_no_layout, filter_zero_dimensions
 
 
 def apply_visibility_filters(
-    node: DomNode, config: Optional[DomContextConfig] = None
+    node: DomNode, config: Optional[DomFilterConfig] = None
 ) -> Optional[DomNode]:
     """Apply all visibility filters based on config."""
     if config is None:
-        config = DomContextConfig()
+        config = DomFilterConfig()
 
     result = node
 

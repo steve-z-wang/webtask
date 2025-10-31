@@ -4,7 +4,7 @@ from typing import Optional
 from .browser import Browser, Session
 from .llm import LLM
 from .agent import Agent
-from .dom.dom_context_config import DomContextConfig
+from .llm_browser.dom_filter_config import DomFilterConfig
 
 
 class Webtask:
@@ -37,7 +37,7 @@ class Webtask:
         llm: LLM,
         cookies=None,
         action_delay: float = 1.0,
-        dom_context_config: Optional[DomContextConfig] = None,
+        dom_filter_config: Optional[DomFilterConfig] = None,
     ) -> Agent:
         """Create agent with new session. Launches browser on first call."""
         browser = await self._ensure_browser()
@@ -46,7 +46,7 @@ class Webtask:
             llm,
             session=session,
             action_delay=action_delay,
-            dom_context_config=dom_context_config,
+            dom_filter_config=dom_filter_config,
         )
 
         return agent

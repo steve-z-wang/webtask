@@ -1,12 +1,12 @@
-"""Configuration for DOM context processing and filtering."""
+"""Configuration for DOM filtering."""
 
 from dataclasses import dataclass, field
 from typing import Set, Optional
 
 
 @dataclass
-class DomContextConfig:
-    """Configuration for DOM snapshot filtering and processing."""
+class DomFilterConfig:
+    """Configuration for DOM filtering."""
 
     filter_non_visible_tags: bool = True
     non_visible_tags: Set[str] = field(default_factory=lambda: {

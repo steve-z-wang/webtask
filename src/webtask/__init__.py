@@ -10,12 +10,10 @@ from .dom import (
     BoundingBox,
     parse_html,
     parse_cdp,
-    apply_visibility_filters,
-    apply_semantic_filters,
     DomSnapshot,
-    serialize_to_markdown,
-    DomContextConfig,
 )
+
+from .llm_browser.dom_filter_config import DomFilterConfig
 
 from .llm import (
     Context,
@@ -43,16 +41,11 @@ __all__ = [
     'parse_html',
     'parse_cdp',
 
-    # Filters
-    'apply_visibility_filters',
-    'apply_semantic_filters',
-
     # Snapshot
     'DomSnapshot',
-    'serialize_to_markdown',
 
     # Config
-    'DomContextConfig',
+    'DomFilterConfig',
 
     # LLM
     'Context',

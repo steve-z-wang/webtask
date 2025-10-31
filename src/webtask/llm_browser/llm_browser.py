@@ -3,9 +3,9 @@
 from typing import Dict, Optional
 from ..browser import Page, Session
 from ..dom.domnode import DomNode
-from ..dom.dom_context_config import DomContextConfig
+from .dom_filter_config import DomFilterConfig
 from ..llm import Block
-from .web_context_builder import WebContextBuilder
+from .page_context_builder import PageContextBuilder
 
 
 class LLMBrowser:
@@ -14,11 +14,11 @@ class LLMBrowser:
     def __init__(
         self,
         session: Optional[Session] = None,
-        dom_context_config: Optional[DomContextConfig] = None,
+        dom_filter_config: Optional[DomFilterConfig] = None,
     ):
-        """Initialize with optional Session and DOM configuration."""
+        """Initialize with optional Session and DOM filter configuration."""
         self.session = session
-        self.dom_context_config = dom_context_config or DomContextConfig()
+        self.dom_filter_config = dom_filter_config or DomFilterConfig()
         self._pages: Dict[str, Page] = {}
         self._page_counter = 0
         self.current_page_id: Optional[str] = None
@@ -104,28 +104,50 @@ class LLMBrowser:
 
     async def to_context_block(self) -> Block:
         """Get formatted page context with element IDs for LLM."""
-        
+
         if self.current_page_id is None:
             self.element_map = {}
-            return Block("Page:\nERROR: No page opened yet. Use set_page() to inject a page or navigate to a URL.")
+            lines = ["Page:"]
+            lines.append("  URL: (no page loaded)")
+            lines.append("")
+            lines.append("ERROR: No page opened yet.")
+            lines.append("Please use the navigate tool to navigate to a URL.")
+            return Block("\n".join(lines))
 
         page = self._require_page()
-        context_str, element_map = await WebContextBuilder.build_context(
+        url = page.url
+
+        context_str, element_map = await PageContextBuilder.build_context(
             page=page,
-            dom_context_config=self.dom_context_config
+            dom_filter_config=self.dom_filter_config
         )
 
         self.element_map = element_map
-        return Block(context_str)
+
+        lines = ["Page:"]
+        if url:
+            lines.append(f"  URL: {url}")
+        lines.append("")
+
+        if context_str is None:
+            lines.append("ERROR: No visible interactive elements found on this page.")
+            lines.append("")
+            lines.append("Possible causes:")
+            lines.append("- The page is still loading")
+            lines.append("- The page has no interactive elements")
+            lines.append("- All elements were filtered out")
+        else:
+            lines.append(context_str)
+
+        return Block("\n".join(lines))
 
     def _get_selector(self, element_id: str):
         if element_id not in self.element_map:
             raise KeyError(f"Element ID '{element_id}' not found")
 
+        # element_map already contains original unfiltered nodes from PageContextBuilder
         node = self.element_map[element_id]
-        # Get the original unfiltered node to compute XPath from the full DOM tree
-        original_node = node.metadata.get('original_node', node)
-        return original_node.get_x_path()
+        return node.get_x_path()
 
     async def navigate(self, url: str) -> None:
         """Navigate to URL. Auto-creates a page if none exists yet and session is available."""

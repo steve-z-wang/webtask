@@ -1,6 +1,6 @@
 """Filter presentational role attributes."""
 
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_presentational_roles(node: DomNode) -> DomNode:

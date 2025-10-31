@@ -1,7 +1,7 @@
 """Filter attributes."""
 
 from typing import Set
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_attributes(node: DomNode, keep: Set[str]) -> DomNode:

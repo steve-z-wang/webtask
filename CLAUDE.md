@@ -295,4 +295,4 @@ See `examples/` directory:
 - Screenshots saved with `agent.screenshot(path)`
 - Action delay configurable per agent (default 1.0s)
 - Full debug logging available (no truncation of prompts/responses)
-- DOM filtering is configurable via `DomContextConfig`
+- DOM filtering is configurable via `DomFilterConfig`

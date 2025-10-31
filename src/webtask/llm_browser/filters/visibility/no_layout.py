@@ -1,7 +1,7 @@
 """Remove elements with no layout data."""
 
 from typing import Optional
-from ...domnode import DomNode, Text
+from ....dom.domnode import DomNode, Text
 
 
 def filter_no_layout(node: DomNode) -> Optional[DomNode]:

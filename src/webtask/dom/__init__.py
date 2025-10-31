@@ -2,11 +2,8 @@
 
 from .domnode import DomNode, DomNodeData, Text, BoundingBox
 from .parsers import parse_html, parse_cdp
-from .filters import apply_visibility_filters, apply_semantic_filters
 from .snapshot import DomSnapshot
-from .serializers import serialize_to_markdown
 from .selector import XPath
-from .dom_context_config import DomContextConfig
 
 __all__ = [
     'DomNode',
@@ -15,10 +12,6 @@ __all__ = [
     'BoundingBox',
     'parse_html',
     'parse_cdp',
-    'apply_visibility_filters',
-    'apply_semantic_filters',
     'DomSnapshot',
-    'serialize_to_markdown',
     'XPath',
-    'DomContextConfig',
 ]
