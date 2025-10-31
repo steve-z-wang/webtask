@@ -9,37 +9,12 @@ from .visibility import filter_non_visible_tags, filter_css_hidden, filter_no_la
 def apply_visibility_filters(
     node: DomNode, config: Optional[DomContextConfig] = None
 ) -> Optional[DomNode]:
-    """
-    Apply all visibility filters based on config.
-
-    Removes:
-    - Non-visible tags (script, style, head, meta, etc.)
-    - CSS-hidden elements (display:none, visibility:hidden, opacity:0)
-    - Elements not in layout tree (no styles, no bounds from CDP)
-    - Zero-dimension elements (except positioned popups)
-
-    Args:
-        node: DomNode to filter
-        config: Configuration for filtering. If None, uses default config.
-
-    Returns:
-        Filtered DomNode with only visible elements, or None if all removed
-
-    Example:
-        >>> from webtask.dom.parsers import parse_html
-        >>> from webtask.dom.filters import apply_visibility_filters
-        >>> html = '<div><script>x</script><button>Click</button></div>'
-        >>> root = parse_html(html)
-        >>> filtered = apply_visibility_filters(root)
-        >>> len(filtered.children)  # Only button remains
-        1
-    """
+    """Apply all visibility filters based on config."""
     if config is None:
         config = DomContextConfig()
 
     result = node
 
-    # Apply each filter based on config
     if config.filter_non_visible_tags and result is not None:
         result = filter_non_visible_tags(result, config.non_visible_tags)
 

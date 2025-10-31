@@ -13,19 +13,9 @@ class NavigateParams(ToolParams):
 
 
 class NavigateTool(Tool[NavigateParams]):
-    """
-    Tool for navigating to a URL.
-
-    Navigates the browser page to the specified URL.
-    """
+    """Tool for navigating to a URL."""
 
     def __init__(self, llm_browser: LLMBrowser):
-        """
-        Initialize navigate tool.
-
-        Args:
-            llm_browser: LLMBrowser instance to execute navigation
-        """
         self.llm_browser = llm_browser
 
     @property
@@ -41,13 +31,5 @@ class NavigateTool(Tool[NavigateParams]):
         return NavigateParams
 
     async def execute(self, params: NavigateParams):
-        """
-        Execute navigation to URL.
-
-        Args:
-            params: NavigateParams with url
-
-        Returns:
-            None
-        """
+        """Execute navigation to URL."""
         await self.llm_browser.navigate(params.url)

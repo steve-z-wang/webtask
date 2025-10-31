@@ -16,30 +16,12 @@ class Webtask:
     """
 
     def __init__(self, headless: bool = False, browser_type: str = "chromium"):
-        """
-        Initialize Webtask.
-
-        Browser is not launched until first agent is created (lazy initialization).
-
-        Args:
-            headless: Whether to run browser in headless mode (default: False)
-            browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
-
-        Example:
-            >>> webtask = Webtask(headless=False)  # No await needed!
-            >>> agent = await webtask.create_agent(llm=my_llm)
-        """
+        """Initialize Webtask. Browser launches lazily on first agent creation."""
         self.headless = headless
         self.browser_type = browser_type
         self.browser: Optional[Browser] = None
 
     async def _ensure_browser(self) -> Browser:
-        """
-        Ensure browser is launched (lazy initialization).
-
-        Returns:
-            Browser instance
-        """
         if self.browser is None:
             from .integrations.browser.playwright import PlaywrightBrowser
 
@@ -57,38 +39,9 @@ class Webtask:
         action_delay: float = 1.0,
         dom_context_config: Optional[DomContextConfig] = None,
     ) -> Agent:
-        """
-        Create a new agent with a new session.
-
-        Launches browser on first call (lazy initialization).
-
-        Args:
-            llm: LLM instance for reasoning
-            cookies: Optional list of cookies for the session
-            action_delay: Minimum delay in seconds between actions (default: 1.0)
-            dom_context_config: Configuration for DOM filtering. If None, uses defaults.
-
-        Returns:
-            Agent instance ready to use
-
-        Example:
-            >>> from webtask.integration.llm import OpenAILLM
-            >>> webtask = Webtask()  # No await needed!
-            >>> llm = OpenAILLM.create(model="gpt-4")
-            >>> agent = await webtask.create_agent(llm=llm, action_delay=2.0)
-            >>> await agent.execute("Search for Python tutorials")
-
-            >>> # With custom DOM config for Poshmark
-            >>> config = DomContextConfig(kept_attributes={"role", "type", "data-test"})
-            >>> agent = await webtask.create_agent(llm=llm, dom_context_config=config)
-        """
-        # Ensure browser is launched (lazy initialization)
+        """Create agent with new session. Launches browser on first call."""
         browser = await self._ensure_browser()
-
-        # Create a new session
         session = await browser.create_session(cookies=cookies)
-
-        # Create agent with session and LLM
         agent = Agent(
             llm,
             session=session,
@@ -99,10 +52,6 @@ class Webtask:
         return agent
 
     async def close(self) -> None:
-        """
-        Close the Webtask and cleanup all resources.
-
-        Closes the browser and all associated sessions/pages.
-        """
+        """Close and cleanup all resources."""
         if self.browser is not None:
             await self.browser.close()

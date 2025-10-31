@@ -13,19 +13,9 @@ class ClickParams(ToolParams):
 
 
 class ClickTool(Tool[ClickParams]):
-    """
-    Tool for clicking an element.
-
-    Clicks the element identified by the given ID.
-    """
+    """Tool for clicking an element."""
 
     def __init__(self, llm_browser: LLMBrowser):
-        """
-        Initialize click tool.
-
-        Args:
-            llm_browser: LLMBrowser instance to execute click
-        """
         self.llm_browser = llm_browser
 
     @property
@@ -41,13 +31,5 @@ class ClickTool(Tool[ClickParams]):
         return ClickParams
 
     async def execute(self, params: ClickParams):
-        """
-        Execute click on element.
-
-        Args:
-            params: ClickParams with element_id
-
-        Returns:
-            None
-        """
+        """Execute click on element."""
         await self.llm_browser.click(params.element_id)

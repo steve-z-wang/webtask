@@ -6,32 +6,17 @@ from ..llm import Block
 
 
 class StepHistory:
-    """
-    Maintains history of completed agent steps.
-
-    Each step represents a full cycle: proposal → execution → verification.
-    """
+    """Maintains history of completed agent steps."""
 
     def __init__(self):
-        """Initialize empty step history."""
         self._steps: List[Step] = []
 
     def add_step(self, step: Step) -> None:
-        """
-        Add a completed step to the history.
-
-        Args:
-            step: Step that was completed (proposal + execution + verification)
-        """
+        """Add a completed step to the history."""
         self._steps.append(step)
 
     def get_all(self) -> List[Step]:
-        """
-        Get all steps in history.
-
-        Returns:
-            List of all completed steps
-        """
+        """Get all steps in history."""
         return list(self._steps)
 
     def clear(self) -> None:
@@ -39,21 +24,15 @@ class StepHistory:
         self._steps.clear()
 
     def to_context_block(self) -> Block:
-        """
-        Convert step history to context block for LLM.
-
-        Returns:
-            Block containing formatted step history
-        """
+        """Convert step history to context block for LLM."""
         if not self._steps:
             return Block("Step History:\nNo steps executed yet.")
 
         lines = ["Step History:"]
         for i, step in enumerate(self._steps, 1):
-            lines.append("")  # Single blank line before each step
+            lines.append("")
             lines.append(f"Step {i}:")
 
-            # Display all actions in this step
             for j, (action, execution) in enumerate(
                 zip(step.proposals, step.executions), 1
             ):

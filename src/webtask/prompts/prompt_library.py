@@ -18,29 +18,13 @@ class PromptLibrary:
     _loaded: bool = False
 
     def __new__(cls):
-        """Singleton pattern to ensure one instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     @classmethod
     def get(cls, key: str) -> str:
-        """
-        Get prompt by key.
-
-        Args:
-            key: Prompt identifier (e.g., "proposer_system")
-
-        Returns:
-            Prompt content as string
-
-        Raises:
-            KeyError: If prompt key not found
-            RuntimeError: If prompts not loaded
-
-        Example:
-            >>> system_prompt = PromptLibrary.get("proposer_system")
-        """
+        """Get prompt by key."""
         instance = cls()
         if not instance._loaded:
             instance._load_prompts()
@@ -62,21 +46,13 @@ class PromptLibrary:
 
     @classmethod
     def list_keys(cls) -> list[str]:
-        """
-        List all available prompt keys.
-
-        Returns:
-            List of prompt keys
-        """
+        """List all available prompt keys."""
         instance = cls()
         if not instance._loaded:
             instance._load_prompts()
         return list(instance._prompts.keys())
 
     def _load_prompts(self) -> None:
-        """Load all prompts from YAML files in prompts directory."""
-        # Find prompts directory relative to this file
-        # src/webtask/prompts/prompt_library.py -> ../prompts_data/
         current_file = Path(__file__)
         prompts_dir = current_file.parent.parent / "prompts_data"
 
@@ -95,12 +71,6 @@ class PromptLibrary:
         self._loaded = True
 
     def _load_yaml_file(self, file_path: Path) -> None:
-        """
-        Load prompts from a single YAML file.
-
-        Args:
-            file_path: Path to YAML file
-        """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
@@ -122,15 +92,6 @@ class PromptLibrary:
             print(f"Warning: Failed to load {file_path}: {e}")
 
 
-# Convenience function for quick access
 def get_prompt(key: str) -> str:
-    """
-    Get prompt by key (convenience function).
-
-    Args:
-        key: Prompt identifier
-
-    Returns:
-        Prompt content
-    """
+    """Get prompt by key."""
     return PromptLibrary.get(key)

@@ -8,7 +8,6 @@ class Element(ABC):
     Abstract base class for browser element.
 
     Simple adapter over browser automation library elements (Playwright, Selenium, etc.).
-    Provides basic action methods for element interaction.
     """
 
     @abstractmethod
@@ -30,8 +29,6 @@ class Element(ABC):
     async def type(self, text: str, delay: float = None):
         """
         Type text into the element character by character.
-
-        Simulates keyboard input with delays between keystrokes for more realistic behavior.
 
         Args:
             text: Text to type

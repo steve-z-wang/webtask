@@ -8,7 +8,6 @@ class Browser(ABC):
     Abstract base class for browser management.
 
     Manages browser lifecycle (launch, close, etc.).
-    Concrete implementations (PlaywrightBrowser, etc.) inherit from this.
     """
 
     def __init__(self, headless: bool = False):
@@ -26,15 +25,11 @@ class Browser(ABC):
         """
         Create and launch the browser instance (async factory method).
 
-        Subclasses should implement this as a classmethod that creates
-        and returns a new browser instance.
-
         Returns:
-            Browser instance (concrete implementation type)
+            Browser instance
 
         Example:
             >>> browser = await PlaywrightBrowser.create_browser(headless=True)
-            >>> await browser.close()
         """
         pass
 
@@ -49,7 +44,6 @@ class Browser(ABC):
         Example:
             >>> browser = await PlaywrightBrowser.create_browser()
             >>> session = await browser.create_session()
-            >>> await session.close()
         """
         pass
 

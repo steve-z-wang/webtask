@@ -6,11 +6,7 @@ from typing import Optional, Dict, Any, List
 
 @dataclass
 class Action:
-    """
-    Represents an action to be executed.
-
-    Pure data structure with tool name and parameters.
-    """
+    """Represents an action to be executed."""
 
     reason: str
     tool_name: str
@@ -19,13 +15,7 @@ class Action:
 
 @dataclass
 class ExecutionResult:
-    """
-    Result of executing an action.
-
-    Attributes:
-        success: Whether execution succeeded
-        error: Error message if execution failed
-    """
+    """Result of executing an action."""
 
     success: bool
     error: Optional[str] = None
@@ -33,13 +23,7 @@ class ExecutionResult:
 
 @dataclass
 class VerificationResult:
-    """
-    Result of verifying task completion.
-
-    Attributes:
-        complete: Whether the task is complete
-        message: Explanation or reasoning for the verification result
-    """
+    """Result of verifying task completion."""
 
     complete: bool
     message: str
@@ -47,27 +31,16 @@ class VerificationResult:
 
 @dataclass
 class Step:
-    """
-    Represents one complete agent cycle.
+    """Represents one complete agent cycle."""
 
-    Contains the proposals, execution results, and verification result.
-    """
-
-    proposals: List[Action]  # Changed from singular to plural
-    executions: List[ExecutionResult]  # Changed from singular to plural
+    proposals: List[Action]
+    executions: List[ExecutionResult]
     verification: VerificationResult
 
 
 @dataclass
 class TaskResult:
-    """
-    Result of executing a task.
-
-    Attributes:
-        completed: Whether the task was completed successfully
-        steps: List of all steps taken during execution
-        message: Final verification message
-    """
+    """Result of executing a task."""
 
     completed: bool
     steps: List[Step]

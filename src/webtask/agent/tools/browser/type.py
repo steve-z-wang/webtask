@@ -14,34 +14,9 @@ class TypeParams(ToolParams):
 
 
 class TypeTool(Tool[TypeParams]):
-    """
-    Tool for typing text into the currently focused element.
-
-    Types text using keyboard without needing to select an element.
-    The element must be focused first (usually by clicking it).
-
-    Workflow:
-    1. Click element to focus it
-    2. Type text into the focused element (optionally clear first)
-
-    Example:
-        # Click input field first
-        click(element_id="input-1")
-        # Type without clearing
-        type(text="Hello World")
-
-        # Or clear existing text first
-        click(element_id="input-2")
-        type(text="New Text", clear=True)
-    """
+    """Tool for typing text into the currently focused element."""
 
     def __init__(self, llm_browser: LLMBrowser):
-        """
-        Initialize type tool.
-
-        Args:
-            llm_browser: LLMBrowser instance to execute type
-        """
         self.llm_browser = llm_browser
 
     @property
@@ -57,13 +32,5 @@ class TypeTool(Tool[TypeParams]):
         return TypeParams
 
     async def execute(self, params: TypeParams):
-        """
-        Execute type using keyboard.
-
-        Args:
-            params: TypeParams with text to type and optional clear flag
-
-        Returns:
-            None
-        """
+        """Execute type using keyboard."""
         await self.llm_browser.keyboard_type(params.text, clear=params.clear)

@@ -10,7 +10,6 @@ class Session(ABC):
     Abstract base class for browser session management.
 
     Manages browser sessions with cookies and context.
-    Concrete implementations (PlaywrightSession, etc.) inherit from this.
     """
 
     def __init__(self, cookies: Optional[List[Cookie]] = None):
@@ -32,8 +31,7 @@ class Session(ABC):
 
         Example:
             >>> session = await PlaywrightSession.create_session(browser)
-            >>> page1 = await session.create_page()
-            >>> page2 = await session.create_page()
+            >>> page = await session.create_page()
         """
         pass
 

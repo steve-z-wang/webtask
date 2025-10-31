@@ -11,7 +11,6 @@ class Page(ABC):
     Abstract base class for browser page management.
 
     Simple adapter over browser automation libraries (Playwright, Selenium, etc.).
-    Concrete implementations (PlaywrightPage, etc.) inherit from this.
     """
 
     @abstractmethod
@@ -73,11 +72,8 @@ class Page(ABC):
         """
         Wait for page to be idle (network and DOM stable).
 
-        Waits for network activity to finish and DOM to stabilize.
-        Useful after navigation, clicks, or dynamic content updates.
-
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 30000ms = 30s)
+            timeout: Maximum time to wait in milliseconds (default: 30000)
 
         Raises:
             TimeoutError: If page doesn't become idle within timeout
@@ -94,21 +90,14 @@ class Page(ABC):
         Take a screenshot of the current page.
 
         Args:
-            path: Optional file path to save screenshot. If None, doesn't save to disk.
+            path: Optional file path to save screenshot
             full_page: Whether to screenshot the full scrollable page (default: False)
 
         Returns:
             Screenshot as bytes (PNG format)
 
         Example:
-            >>> # Just get bytes
-            >>> screenshot_bytes = await page.screenshot()
-            >>>
-            >>> # Save to file
             >>> await page.screenshot("step1.png")
-            >>>
-            >>> # Full page screenshot
-            >>> await page.screenshot("fullpage.png", full_page=True)
         """
         pass
 
@@ -120,17 +109,12 @@ class Page(ABC):
         Args:
             text: Text to type
             clear: Clear existing text before typing (default: False)
-            delay: Delay between keystrokes in milliseconds (default: 80ms)
+            delay: Delay between keystrokes in milliseconds (default: 80)
 
         Example:
-            >>> # Click to focus element first
             >>> element = await page.select_one("#input")
             >>> await element.click()
-            >>> # Type into focused element
             >>> await page.keyboard_type("Hello World")
-            >>>
-            >>> # Clear and type
-            >>> await page.keyboard_type("New text", clear=True)
         """
         pass
 
@@ -150,7 +134,7 @@ class Page(ABC):
         Get DOM snapshot of the current page.
 
         Returns:
-            DomSnapshot with parsed DOM tree (no filtering or element IDs)
+            DomSnapshot with parsed DOM tree
         """
         from ..dom import DomSnapshot
 
