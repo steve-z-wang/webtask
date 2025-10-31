@@ -27,7 +27,7 @@ def apply_semantic_filters(
         result = filter_presentational_roles(result)
 
     if config.filter_empty and result is not None:
-        result = filter_empty(result)
+        result = filter_empty(result, config.interactive_tags)
 
     if config.collapse_wrappers and result is not None:
         result = collapse_single_child_wrappers(result)

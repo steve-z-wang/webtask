@@ -40,4 +40,7 @@ class DomContextConfig:
 
     filter_presentational_roles: bool = True
     filter_empty: bool = True
+    interactive_tags: Set[str] = field(default_factory=lambda: {
+        "a", "button", "input", "select", "textarea", "label"
+    })
     collapse_wrappers: bool = True
