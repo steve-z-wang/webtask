@@ -1,8 +1,8 @@
 """Google Gemini LLM implementation."""
 
-from typing import Optional
+from typing import Optional, List, Any
 import google.generativeai as genai
-from ....llm import LLM, Tokenizer
+from ....llm import LLM, Tokenizer, Context
 
 # Model max token limits
 MODEL_MAX_TOKENS = {
@@ -92,24 +92,60 @@ class GeminiLLM(LLM):
 
         return cls(tokenizer, max_tokens, gemini_model, model, temperature)
 
-    async def _generate(self, system_prompt: str, user_prompt: str) -> str:
+    def _build_content(self, context: Context) -> List[Any] | str:
+        """Build content for Gemini API, supporting both text and images.
+
+        Returns:
+            List of content parts if images are present, otherwise plain string
+        """
+        has_images = any(block.image for block in context.blocks)
+
+        # Combine system and user prompts for Gemini
+        # Gemini doesn't have separate system/user roles like OpenAI
+        combined_text = f"{context.system}\n\n{context.user}"
+
+        if not has_images:
+            # Text-only: return simple string
+            return combined_text
+
+        # Multimodal: build content array
+        # Gemini uses PIL Images, so we need to convert from bytes
+        from PIL import Image as PILImage
+        import io
+
+        content = []
+
+        # Add combined text first
+        content.append(combined_text)
+
+        # Add images from blocks
+        for block in context.blocks:
+            if block.image:
+                # Convert image bytes to PIL Image
+                image_bytes = block.image.to_bytes()
+                pil_image = PILImage.open(io.BytesIO(image_bytes))
+                content.append(pil_image)
+
+        return content
+
+    async def _generate(self, context: Context) -> str:
         """
         Internal method for actual text generation using Gemini API.
 
+        Supports multimodal content (text + images).
+
         Args:
-            system_prompt: System prompt that sets LLM behavior/role
-            user_prompt: User prompt with the actual query/task
+            context: Context object with system, blocks (text + images), etc.
 
         Returns:
             Generated text response from Gemini
         """
         self.logger.info(f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}")
 
-        # Combine system and user prompts for Gemini
-        # Gemini doesn't have separate system/user roles like OpenAI
-        combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+        # Build content (may include images)
+        content = self._build_content(context)
 
-        response = await self.model.generate_content_async(combined_prompt)
+        response = await self.model.generate_content_async(content)
 
         # Log token usage if available
         if hasattr(response, 'usage_metadata') and response.usage_metadata:

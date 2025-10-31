@@ -1,4 +1,4 @@
-"""PageContextBuilder - builds page context from DOM."""
+"""DomContextBuilder - builds LLM context from DOM."""
 
 from typing import Dict, Optional
 from ..browser import Page
@@ -7,8 +7,8 @@ from .dom_filter_config import DomFilterConfig
 from .filters import apply_visibility_filters, apply_semantic_filters
 
 
-class PageContextBuilder:
-    """Static builder for creating page context from DOM."""
+class DomContextBuilder:
+    """Static builder for creating LLM context from DOM."""
 
     @staticmethod
     async def build_context(
@@ -28,7 +28,7 @@ class PageContextBuilder:
         root = snapshot.root
 
         # Add reference to original nodes before filtering
-        root = PageContextBuilder._add_node_reference(root)
+        root = DomContextBuilder._add_node_reference(root)
 
         root = apply_visibility_filters(root, dom_filter_config)
         root = apply_semantic_filters(root, dom_filter_config)
@@ -36,30 +36,44 @@ class PageContextBuilder:
         if root is None:
             return None, {}
 
-        element_map = PageContextBuilder._assign_element_ids(root)
-        context_str = PageContextBuilder._serialize_context(root)
+        element_map = DomContextBuilder._assign_element_ids(root, dom_filter_config)
+        context_str = DomContextBuilder._serialize_context(root)
 
         return context_str, element_map
 
     @staticmethod
-    def _assign_element_ids(root: DomNode) -> Dict[str, DomNode]:
-        """Assign element IDs and return map of element_id -> original_node."""
+    def _assign_element_ids(root: DomNode, dom_filter_config: DomFilterConfig) -> Dict[str, DomNode]:
+        """Assign element IDs only to interactive nodes.
+
+        Non-interactive nodes still appear in context but without IDs.
+        Only interactive elements get IDs and go into element_map.
+
+        An element is considered interactive if:
+        - Its tag is in interactive_tags (e.g., button, input, a)
+        - Its role attribute is in interactive_roles (e.g., role="button")
+        """
         element_map = {}
         tag_counters: Dict[str, int] = {}
 
         for node in root.traverse():
             if isinstance(node, DomNode):
-                tag = node.tag
-                count = tag_counters.get(tag, 0)
-                element_id = f"{tag}-{count}"
+                # Check if element is interactive by tag or role
+                is_interactive_tag = node.tag in dom_filter_config.interactive_tags
+                element_role = node.attrib.get('role')
+                is_interactive_role = element_role in dom_filter_config.interactive_roles if element_role else False
 
-                node.metadata['element_id'] = element_id
+                if is_interactive_tag or is_interactive_role:
+                    tag = node.tag
+                    count = tag_counters.get(tag, 0)
+                    element_id = f"{tag}-{count}"
 
-                # Map to original unfiltered node for correct XPath computation
-                original_node = node.metadata.get('original_node', node)
-                element_map[element_id] = original_node
+                    node.metadata['element_id'] = element_id
 
-                tag_counters[tag] = count + 1
+                    # Map to original unfiltered node for correct XPath computation
+                    original_node = node.metadata.get('original_node', node)
+                    element_map[element_id] = original_node
+
+                    tag_counters[tag] = count + 1
 
         return element_map
 

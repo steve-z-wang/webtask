@@ -1,8 +1,8 @@
 """OpenAI LLM implementation."""
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from openai import AsyncOpenAI
-from ....llm import LLM, Tokenizer
+from ....llm import LLM, Tokenizer, Context
 
 # Model max token limits
 MODEL_MAX_TOKENS = {
@@ -86,24 +86,54 @@ class OpenAILLM(LLM):
 
         return cls(tokenizer, max_tokens, client, model, temperature)
 
-    async def _generate(self, system_prompt: str, user_prompt: str) -> str:
+    def _build_user_content(self, context: Context) -> List[Dict[str, Any]] | str:
+        """Build user message content, supporting both text and images.
+
+        Returns:
+            List of content blocks if images are present, otherwise plain string
+        """
+        has_images = any(block.image for block in context.blocks)
+
+        if not has_images:
+            # Text-only: return simple string
+            return context.user
+
+        # Multimodal: build content array
+        content = []
+        for block in context.blocks:
+            if block.text:
+                content.append({"type": "text", "text": block.text})
+
+            if block.image:
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": block.image.to_data_url()}
+                })
+
+        return content
+
+    async def _generate(self, context: Context) -> str:
         """
         Internal method for actual text generation using OpenAI API.
 
+        Supports multimodal content (text + images).
+
         Args:
-            system_prompt: System prompt that sets LLM behavior/role
-            user_prompt: User prompt with the actual query/task
+            context: Context object with system, blocks (text + images), etc.
 
         Returns:
             Generated text response from OpenAI
         """
+        # Build user content (may include images)
+        user_content = self._build_user_content(context)
+
         self.logger.info(f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}")
 
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
+                {"role": "system", "content": context.system},
+                {"role": "user", "content": user_content},
             ],
             temperature=self.temperature,
         )

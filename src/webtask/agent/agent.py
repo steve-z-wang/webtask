@@ -27,6 +27,7 @@ class Agent:
         page: Optional[Page] = None,
         action_delay: float = 1.0,
         dom_filter_config: Optional[DomFilterConfig] = None,
+        use_screenshot: bool = False,
     ):
         """
         Initialize agent.
@@ -37,11 +38,13 @@ class Agent:
             page: Optional Page instance to use as initial page
             action_delay: Delay in seconds after actions (default: 1.0)
             dom_filter_config: Configuration for DOM filtering
+            use_screenshot: Use screenshots with bounding boxes in LLM context (default: False)
         """
         self.llm = llm
         self.session = session
         self.action_delay = action_delay
         self.dom_filter_config = dom_filter_config
+        self.use_screenshot = use_screenshot
         self.logger = logging.getLogger(__name__)
 
         self.llm_browser = LLMBrowser(session, dom_filter_config)
@@ -114,10 +117,10 @@ class Agent:
             self.step_history.clear()
 
         self.proposer = Proposer(
-            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
+            self.llm, task, self.step_history, self.tool_registry, self.llm_browser, self.use_screenshot
         )
         self.executer = Executer(self.tool_registry, self.action_delay)
-        self.verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
+        self.verifier = Verifier(self.llm, task, self.step_history, self.llm_browser, self.use_screenshot)
 
     async def run_step(self) -> Step:
         """

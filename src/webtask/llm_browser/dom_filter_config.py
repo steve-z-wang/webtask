@@ -43,4 +43,9 @@ class DomFilterConfig:
     interactive_tags: Set[str] = field(default_factory=lambda: {
         "a", "button", "input", "select", "textarea", "label"
     })
+    interactive_roles: Set[str] = field(default_factory=lambda: {
+        "button", "link", "checkbox", "radio", "switch", "tab",
+        "menuitem", "menuitemcheckbox", "menuitemradio", "option",
+        "textbox", "searchbox", "combobox", "slider", "spinbutton"
+    })
     collapse_wrappers: bool = True

@@ -1,23 +1,28 @@
 """Context and Block classes for LLM prompts."""
 
-from typing import List, Union
+from typing import List, Union, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..media import Image
 
 
 class Block:
     """
     Building block for LLM context.
 
-    Blocks can contain text and nested blocks, allowing composable context construction.
+    Blocks can contain text, images, and nested blocks, allowing composable context construction.
     """
 
-    def __init__(self, text: str = ""):
+    def __init__(self, text: str = "", image: Optional['Image'] = None):
         """
-        Create a Block with optional text.
+        Create a Block with optional text and image.
 
         Args:
             text: Text content for this block
+            image: Optional image (e.g., screenshot with bounding boxes)
         """
         self.text = text
+        self.image = image
         self.blocks: List['Block'] = []
 
     def append(self, item: Union['Block', str]) -> 'Block':

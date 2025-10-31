@@ -38,8 +38,17 @@ class Webtask:
         cookies=None,
         action_delay: float = 1.0,
         dom_filter_config: Optional[DomFilterConfig] = None,
+        use_screenshot: bool = False,
     ) -> Agent:
-        """Create agent with new session. Launches browser on first call."""
+        """Create agent with new session. Launches browser on first call.
+
+        Args:
+            llm: LLM instance for reasoning
+            cookies: Optional cookies for the session
+            action_delay: Delay in seconds after actions (default: 1.0)
+            dom_filter_config: Configuration for DOM filtering
+            use_screenshot: Use screenshots with bounding boxes in LLM context (default: False)
+        """
         browser = await self._ensure_browser()
         session = await browser.create_session(cookies=cookies)
         agent = Agent(
@@ -47,6 +56,7 @@ class Webtask:
             session=session,
             action_delay=action_delay,
             dom_filter_config=dom_filter_config,
+            use_screenshot=use_screenshot,
         )
 
         return agent

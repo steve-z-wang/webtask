@@ -22,6 +22,8 @@ from .llm import (
     LLM,
 )
 
+from .media import Image
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -52,4 +54,7 @@ __all__ = [
     'Block',
     'Tokenizer',
     'LLM',
+
+    # Media
+    'Image',
 ]

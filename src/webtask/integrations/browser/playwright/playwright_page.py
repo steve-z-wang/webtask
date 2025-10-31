@@ -150,6 +150,18 @@ class PlaywrightPage(Page):
         # Type the text
         await self._page.keyboard.type(text, delay=delay)
 
+    async def evaluate(self, script: str) -> Any:
+        """
+        Execute JavaScript in the page context.
+
+        Args:
+            script: JavaScript code to execute
+
+        Returns:
+            Result of the script execution (JSON-serializable values)
+        """
+        return await self._page.evaluate(script)
+
     @property
     def url(self) -> str:
         """

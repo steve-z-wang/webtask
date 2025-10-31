@@ -118,6 +118,23 @@ class Page(ABC):
         """
         pass
 
+    @abstractmethod
+    async def evaluate(self, script: str) -> Any:
+        """
+        Execute JavaScript in the page context.
+
+        Args:
+            script: JavaScript code to execute
+
+        Returns:
+            Result of the script execution (JSON-serializable values)
+
+        Example:
+            >>> result = await page.evaluate("document.title")
+            >>> ratio = await page.evaluate("window.devicePixelRatio")
+        """
+        pass
+
     @property
     @abstractmethod
     def url(self) -> str:

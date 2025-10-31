@@ -5,7 +5,8 @@ from ..browser import Page, Session
 from ..dom.domnode import DomNode
 from .dom_filter_config import DomFilterConfig
 from ..llm import Block
-from .page_context_builder import PageContextBuilder
+from .dom_context_builder import DomContextBuilder
+from .bounding_box_renderer import BoundingBoxRenderer
 
 
 class LLMBrowser:
@@ -102,8 +103,15 @@ class LLMBrowser:
                 self.current_page_id = None
                 self.element_map.clear()
 
-    async def to_context_block(self) -> Block:
-        """Get formatted page context with element IDs for LLM."""
+    async def to_context_block(self, use_screenshot: bool = False) -> Block:
+        """Get formatted page context with element IDs for LLM.
+
+        Args:
+            use_screenshot: If True, includes screenshot with bounding boxes in the Block
+
+        Returns:
+            Block with text context and optional screenshot image
+        """
 
         if self.current_page_id is None:
             self.element_map = {}
@@ -117,7 +125,7 @@ class LLMBrowser:
         page = self._require_page()
         url = page.url
 
-        context_str, element_map = await PageContextBuilder.build_context(
+        context_str, element_map = await DomContextBuilder.build_context(
             page=page,
             dom_filter_config=self.dom_filter_config
         )
@@ -139,13 +147,21 @@ class LLMBrowser:
         else:
             lines.append(context_str)
 
-        return Block("\n".join(lines))
+        # Optionally include screenshot with bounding boxes
+        image = None
+        if use_screenshot and element_map:
+            image = await BoundingBoxRenderer.render(
+                page=page,
+                element_map=element_map
+            )
+
+        return Block(text="\n".join(lines), image=image)
 
     def _get_selector(self, element_id: str):
         if element_id not in self.element_map:
             raise KeyError(f"Element ID '{element_id}' not found")
 
-        # element_map already contains original unfiltered nodes from PageContextBuilder
+        # element_map already contains original unfiltered nodes from DomContextBuilder
         node = self.element_map[element_id]
         return node.get_x_path()
 
