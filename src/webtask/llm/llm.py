@@ -2,21 +2,34 @@
 
 import logging
 from abc import ABC, abstractmethod
-from .tokenizer import Tokenizer
 from .context import Context
 
 
 class LLM(ABC):
     """Abstract base class for Large Language Models."""
 
-    def __init__(self, tokenizer: Tokenizer, max_tokens: int):
-        self.tokenizer = tokenizer
+    def __init__(self, max_tokens: int):
         self.max_tokens = max_tokens
         self.logger = logging.getLogger(__name__)
 
+    @abstractmethod
+    def count_tokens(self, text: str) -> int:
+        """
+        Count the number of tokens in the given text.
+
+        Each LLM provider implements this using their specific tokenization.
+
+        Args:
+            text: Text to tokenize and count
+
+        Returns:
+            Number of tokens in the text
+        """
+        pass
+
     def _check_token_limit(self, context: Context) -> int:
-        system_tokens = self.tokenizer.count_tokens(context.system)
-        user_tokens = self.tokenizer.count_tokens(context.user)
+        system_tokens = self.count_tokens(context.system)
+        user_tokens = self.count_tokens(context.user)
         total_tokens = system_tokens + user_tokens
 
         if total_tokens > self.max_tokens:

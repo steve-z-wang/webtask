@@ -1,8 +1,9 @@
 """OpenAI LLM implementation."""
 
 from typing import Optional, List, Dict, Any
+import tiktoken
 from openai import AsyncOpenAI
-from ....llm import LLM, Tokenizer, Context
+from ....llm import LLM, Context
 
 # Model max token limits
 MODEL_MAX_TOKENS = {
@@ -27,26 +28,27 @@ class OpenAILLM(LLM):
 
     def __init__(
         self,
-        tokenizer: Tokenizer,
         max_tokens: int,
         client: AsyncOpenAI,
         model: str,
         temperature: float,
+        encoding_name: str = "cl100k_base",
     ):
         """
         Initialize OpenAILLM (use create factory instead).
 
         Args:
-            tokenizer: Tokenizer for counting tokens
             max_tokens: Maximum token limit for prompts
             client: AsyncOpenAI client instance
             model: Model name
             temperature: Temperature for generation
+            encoding_name: Tiktoken encoding name
         """
-        super().__init__(tokenizer, max_tokens)
+        super().__init__(max_tokens)
         self.model = model
         self.temperature = temperature
         self.client = client
+        self.encoding = tiktoken.get_encoding(encoding_name)
 
     @classmethod
     def create(
@@ -57,7 +59,7 @@ class OpenAILLM(LLM):
         max_tokens: Optional[int] = None,
     ) -> 'OpenAILLM':
         """
-        Create an OpenAILLM instance with automatic tokenizer and max_tokens detection.
+        Create an OpenAILLM instance with automatic encoding and max_tokens detection.
 
         Args:
             model: Model name (e.g., "gpt-4", "gpt-3.5-turbo")
@@ -72,9 +74,13 @@ class OpenAILLM(LLM):
             >>> llm = OpenAILLM.create(model="gpt-4")
             >>> response = await llm.generate("You are helpful", "Hello!")
         """
-        # Auto-create tokenizer for this model
-        from .tiktoken_tokenizer import TikTokenizer
-        tokenizer = TikTokenizer.for_model(model)
+        # Get encoding for model
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+            encoding_name = encoding.name
+        except KeyError:
+            # Default to cl100k_base for unknown models (GPT-4 encoding)
+            encoding_name = "cl100k_base"
 
         # Auto-detect max_tokens if not provided
         if max_tokens is None:
@@ -84,7 +90,19 @@ class OpenAILLM(LLM):
 
         client = AsyncOpenAI(api_key=api_key)
 
-        return cls(tokenizer, max_tokens, client, model, temperature)
+        return cls(max_tokens, client, model, temperature, encoding_name)
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Count tokens in text using tiktoken.
+
+        Args:
+            text: Text to tokenize and count
+
+        Returns:
+            Number of tokens in the text
+        """
+        return len(self.encoding.encode(text))
 
     def _build_user_content(self, context: Context) -> List[Dict[str, Any]] | str:
         """Build user message content, supporting both text and images.
