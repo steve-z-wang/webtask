@@ -6,8 +6,8 @@ from .playwright_page import PlaywrightPage
 from .playwright_element import PlaywrightElement
 
 __all__ = [
-    'PlaywrightBrowser',
-    'PlaywrightSession',
-    'PlaywrightPage',
-    'PlaywrightElement',
+    "PlaywrightBrowser",
+    "PlaywrightSession",
+    "PlaywrightPage",
+    "PlaywrightElement",
 ]

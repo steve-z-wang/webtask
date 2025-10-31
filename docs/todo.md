@@ -7,9 +7,12 @@
   - [ ] `utils/json_parser.py` - Test JSON parsing with malformed input
   - [ ] `utils/url.py` - Test URL normalization
   - [ ] `utils/wait.py` - Test wait function
-- [ ] DOM processing
-  - [ ] `dom/snapshot.py` - Test DOM snapshot parsing from CDP
-  - [ ] `dom/filters.py` - Test visibility and semantic filters
+- [x] DOM processing
+  - [x] `dom/parsers/cdp.py` - Test CDP parser and helper functions (23 tests)
+  - [x] `dom/filters/` - Test visibility and semantic filters (110 tests)
+    - [x] Visibility filters: css_hidden, no_layout, non_visible_tags, zero_dimensions
+    - [x] Semantic filters: attributes, empty, presentational, wrappers
+    - [x] Filter orchestrators: apply_visibility_filters, apply_semantic_filters
   - [ ] `dom/serializers.py` - Test DOM to markdown serialization
 - [ ] LLM context
   - [ ] `llm/context.py` - Test Block and Context building
@@ -58,12 +61,14 @@
   - [ ] Track performance over time
 
 ### 5. Test Infrastructure
-- [ ] Set up pytest with pytest-asyncio
-- [ ] Create fixtures for mocked LLM responses
+- [x] Set up pytest with pytest-asyncio
+- [x] Create fixtures for mocked LLM responses (conftest.py)
 - [ ] Set up local HTTP server for test HTML files
-- [ ] Add pytest-mock for mocking dependencies
-- [ ] Set up GitHub Actions CI/CD pipeline
-- [ ] Add test coverage reporting
+- [x] Add pytest-mock for mocking dependencies
+- [x] Set up GitHub Actions CI/CD pipeline (pr.yml, test.yml, publish.yml)
+- [x] Add test coverage reporting (pytest-cov)
+- [x] Add linting and formatting checks (ruff, black)
+- [x] Create local PR check script (scripts/pr.sh)
 
 ## Recently Completed
 

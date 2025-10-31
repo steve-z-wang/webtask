@@ -6,12 +6,12 @@ from .snapshot import DomSnapshot
 from .selector import XPath
 
 __all__ = [
-    'DomNode',
-    'DomNodeData',
-    'Text',
-    'BoundingBox',
-    'parse_html',
-    'parse_cdp',
-    'DomSnapshot',
-    'XPath',
+    "DomNode",
+    "DomNodeData",
+    "Text",
+    "BoundingBox",
+    "parse_html",
+    "parse_cdp",
+    "DomSnapshot",
+    "XPath",
 ]

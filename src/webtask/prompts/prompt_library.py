@@ -1,6 +1,5 @@
 """Centralized prompt management system."""
 
-import os
 from pathlib import Path
 from typing import Dict, Optional
 import yaml
@@ -13,7 +12,7 @@ class PromptLibrary:
     Provides simple key-based access: PromptLibrary.get("key")
     """
 
-    _instance: Optional['PromptLibrary'] = None
+    _instance: Optional["PromptLibrary"] = None
     _prompts: Dict[str, str] = {}
     _loaded: bool = False
 
@@ -72,7 +71,7 @@ class PromptLibrary:
 
     def _load_yaml_file(self, file_path: Path) -> None:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not isinstance(data, dict):
@@ -81,9 +80,9 @@ class PromptLibrary:
 
             # Extract prompts from YAML structure
             for key, value in data.items():
-                if isinstance(value, dict) and 'content' in value:
+                if isinstance(value, dict) and "content" in value:
                     # Store the content string
-                    self._prompts[key] = value['content'].strip()
+                    self._prompts[key] = value["content"].strip()
                 elif isinstance(value, str):
                     # Direct string value
                     self._prompts[key] = value.strip()

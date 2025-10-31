@@ -3,7 +3,12 @@
 from typing import Optional
 from ...dom.domnode import DomNode
 from ..dom_filter_config import DomFilterConfig
-from .visibility import filter_non_visible_tags, filter_css_hidden, filter_no_layout, filter_zero_dimensions
+from .visibility import (
+    filter_non_visible_tags,
+    filter_css_hidden,
+    filter_no_layout,
+    filter_zero_dimensions,
+)
 
 
 def apply_visibility_filters(
@@ -15,14 +20,14 @@ def apply_visibility_filters(
 
     result = node
 
+    if config.filter_no_layout and result is not None:
+        result = filter_no_layout(result)
+
     if config.filter_non_visible_tags and result is not None:
         result = filter_non_visible_tags(result, config.non_visible_tags)
 
     if config.filter_css_hidden and result is not None:
         result = filter_css_hidden(result)
-
-    if config.filter_no_layout and result is not None:
-        result = filter_no_layout(result)
 
     if config.filter_zero_dimensions and result is not None:
         result = filter_zero_dimensions(result)

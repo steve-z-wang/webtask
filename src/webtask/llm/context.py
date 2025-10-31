@@ -13,7 +13,7 @@ class Block:
     Blocks can contain text, images, and nested blocks, allowing composable context construction.
     """
 
-    def __init__(self, text: str = "", image: Optional['Image'] = None):
+    def __init__(self, text: str = "", image: Optional["Image"] = None):
         """
         Create a Block with optional text and image.
 
@@ -23,9 +23,9 @@ class Block:
         """
         self.text = text
         self.image = image
-        self.blocks: List['Block'] = []
+        self.blocks: List["Block"] = []
 
-    def append(self, item: Union['Block', str]) -> 'Block':
+    def append(self, item: Union["Block", str]) -> "Block":
         """
         Append a nested block or text.
 
@@ -72,7 +72,7 @@ class Context:
         self.system = system
         self.blocks: List[Block] = []
 
-    def append(self, item: Union[Block, str]) -> 'Context':
+    def append(self, item: Union[Block, str]) -> "Context":
         """
         Append a block or string to user prompt.
 

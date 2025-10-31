@@ -11,7 +11,11 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   publish:
+    needs: test  # Only publish if tests pass
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for trusted publishing

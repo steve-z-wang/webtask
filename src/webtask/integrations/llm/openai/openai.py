@@ -57,7 +57,7 @@ class OpenAILLM(LLM):
         api_key: Optional[str] = None,
         temperature: float = 1,
         max_tokens: Optional[int] = None,
-    ) -> 'OpenAILLM':
+    ) -> "OpenAILLM":
         """
         Create an OpenAILLM instance with automatic encoding and max_tokens detection.
 
@@ -86,7 +86,9 @@ class OpenAILLM(LLM):
         if max_tokens is None:
             max_tokens = MODEL_MAX_TOKENS.get(model)
             if max_tokens is None:
-                raise ValueError(f"Unknown model: {model}. Please specify max_tokens manually.")
+                raise ValueError(
+                    f"Unknown model: {model}. Please specify max_tokens manually."
+                )
 
         client = AsyncOpenAI(api_key=api_key)
 
@@ -123,10 +125,12 @@ class OpenAILLM(LLM):
                 content.append({"type": "text", "text": block.text})
 
             if block.image:
-                content.append({
-                    "type": "image_url",
-                    "image_url": {"url": block.image.to_data_url()}
-                })
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": block.image.to_data_url()},
+                    }
+                )
 
         return content
 
@@ -145,7 +149,9 @@ class OpenAILLM(LLM):
         # Build user content (may include images)
         user_content = self._build_user_content(context)
 
-        self.logger.info(f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}")
+        self.logger.info(
+            f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}"
+        )
 
         response = await self.client.chat.completions.create(
             model=self.model,

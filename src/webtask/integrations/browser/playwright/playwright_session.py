@@ -1,10 +1,11 @@
 """Playwright session implementation."""
 
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 from playwright.async_api import BrowserContext
 from ....browser import Session, Cookie
-from ....browser.cookies import Cookies
-from .playwright_browser import PlaywrightBrowser
+
+if TYPE_CHECKING:
+    from .playwright_page import PlaywrightPage
 
 
 class PlaywrightSession(Session):
@@ -25,7 +26,7 @@ class PlaywrightSession(Session):
         super().__init__(cookies=cookies)
         self._context = context
 
-    async def create_page(self) -> 'PlaywrightPage':
+    async def create_page(self) -> "PlaywrightPage":
         """
         Create a new page/tab in this session.
 

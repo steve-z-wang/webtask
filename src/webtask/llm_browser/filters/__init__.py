@@ -13,6 +13,6 @@ from .apply_visibility_filters import apply_visibility_filters
 from .apply_semantic_filters import apply_semantic_filters
 
 __all__ = [
-    'apply_visibility_filters',
-    'apply_semantic_filters',
+    "apply_visibility_filters",
+    "apply_semantic_filters",
 ]

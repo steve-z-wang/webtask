@@ -56,7 +56,7 @@ class Cookie:
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Cookie':
+    def from_dict(cls, data: Dict[str, Any]) -> "Cookie":
         """
         Create a Cookie from dictionary format.
 

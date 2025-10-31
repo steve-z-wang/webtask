@@ -7,16 +7,17 @@ from ..domnode import DomNode, Text, BoundingBox
 
 def _get_string_resolver(strings: List[str]) -> Callable[[Any], str]:
     """Create a function to resolve string indices from the CDP strings array."""
+
     def resolve(index: Any) -> str:
         if isinstance(index, int) and 0 <= index < len(strings):
             return strings[index]
         return ""
+
     return resolve
 
 
 def _parse_layout_data(
-    layout_data: Dict[str, Any],
-    get_string: Callable[[Any], str]
+    layout_data: Dict[str, Any], get_string: Callable[[Any], str]
 ) -> Dict[int, Tuple[Optional[BoundingBox], Dict[str, str]]]:
     """
     Parse layout information from CDP snapshot.
@@ -28,7 +29,7 @@ def _parse_layout_data(
     layout_styles = layout_data.get("styles", [])
 
     layout_map = {}
-    requested_properties = ['display', 'visibility', 'opacity']
+    requested_properties = ["display", "visibility", "opacity"]
 
     for i, node_idx in enumerate(layout_node_indices):
         # Parse bounding box
@@ -57,7 +58,7 @@ def _parse_layout_data(
 def _create_element_nodes(
     nodes_data: Dict[str, Any],
     layout_map: Dict[int, Tuple[Optional[BoundingBox], Dict[str, str]]],
-    get_string: Callable[[Any], str]
+    get_string: Callable[[Any], str],
 ) -> List[Optional[DomNode]]:
     """
     Create DomNode objects for element nodes (node_type == 1).
@@ -90,7 +91,11 @@ def _create_element_nodes(
 
         # Get tag name
         node_name_idx = node_names[i] if i < len(node_names) else None
-        tag_name = get_string(node_name_idx).lower() if node_name_idx is not None else "unknown"
+        tag_name = (
+            get_string(node_name_idx).lower()
+            if node_name_idx is not None
+            else "unknown"
+        )
 
         # Get layout info
         bounds, styles = layout_map.get(i, (None, {}))
@@ -112,7 +117,7 @@ def _create_element_nodes(
 def _add_text_nodes(
     nodes_data: Dict[str, Any],
     element_nodes: List[Optional[DomNode]],
-    get_string: Callable[[Any], str]
+    get_string: Callable[[Any], str],
 ) -> None:
     """Add text nodes (node_type == 3) as children to their parent elements."""
     node_types = nodes_data.get("nodeType", [])
@@ -147,8 +152,7 @@ def _add_text_nodes(
 
 
 def _build_tree(
-    nodes_data: Dict[str, Any],
-    element_nodes: List[Optional[DomNode]]
+    nodes_data: Dict[str, Any], element_nodes: List[Optional[DomNode]]
 ) -> Optional[DomNode]:
     """
     Build the DOM tree by linking child nodes to parents.

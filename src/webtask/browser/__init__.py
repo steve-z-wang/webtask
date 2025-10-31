@@ -7,10 +7,10 @@ from .element import Element
 from .cookies import Cookie, Cookies
 
 __all__ = [
-    'Browser',
-    'Session',
-    'Page',
-    'Element',
-    'Cookie',
-    'Cookies',
+    "Browser",
+    "Session",
+    "Page",
+    "Element",
+    "Cookie",
+    "Cookies",
 ]

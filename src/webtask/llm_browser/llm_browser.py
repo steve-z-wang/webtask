@@ -125,8 +125,7 @@ class LLMBrowser:
         url = page.url
 
         context_str, element_map = await DomContextBuilder.build_context(
-            page=page,
-            dom_filter_config=self.dom_filter_config
+            page=page, dom_filter_config=self.dom_filter_config
         )
 
         self.element_map = element_map
@@ -149,10 +148,7 @@ class LLMBrowser:
         # Optionally include screenshot with bounding boxes
         image = None
         if self.use_screenshot and element_map:
-            image = await BoundingBoxRenderer.render(
-                page=page,
-                element_map=element_map
-            )
+            image = await BoundingBoxRenderer.render(page=page, element_map=element_map)
 
         return Block(text="\n".join(lines), image=image)
 
@@ -198,7 +194,9 @@ class LLMBrowser:
         element = await page.select_one(selector)
         await element.type(text, delay=delay)
 
-    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
+    async def keyboard_type(
+        self, text: str, clear: bool = False, delay: float = 80
+    ) -> None:
         """Type text using keyboard into the currently focused element.
 
         Does not require selecting an element. The element must be focused first

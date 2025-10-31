@@ -1,12 +1,16 @@
 """Core DOM node types with browser rendering data."""
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Union, Any
+from typing import TYPE_CHECKING, List, Dict, Optional, Union, Any
+
+if TYPE_CHECKING:
+    from .selector import XPath
 
 
 @dataclass
 class BoundingBox:
     """Element bounding box from browser rendering."""
+
     x: float
     y: float
     width: float
@@ -16,13 +20,14 @@ class BoundingBox:
 @dataclass
 class DomNodeData:
     """Data container for DOM node properties."""
+
     tag: str
     attrib: Dict[str, str] = field(default_factory=dict)
     styles: Dict[str, str] = field(default_factory=dict)
     bounds: Optional[BoundingBox] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def copy(self) -> 'DomNodeData':
+    def copy(self) -> "DomNodeData":
         return DomNodeData(
             tag=self.tag,
             attrib=self.attrib.copy(),
@@ -37,8 +42,8 @@ class DomNode:
     """DOM element node with browser rendering data."""
 
     data: DomNodeData
-    children: List[Union['DomNode', 'Text']] = field(default_factory=list)
-    parent: Optional['DomNode'] = field(default=None, repr=False)
+    children: List[Union["DomNode", "Text"]] = field(default_factory=list)
+    parent: Optional["DomNode"] = field(default=None, repr=False)
 
     def __init__(
         self,
@@ -86,26 +91,26 @@ class DomNode:
     def metadata(self) -> Dict[str, Any]:
         return self.data.metadata
 
-    def add_child(self, child: Union['DomNode', 'Text']):
+    def add_child(self, child: Union["DomNode", "Text"]):
         self.children.append(child)
         child.parent = self
 
-    def copy(self) -> 'DomNode':
+    def copy(self) -> "DomNode":
         """Create shallow copy without children."""
         return DomNode(data=self.data)
 
-    def deepcopy(self) -> 'DomNode':
+    def deepcopy(self) -> "DomNode":
         """Create deep copy without children."""
         return DomNode(data=self.data.copy())
 
     def is_visible(self) -> bool:
         """Check if element is visible."""
-        if self.styles.get('display') == 'none':
+        if self.styles.get("display") == "none":
             return False
-        if self.styles.get('visibility') == 'hidden':
+        if self.styles.get("visibility") == "hidden":
             return False
         try:
-            if float(self.styles.get('opacity', '1')) == 0:
+            if float(self.styles.get("opacity", "1")) == 0:
                 return False
         except (ValueError, TypeError):
             pass
@@ -125,34 +130,38 @@ class DomNode:
             else:
                 yield child
 
-    def get_text(self, separator: str = '') -> str:
+    def get_text(self, separator: str = "") -> str:
         """Get all text content."""
         parts = [node.content for node in self.traverse() if isinstance(node, Text)]
         return separator.join(parts)
 
-    def get_x_path(self) -> 'XPath':
+    def get_x_path(self) -> "XPath":
         """Get XPath to this element."""
         from .selector import XPath
 
         if self.parent is None:
-            return XPath(f'/{self.tag}')
+            return XPath(f"/{self.tag}")
 
-        siblings = [child for child in self.parent.children
-                   if isinstance(child, DomNode) and child.tag == self.tag]
+        siblings = [
+            child
+            for child in self.parent.children
+            if isinstance(child, DomNode) and child.tag == self.tag
+        ]
 
         if len(siblings) == 1:
-            position = ''
+            position = ""
         else:
             index = siblings.index(self) + 1
-            position = f'[{index}]'
+            position = f"[{index}]"
 
         parent_path = self.parent.get_x_path()
-        return XPath(f'{parent_path.path}/{self.tag}{position}')
+        return XPath(f"{parent_path.path}/{self.tag}{position}")
 
 
 @dataclass
 class Text:
     """DOM text node."""
+
     content: str
     parent: Optional[DomNode] = field(default=None, repr=False)
 

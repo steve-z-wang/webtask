@@ -49,7 +49,7 @@ class GeminiLLM(LLM):
         api_key: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
-    ) -> 'GeminiLLM':
+    ) -> "GeminiLLM":
         """
         Create a GeminiLLM instance with automatic max_tokens detection.
 
@@ -70,7 +70,9 @@ class GeminiLLM(LLM):
         if max_tokens is None:
             max_tokens = MODEL_MAX_TOKENS.get(model)
             if max_tokens is None:
-                raise ValueError(f"Unknown model: {model}. Please specify max_tokens manually.")
+                raise ValueError(
+                    f"Unknown model: {model}. Please specify max_tokens manually."
+                )
 
         # Configure API key
         if api_key:
@@ -81,7 +83,7 @@ class GeminiLLM(LLM):
             model_name=model,
             generation_config=genai.GenerationConfig(
                 temperature=temperature,
-            )
+            ),
         )
 
         return cls(max_tokens, gemini_model, model, temperature)
@@ -157,7 +159,9 @@ class GeminiLLM(LLM):
         Returns:
             Generated text response from Gemini
         """
-        self.logger.info(f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}")
+        self.logger.info(
+            f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}"
+        )
 
         # Build content (may include images)
         content = self._build_content(context)
@@ -165,7 +169,7 @@ class GeminiLLM(LLM):
         response = await self.model.generate_content_async(content)
 
         # Log token usage if available
-        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
             self.logger.info(
                 f"Gemini API response - "
                 f"prompt_tokens: {response.usage_metadata.prompt_token_count}, "

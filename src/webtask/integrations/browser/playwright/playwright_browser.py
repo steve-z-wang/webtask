@@ -1,6 +1,5 @@
 """Playwright browser implementation."""
 
-from typing import Optional
 from playwright.async_api import async_playwright, Browser as PlaywrightBrowserType
 from ....browser import Browser
 
@@ -12,7 +11,9 @@ class PlaywrightBrowser(Browser):
     Wraps Playwright's browser for lifecycle management.
     """
 
-    def __init__(self, playwright, browser: PlaywrightBrowserType, headless: bool = False):
+    def __init__(
+        self, playwright, browser: PlaywrightBrowserType, headless: bool = False
+    ):
         """
         Initialize PlaywrightBrowser (use create_browser factory instead).
 
@@ -26,7 +27,9 @@ class PlaywrightBrowser(Browser):
         self._browser = browser
 
     @classmethod
-    async def create_browser(cls, headless: bool = False, browser_type: str = "chromium") -> 'PlaywrightBrowser':
+    async def create_browser(
+        cls, headless: bool = False, browser_type: str = "chromium"
+    ) -> "PlaywrightBrowser":
         """
         Create and launch a new Playwright browser instance.
 
@@ -78,6 +81,7 @@ class PlaywrightBrowser(Browser):
         # Set cookies if provided
         if cookies:
             from ....browser.cookies import Cookies
+
             cookie_dicts = Cookies.to_dict_list(cookies)
             await context.add_cookies(cookie_dicts)
 

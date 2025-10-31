@@ -19,7 +19,4 @@ def parse_json(text: str) -> Dict[str, Any]:
         return json.loads(text)
     except json.JSONDecodeError as e:
         preview = text[:500] if text else "(empty string)"
-        raise ValueError(
-            f"Failed to parse JSON: {e}\n"
-            f"Text preview: {preview}"
-        )
+        raise ValueError(f"Failed to parse JSON: {e}\n" f"Text preview: {preview}")
