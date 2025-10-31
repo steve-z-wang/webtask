@@ -12,7 +12,7 @@ Three ways to use it:
 **Step-by-step** - Execute tasks one step at a time for debugging/control
 **Low-level** - Tell it exactly what to do with natural language selectors
 
-Uses LLMs to understand pages, plan actions, and select elements. Built with Playwright for the browser stuff.
+Uses multimodal LLMs (GPT-4 Vision, Gemini 2.5) to understand pages visually and through DOM. Sends screenshots with bounding boxes by default for better accuracy. Built with Playwright for the browser stuff.
 
 ---
 
@@ -29,8 +29,11 @@ wt = Webtask()
 # Choose your LLM (Gemini or OpenAI)
 llm = GeminiLLM.create(model="gemini-2.5-flash")
 
-# Create agent
+# Create agent (screenshots with bounding boxes enabled by default)
 agent = await wt.create_agent(llm=llm)
+
+# Or disable screenshots for faster/cheaper operation
+# agent = await wt.create_agent(llm=llm, use_screenshot=False)
 ```
 
 **High-level autonomous:**
@@ -82,10 +85,12 @@ No CSS selectors. No XPath. Just describe what you want.
 ## How it works
 
 **High-level mode** - The agent loop:
-1. Proposer looks at the page and task, decides next action
-2. Executer runs it (click, type, navigate, etc.)
-3. Verifier checks if task complete
+1. Proposer looks at the page (text DOM + screenshot with bounding boxes) and task, decides next action
+2. Executer runs it (navigate, click, fill, type)
+3. Verifier checks if task complete by looking at updated page
 4. Repeat until done
+
+The agent sees both text (DOM tree with element IDs) and visual context (screenshot with labeled bounding boxes) for more accurate understanding.
 
 **Step-by-step mode** - Same as high-level but you control the loop:
 - `agent.set_task(description)` - Set the task
@@ -100,7 +105,13 @@ No CSS selectors. No XPath. Just describe what you want.
 - `agent.wait_for_idle()` - Wait for network/DOM to stabilize
 - `agent.screenshot(path)` - Capture page screenshot
 
-All modes use the same core: LLM sees cleaned DOM with element IDs like `button-0` instead of raw HTML. Clean input, clean output.
+All modes use the same core: LLM sees cleaned DOM with element IDs like `button-0` instead of raw HTML, plus a screenshot with bounding boxes showing exactly where each element is. Clean input, clean output.
+
+**Available tools for autonomous mode:**
+- `navigate(url)` - Navigate to a URL
+- `click(element_id)` - Click an element
+- `fill(element_id, value)` - Fill form field instantly
+- `type(element_id, text)` - Type text character-by-character with realistic delays
 
 ---
 

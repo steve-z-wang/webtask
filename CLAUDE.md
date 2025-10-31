@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**webtask** is a Python library for LLM-powered web automation with autonomous agents and natural language selectors. Built on Playwright for browser automation and supports OpenAI/Gemini LLMs.
+**webtask** is a Python library for LLM-powered web automation with autonomous agents and natural language selectors. Built on Playwright for browser automation and supports OpenAI/Gemini multimodal LLMs with screenshot capabilities.
 
 Three interaction modes:
-- **High-level autonomous**: `agent.execute(task)` - Agent autonomously plans and executes steps
+- **High-level autonomous**: `agent.execute(task)` - Agent autonomously plans and executes steps with visual + text context
 - **Step-by-step**: `agent.set_task()` + `agent.execute_step()` loop - Manual control of agent loop for debugging
 - **Low-level imperative**: `agent.navigate()`, `agent.select()`, `agent.wait()` - Direct control with natural language selectors
+
+**Multimodal by default**: Agent sees both DOM text (element IDs) and screenshots with bounding boxes for better accuracy.
 
 ## Development Commands
 
@@ -66,11 +68,12 @@ python -m twine upload dist/*
 ### Core Design Principles
 
 1. **Element ID Abstraction**: LLM sees clean element IDs (`button-0`, `input-1`), browser uses XPath
-2. **XPath from Original DOM**: Element XPaths computed from unfiltered DOM tree to match actual browser state
-3. **Separation of Concerns**: DOM layer is pure data structures, doesn't know about LLMs or browsers
-4. **Propose-Execute-Verify Loop**: Three specialized agent roles work together autonomously
-5. **Composable Context Building**: Block system allows flexible prompt construction
-6. **Lazy Initialization**: Browser launches only when first agent is created
+2. **Multimodal Context**: LLM receives both text (DOM tree) and visual (screenshot with bounding boxes) context
+3. **XPath from Original DOM**: Element XPaths computed from unfiltered DOM tree to match actual browser state
+4. **Separation of Concerns**: DOM layer is pure data structures, doesn't know about LLMs or browsers
+5. **Propose-Execute-Verify Loop**: Three specialized agent roles work together autonomously
+6. **Composable Context Building**: Block system supports text + images for multimodal LLM APIs
+7. **Lazy Initialization**: Browser launches only when first agent is created
 
 ### Module Structure
 
@@ -92,9 +95,13 @@ src/webtask/
 │   └── tools/browser/     # Concrete browser action tools
 │       ├── navigate.py
 │       ├── click.py
-│       └── type.py
+│       ├── fill.py        # Fill form fields by element_id
+│       └── type.py        # Type into elements by element_id
 ├── llm_browser/           # Bridge between LLM text and browser operations
 │   ├── llm_browser.py    # Element ID mapping, context building, action execution
+│   ├── dom_context_builder.py  # Builds text DOM context
+│   ├── bounding_box_renderer.py # Renders screenshots with bounding boxes
+│   ├── dom_filter_config.py  # DOM filtering configuration
 │   └── selector.py       # Natural language element selection
 ├── browser/               # Abstract browser interfaces
 │   ├── browser.py        # Browser management
@@ -112,8 +119,10 @@ src/webtask/
 │   └── utils/            # add_node_reference.py - preserves original nodes
 ├── llm/                   # LLM interfaces
 │   ├── llm.py            # Abstract LLM base class with logging
-│   ├── context.py        # Context (system + user blocks) and Block (composable text)
+│   ├── context.py        # Context (system + user blocks) and Block (text + image)
 │   └── tokenizer.py      # Token counting
+├── media/                 # Media handling
+│   └── image.py          # Image class (base64, data URL, save to file)
 ├── integrations/          # Concrete implementations
 │   ├── browser/playwright/ # Playwright implementation
 │   │   ├── playwright_browser.py
@@ -121,8 +130,8 @@ src/webtask/
 │   │   ├── playwright_page.py  # XPath-based element selection
 │   │   └── playwright_element.py
 │   └── llm/
-│       ├── openai/       # OpenAI GPT models
-│       └── google/       # Google Gemini models
+│       ├── openai/       # OpenAI GPT models (multimodal support)
+│       └── google/       # Google Gemini models (multimodal support)
 ├── prompts/              # LLM prompts loaded from prompts_data/
 │   └── prompt_library.py
 ├── prompts_data/         # YAML files with prompts
