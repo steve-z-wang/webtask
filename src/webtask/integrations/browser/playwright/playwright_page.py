@@ -1,11 +1,14 @@
 """Playwright page implementation."""
 
-from typing import Dict, Any, List, Union, Optional
+from typing import TYPE_CHECKING, Dict, Any, List, Union, Optional
 from pathlib import Path
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
 from ....utils import normalize_url
 from ....dom import XPath
+
+if TYPE_CHECKING:
+    from .playwright_element import PlaywrightElement
 
 
 class PlaywrightPage(Page):
@@ -47,15 +50,18 @@ class PlaywrightPage(Page):
         cdp = await self._page.context.new_cdp_session(self._page)
 
         # Capture snapshot
-        snapshot = await cdp.send('DOMSnapshot.captureSnapshot', {
-            'computedStyles': ['display', 'visibility', 'opacity'],
-            'includePaintOrder': True,
-            'includeDOMRects': True
-        })
+        snapshot = await cdp.send(
+            "DOMSnapshot.captureSnapshot",
+            {
+                "computedStyles": ["display", "visibility", "opacity"],
+                "includePaintOrder": True,
+                "includeDOMRects": True,
+            },
+        )
 
         return snapshot
 
-    async def select(self, selector: Union[str, XPath]) -> List['PlaywrightElement']:
+    async def select(self, selector: Union[str, XPath]) -> List["PlaywrightElement"]:
         """
         Select all elements matching the selector.
 
@@ -74,7 +80,7 @@ class PlaywrightPage(Page):
 
         return [PlaywrightElement(el) for el in elements]
 
-    async def select_one(self, selector: Union[str, XPath]) -> 'PlaywrightElement':
+    async def select_one(self, selector: Union[str, XPath]) -> "PlaywrightElement":
         """
         Select a single element matching the selector.
 
@@ -93,7 +99,9 @@ class PlaywrightPage(Page):
         if len(elements) == 0:
             raise ValueError(f"No elements found matching selector: {selector}")
         elif len(elements) > 1:
-            raise ValueError(f"Multiple elements ({len(elements)}) found matching selector: {selector}")
+            raise ValueError(
+                f"Multiple elements ({len(elements)}) found matching selector: {selector}"
+            )
 
         return elements[0]
 
@@ -110,16 +118,14 @@ class PlaywrightPage(Page):
         Raises:
             TimeoutError: If page doesn't become idle within timeout
         """
-        await self._page.wait_for_load_state('networkidle', timeout=timeout)
+        await self._page.wait_for_load_state("networkidle", timeout=timeout)
 
     async def close(self):
         """Close the page."""
         await self._page.close()
 
     async def screenshot(
-        self,
-        path: Optional[Union[str, Path]] = None,
-        full_page: bool = False
+        self, path: Optional[Union[str, Path]] = None, full_page: bool = False
     ) -> bytes:
         """
         Take a screenshot of the current page.
@@ -133,7 +139,9 @@ class PlaywrightPage(Page):
         """
         return await self._page.screenshot(path=path, full_page=full_page)
 
-    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
+    async def keyboard_type(
+        self, text: str, clear: bool = False, delay: float = 80
+    ) -> None:
         """
         Type text using keyboard into the currently focused element.
 

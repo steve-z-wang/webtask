@@ -16,7 +16,9 @@ class DomSnapshot:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_cdp(cls, cdp_snapshot: Dict[str, Any], url: Optional[str] = None) -> 'DomSnapshot':
+    def from_cdp(
+        cls, cdp_snapshot: Dict[str, Any], url: Optional[str] = None
+    ) -> "DomSnapshot":
         """Create DomSnapshot from CDP snapshot."""
         root = parse_cdp(cdp_snapshot)
         return cls(root=root, url=url)

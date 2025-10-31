@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class NaturalSelector:
     """Selects elements using natural language descriptions."""
 
-    def __init__(self, llm: LLM, llm_browser: 'LLMBrowser'):
+    def __init__(self, llm: LLM, llm_browser: "LLMBrowser"):
         self.llm = llm
         self.llm_browser = llm_browser
 
@@ -25,7 +25,7 @@ class NaturalSelector:
 
         context = Context(system=system)
         context.append(str(page_context))
-        context.append(f"\nWhich element_id matches this description: \"{description}\"?")
+        context.append(f'\nWhich element_id matches this description: "{description}"?')
 
         response = await self.llm.generate(context)
         data = parse_json(response)

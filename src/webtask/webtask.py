@@ -1,7 +1,7 @@
 """Webtask - main manager class for web automation."""
 
 from typing import Optional
-from .browser import Browser, Session
+from .browser import Browser
 from .llm import LLM
 from .agent import Agent
 from .llm_browser.dom_filter_config import DomFilterConfig
@@ -26,8 +26,7 @@ class Webtask:
             from .integrations.browser.playwright import PlaywrightBrowser
 
             self.browser = await PlaywrightBrowser.create_browser(
-                headless=self.headless,
-                browser_type=self.browser_type
+                headless=self.headless, browser_type=self.browser_type
             )
 
         return self.browser

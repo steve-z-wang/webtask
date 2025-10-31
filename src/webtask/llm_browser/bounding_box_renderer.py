@@ -183,7 +183,7 @@ class BoundingBoxRenderer:
             element_map=element_map,
             color=color,
             line_width=line_width,
-            font_size=font_size
+            font_size=font_size,
         )
 
         # Save using Image's save method

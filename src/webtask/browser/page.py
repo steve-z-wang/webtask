@@ -1,9 +1,12 @@
 """Page base class for browser page management."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
 from pathlib import Path
 from .element import Element
+
+if TYPE_CHECKING:
+    from ..dom.snapshot import DomSnapshot
 
 
 class Page(ABC):
@@ -82,9 +85,7 @@ class Page(ABC):
 
     @abstractmethod
     async def screenshot(
-        self,
-        path: Optional[Union[str, Path]] = None,
-        full_page: bool = False
+        self, path: Optional[Union[str, Path]] = None, full_page: bool = False
     ) -> bytes:
         """
         Take a screenshot of the current page.
@@ -102,7 +103,9 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
+    async def keyboard_type(
+        self, text: str, clear: bool = False, delay: float = 80
+    ) -> None:
         """
         Type text using keyboard into the currently focused element.
 
@@ -146,7 +149,7 @@ class Page(ABC):
         """
         pass
 
-    async def get_snapshot(self) -> 'DomSnapshot':
+    async def get_snapshot(self) -> "DomSnapshot":
         """
         Get DOM snapshot of the current page.
 

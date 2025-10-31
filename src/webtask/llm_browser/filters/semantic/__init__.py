@@ -6,8 +6,8 @@ from .wrappers import collapse_single_child_wrappers
 from .presentational import filter_presentational_roles
 
 __all__ = [
-    'filter_attributes',
-    'filter_empty',
-    'collapse_single_child_wrappers',
-    'filter_presentational_roles',
+    "filter_attributes",
+    "filter_empty",
+    "collapse_single_child_wrappers",
+    "filter_presentational_roles",
 ]

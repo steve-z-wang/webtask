@@ -16,7 +16,7 @@ def parse_html(html_string: str) -> DomNode:
     try:
         parser = etree.XMLParser(recover=True, remove_blank_text=False)
         tree = etree.fromstring(html_string.encode("utf-8"), parser=parser)
-    except:
+    except Exception:
         tree = lxml_html.fromstring(html_string)
 
     root_node = _convert_lxml_to_node(tree)
@@ -32,7 +32,9 @@ def _parse_bounding_box(bbox_str: str) -> Optional[BoundingBox]:
         parts = bbox_str.split(",")
         if len(parts) >= 4:
             x, y, width, height = parts[:4]
-            return BoundingBox(x=float(x), y=float(y), width=float(width), height=float(height))
+            return BoundingBox(
+                x=float(x), y=float(y), width=float(width), height=float(height)
+            )
     except (ValueError, AttributeError):
         pass
 
@@ -79,9 +81,15 @@ def _convert_lxml_to_node(lxml_node) -> DomNode:
     style_str = attributes.get("style", "")
     styles = _parse_inline_styles(style_str)
 
-    attrib = {k: v for k, v in attributes.items() if k not in {"backend_node_id", "bounding_box_rect"}}
+    attrib = {
+        k: v
+        for k, v in attributes.items()
+        if k not in {"backend_node_id", "bounding_box_rect"}
+    }
 
-    node = DomNode(tag=tag_name, attrib=attrib, styles=styles, bounds=bounds, metadata=metadata)
+    node = DomNode(
+        tag=tag_name, attrib=attrib, styles=styles, bounds=bounds, metadata=metadata
+    )
 
     if lxml_node.text:
         text_content = lxml_node.text.strip()

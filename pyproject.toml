@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pywebtask"
-version = "0.5.0"
+version = "0.5.1"
 description = "LLM-powered web automation library with autonomous agents and natural language selectors"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -80,3 +80,17 @@ target-version = ["py310", "py311", "py312"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+
+[tool.pdm.scripts]
+# Linting and formatting
+lint = "ruff check src/ tests/"
+format = "black src/ tests/"
+format-check = "black --check src/ tests/"
+
+# Testing
+test = "pytest tests/ -v --tb=short"
+test-cov = "pytest tests/ --cov=webtask --cov-report=html"
+
+# Combined checks (mimics CI)
+pr = {shell = "./scripts/pr.sh"}
+pr-fix = {shell = "./scripts/pr.sh fix"}

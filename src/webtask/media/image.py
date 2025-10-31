@@ -1,7 +1,6 @@
 """Image class for handling screenshots and visual data."""
 
 import base64
-from typing import Optional
 
 
 class Image:
@@ -23,7 +22,7 @@ class Image:
         Returns:
             Base64-encoded string
         """
-        return base64.b64encode(self._data).decode('utf-8')
+        return base64.b64encode(self._data).decode("utf-8")
 
     def to_data_url(self) -> str:
         """Convert image to data URL for embedding in HTML or sending to APIs.
@@ -40,7 +39,7 @@ class Image:
         Args:
             path: File path to save to
         """
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             f.write(self._data)
 
     def to_bytes(self) -> bytes:

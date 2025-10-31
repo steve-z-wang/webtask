@@ -152,16 +152,22 @@ class Agent:
         self.logger.debug("Phase 2: Executing actions...")
         exec_results = await self.executer.execute(actions)
         success_count = sum(1 for r in exec_results if r.success)
-        self.logger.debug(f"Execution complete: {success_count}/{len(exec_results)} successful")
+        self.logger.debug(
+            f"Execution complete: {success_count}/{len(exec_results)} successful"
+        )
 
         # Wait for page to stabilize before verification
         if actions:
-            self.logger.debug(f"Phase 3: Waiting {self.action_delay}s for page to stabilize...")
+            self.logger.debug(
+                f"Phase 3: Waiting {self.action_delay}s for page to stabilize..."
+            )
             await wait(self.action_delay)
 
         self.logger.debug("Phase 4: Verifying task completion...")
         verify_result = await self.verifier.verify(actions, exec_results)
-        self.logger.debug(f"Verification result: {'Complete' if verify_result.complete else 'Incomplete'}")
+        self.logger.debug(
+            f"Verification result: {'Complete' if verify_result.complete else 'Incomplete'}"
+        )
         self.logger.debug(f"Verification message: {verify_result.message}")
 
         step = Step(
@@ -275,9 +281,7 @@ class Agent:
         await asyncio.sleep(seconds)
 
     async def screenshot(
-        self,
-        path: Optional[str] = None,
-        full_page: bool = False
+        self, path: Optional[str] = None, full_page: bool = False
     ) -> bytes:
         """
         Take a screenshot of the current page.

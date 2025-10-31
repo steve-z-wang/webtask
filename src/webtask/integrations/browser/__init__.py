@@ -8,8 +8,8 @@ from .playwright import (
 )
 
 __all__ = [
-    'PlaywrightBrowser',
-    'PlaywrightSession',
-    'PlaywrightPage',
-    'PlaywrightElement',
+    "PlaywrightBrowser",
+    "PlaywrightSession",
+    "PlaywrightPage",
+    "PlaywrightElement",
 ]

@@ -42,7 +42,9 @@ class DomContextBuilder:
         return context_str, element_map
 
     @staticmethod
-    def _assign_element_ids(root: DomNode, dom_filter_config: DomFilterConfig) -> Dict[str, DomNode]:
+    def _assign_element_ids(
+        root: DomNode, dom_filter_config: DomFilterConfig
+    ) -> Dict[str, DomNode]:
         """Assign element IDs only to interactive nodes.
 
         Non-interactive nodes still appear in context but without IDs.
@@ -59,18 +61,22 @@ class DomContextBuilder:
             if isinstance(node, DomNode):
                 # Check if element is interactive by tag or role
                 is_interactive_tag = node.tag in dom_filter_config.interactive_tags
-                element_role = node.attrib.get('role')
-                is_interactive_role = element_role in dom_filter_config.interactive_roles if element_role else False
+                element_role = node.attrib.get("role")
+                is_interactive_role = (
+                    element_role in dom_filter_config.interactive_roles
+                    if element_role
+                    else False
+                )
 
                 if is_interactive_tag or is_interactive_role:
                     tag = node.tag
                     count = tag_counters.get(tag, 0)
                     element_id = f"{tag}-{count}"
 
-                    node.metadata['element_id'] = element_id
+                    node.metadata["element_id"] = element_id
 
                     # Map to original unfiltered node for correct XPath computation
-                    original_node = node.metadata.get('original_node', node)
+                    original_node = node.metadata.get("original_node", node)
                     element_map[element_id] = original_node
 
                     tag_counters[tag] = count + 1
@@ -113,6 +119,6 @@ class DomContextBuilder:
         """Add original_node reference to metadata before filtering."""
         for node in root.traverse():
             if isinstance(node, DomNode):
-                node.metadata['original_node'] = node
+                node.metadata["original_node"] = node
 
         return root

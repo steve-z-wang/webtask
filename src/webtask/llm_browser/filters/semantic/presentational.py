@@ -7,9 +7,9 @@ def filter_presentational_roles(node: DomNode) -> DomNode:
     """Remove presentational role attributes."""
     new_node = node.deepcopy()
 
-    role = new_node.attrib.get('role', '').lower()
-    if role in ('none', 'presentation'):
-        del new_node.attrib['role']
+    role = new_node.attrib.get("role", "").lower()
+    if role in ("none", "presentation"):
+        del new_node.attrib["role"]
 
     for child in node.children:
         if isinstance(child, Text):
