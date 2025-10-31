@@ -20,14 +20,12 @@ class Proposer:
         step_history: StepHistory,
         tool_registry: ToolRegistry,
         llm_browser: LLMBrowser,
-        use_screenshot: bool = False,
     ):
         self.llm = llm
         self.task = task
         self.step_history = step_history
         self.tool_registry = tool_registry
         self.llm_browser = llm_browser
-        self.use_screenshot = use_screenshot
 
     async def _build_context(self) -> Context:
         system = get_prompt("proposer_system")
@@ -35,7 +33,7 @@ class Proposer:
         context.append(Block(f"Task:\n{self.task}"))
         context.append(self.step_history.to_context_block())
         context.append(self.tool_registry.to_context_block())
-        context.append(await self.llm_browser.to_context_block(use_screenshot=self.use_screenshot))
+        context.append(await self.llm_browser.to_context_block())
         return context
 
     async def propose(self) -> List[Action]:

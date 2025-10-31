@@ -16,10 +16,12 @@ class LLMBrowser:
         self,
         session: Optional[Session] = None,
         dom_filter_config: Optional[DomFilterConfig] = None,
+        use_screenshot: bool = True,
     ):
-        """Initialize with optional Session and DOM filter configuration."""
+        """Initialize with optional Session, DOM filter configuration, and screenshot setting."""
         self.session = session
         self.dom_filter_config = dom_filter_config or DomFilterConfig()
+        self.use_screenshot = use_screenshot
         self._pages: Dict[str, Page] = {}
         self._page_counter = 0
         self.current_page_id: Optional[str] = None
@@ -103,14 +105,11 @@ class LLMBrowser:
                 self.current_page_id = None
                 self.element_map.clear()
 
-    async def to_context_block(self, use_screenshot: bool = False) -> Block:
+    async def to_context_block(self) -> Block:
         """Get formatted page context with element IDs for LLM.
 
-        Args:
-            use_screenshot: If True, includes screenshot with bounding boxes in the Block
-
         Returns:
-            Block with text context and optional screenshot image
+            Block with text context and optional screenshot image (based on self.use_screenshot)
         """
 
         if self.current_page_id is None:
@@ -149,7 +148,7 @@ class LLMBrowser:
 
         # Optionally include screenshot with bounding boxes
         image = None
-        if use_screenshot and element_map:
+        if self.use_screenshot and element_map:
             image = await BoundingBoxRenderer.render(
                 page=page,
                 element_map=element_map
@@ -184,6 +183,20 @@ class LLMBrowser:
         selector = self._get_selector(element_id)
         element = await page.select_one(selector)
         await element.click()
+
+    async def fill(self, element_id: str, value: str) -> None:
+        """Fill element by ID with value."""
+        page = self._require_page()
+        selector = self._get_selector(element_id)
+        element = await page.select_one(selector)
+        await element.fill(value)
+
+    async def type(self, element_id: str, text: str, delay: float = 80) -> None:
+        """Type text into element by ID character by character."""
+        page = self._require_page()
+        selector = self._get_selector(element_id)
+        element = await page.select_one(selector)
+        await element.type(text, delay=delay)
 
     async def keyboard_type(self, text: str, clear: bool = False, delay: float = 80) -> None:
         """Type text using keyboard into the currently focused element.

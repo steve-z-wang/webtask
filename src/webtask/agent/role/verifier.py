@@ -18,13 +18,11 @@ class Verifier:
         task: str,
         step_history: StepHistory,
         llm_browser: LLMBrowser,
-        use_screenshot: bool = False,
     ):
         self.llm = llm
         self.task = task
         self.step_history = step_history
         self.llm_browser = llm_browser
-        self.use_screenshot = use_screenshot
 
     async def _build_context(
         self, actions: List[Action], execution_results: List[ExecutionResult]
@@ -49,7 +47,7 @@ class Verifier:
         context.append(Block("\n".join(lines)))
 
         context.append(self.step_history.to_context_block())
-        context.append(await self.llm_browser.to_context_block(use_screenshot=self.use_screenshot))
+        context.append(await self.llm_browser.to_context_block())
         return context
 
     async def verify(
