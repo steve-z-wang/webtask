@@ -27,6 +27,13 @@ class PlaywrightPage(Page):
         """
         self._page = page
 
+    def __str__(self) -> str:
+        """String representation of the page."""
+        title = self._page.title()
+        if title:
+            return f"PlaywrightPage(url={self.url!r}, title={title!r})"
+        return f"PlaywrightPage(url={self.url!r})"
+
     async def navigate(self, url: str):
         """
         Navigate to a URL.

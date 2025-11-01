@@ -16,6 +16,10 @@ class Page(ABC):
     Simple adapter over browser automation libraries (Playwright, Selenium, etc.).
     """
 
+    def __str__(self) -> str:
+        """String representation of the page."""
+        return f"Page(url={self.url!r})"
+
     @abstractmethod
     async def navigate(self, url: str):
         """
