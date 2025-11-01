@@ -6,23 +6,21 @@ from typing import Set
 
 @dataclass
 class DomFilterConfig:
-    """Configuration for DOM filtering."""
+    """Configuration for DOM filtering.
 
-    filter_non_visible_tags: bool = True
-    non_visible_tags: Set[str] = field(
-        default_factory=lambda: {
-            "script",
-            "style",
-            "head",
-            "meta",
-            "link",
-            "title",
-            "noscript",
-        }
-    )
-    filter_css_hidden: bool = True
-    filter_no_layout: bool = True
-    filter_zero_dimensions: bool = True
+    Visibility Filtering Philosophy:
+    - Only use filter_not_rendered - if CDP didn't include it in the render tree, remove it
+    - Trust CDP's rendering decisions - it already excludes script, style, display:none, etc.
+    - Don't filter by CSS properties - interactive elements may use opacity:0, etc.
+    """
+
+    # ACTIVE FILTER: Remove elements not in CDP's render tree
+    filter_not_rendered: bool = True
+
+    # DEPRECATED FILTERS (kept for backwards compatibility, not used):
+    # - filter_non_visible_tags: CDP already excludes <script>, <style>, etc.
+    # - filter_css_hidden: Too aggressive, removes opacity:0 file inputs
+    # - filter_zero_dimensions: Too aggressive, removes hidden interactive elements
 
     filter_attributes: bool = True
     kept_attributes: Set[str] = field(

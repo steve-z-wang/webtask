@@ -4,7 +4,13 @@ from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
 from .dom_filter_config import DomFilterConfig
-from .filters import apply_visibility_filters, apply_semantic_filters
+from .filters.visibility import filter_not_rendered
+from .filters.semantic import (
+    filter_attributes,
+    filter_presentational_roles,
+    filter_empty,
+    collapse_single_child_wrappers,
+)
 
 
 class DomContextBuilder:
@@ -30,8 +36,27 @@ class DomContextBuilder:
         # Add reference to original nodes before filtering
         root = DomContextBuilder._add_node_reference(root)
 
-        root = apply_visibility_filters(root, dom_filter_config)
-        root = apply_semantic_filters(root, dom_filter_config)
+        # Apply visibility filters
+        if dom_filter_config.filter_not_rendered and root is not None:
+            root = filter_not_rendered(root)
+
+        if root is None:
+            return None, {}
+
+        # Apply semantic filters
+        if dom_filter_config.filter_attributes and root is not None:
+            root = filter_attributes(root, dom_filter_config.kept_attributes)
+
+        if dom_filter_config.filter_presentational_roles and root is not None:
+            root = filter_presentational_roles(root)
+
+        if dom_filter_config.filter_empty and root is not None:
+            root = filter_empty(root, dom_filter_config.interactive_tags)
+
+        if dom_filter_config.collapse_wrappers and root is not None:
+            root = collapse_single_child_wrappers(
+                root, dom_filter_config.interactive_tags
+            )
 
         if root is None:
             return None, {}

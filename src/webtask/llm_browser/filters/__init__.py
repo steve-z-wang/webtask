@@ -1,18 +1,32 @@
 """
 Filters for LLM context building.
 
-Import main filters:
-    from webtask.llm_browser.filters import apply_visibility_filters, apply_semantic_filters
+Import individual filters:
+    from webtask.llm_browser.filters.visibility import filter_not_rendered
+    from webtask.llm_browser.filters.semantic import (
+        filter_attributes,
+        filter_presentational_roles,
+        filter_empty,
+        collapse_single_child_wrappers,
+    )
 
-Or import specific filters:
-    from webtask.llm_browser.filters.visibility import filter_css_hidden
-    from webtask.llm_browser.filters.semantic import filter_attributes
+Filters are applied directly in DomContextBuilder.
 """
 
-from .apply_visibility_filters import apply_visibility_filters
-from .apply_semantic_filters import apply_semantic_filters
+from .visibility import filter_not_rendered
+from .semantic import (
+    filter_attributes,
+    filter_presentational_roles,
+    filter_empty,
+    collapse_single_child_wrappers,
+)
 
 __all__ = [
-    "apply_visibility_filters",
-    "apply_semantic_filters",
+    # Visibility filters
+    "filter_not_rendered",
+    # Semantic filters
+    "filter_attributes",
+    "filter_presentational_roles",
+    "filter_empty",
+    "collapse_single_child_wrappers",
 ]

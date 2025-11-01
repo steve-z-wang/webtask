@@ -1,13 +1,13 @@
-"""Visibility filters for DOM nodes."""
+"""Visibility filters for DOM nodes.
 
-from .non_visible_tags import filter_non_visible_tags
-from .css_hidden import filter_css_hidden
-from .zero_dimensions import filter_zero_dimensions
-from .no_layout import filter_no_layout
+Only one filter is used:
+- filter_not_rendered: Remove elements not in CDP's render tree (no layout data)
+
+CDP already handles visibility - if it didn't render it, we don't show it to the LLM.
+"""
+
+from .not_rendered import filter_not_rendered
 
 __all__ = [
-    "filter_non_visible_tags",
-    "filter_css_hidden",
-    "filter_zero_dimensions",
-    "filter_no_layout",
+    "filter_not_rendered",
 ]

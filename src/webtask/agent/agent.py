@@ -211,6 +211,9 @@ class Agent:
         """
         await self.llm_browser.close_page(page)
 
+    async def get_current_page(self) -> Optional[Page]:
+        return self.llm_browser.get_current_page()
+
     def get_pages(self) -> List[Page]:
         """
         Get all open pages.

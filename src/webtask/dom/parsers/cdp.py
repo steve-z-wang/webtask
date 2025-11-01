@@ -22,6 +22,10 @@ def _parse_layout_data(
     """
     Parse layout information from CDP snapshot.
 
+    Important: CDP only includes layout data for nodes in the browser's render tree.
+    Nodes that are not rendered (e.g., display:none, detached, etc.) will NOT be
+    in this layout data.
+
     Returns a map from node index to (bounds, styles).
     """
     layout_node_indices = layout_data.get("nodeIndex", [])
@@ -97,7 +101,8 @@ def _create_element_nodes(
             else "unknown"
         )
 
-        # Get layout info
+        # Get layout info from CDP
+        # Note: (None, {}) means CDP did not include this node in the render tree
         bounds, styles = layout_map.get(i, (None, {}))
 
         # Create node

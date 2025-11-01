@@ -24,7 +24,7 @@ class NaturalSelector:
         system = get_prompt("selector_system")
 
         context = Context(system=system)
-        context.append(str(page_context))
+        context.append(page_context)  # Keep Block with image, don't convert to string
         context.append(f'\nWhich element_id matches this description: "{description}"?')
 
         response = await self.llm.generate(context)

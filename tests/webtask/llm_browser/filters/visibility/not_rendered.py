@@ -1,13 +1,13 @@
-"""Tests for no layout filter."""
+"""Tests for not rendered filter."""
 
 import pytest
-from webtask.llm_browser.filters.visibility.no_layout import filter_no_layout
+from webtask.llm_browser.filters.visibility.not_rendered import filter_not_rendered
 from webtask.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.mark.unit
-class TestFilterNoLayout:
-    """Tests for filter_no_layout function."""
+class TestFilterNotRendered:
+    """Tests for filter_not_rendered function."""
 
     def test_removes_elements_without_styles_or_bounds(self):
         """Test removes elements with no layout data."""
@@ -18,7 +18,7 @@ class TestFilterNoLayout:
             bounds=None,
         )
 
-        result = filter_no_layout(node)
+        result = filter_not_rendered(node)
 
         assert result is None
 
@@ -31,7 +31,7 @@ class TestFilterNoLayout:
             bounds=None,
         )
 
-        result = filter_no_layout(node)
+        result = filter_not_rendered(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -45,7 +45,7 @@ class TestFilterNoLayout:
             bounds=BoundingBox(10, 10, 100, 50),
         )
 
-        result = filter_no_layout(node)
+        result = filter_not_rendered(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -59,7 +59,7 @@ class TestFilterNoLayout:
             bounds=BoundingBox(10, 10, 100, 50),
         )
 
-        result = filter_no_layout(node)
+        result = filter_not_rendered(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -87,7 +87,7 @@ class TestFilterNoLayout:
         root.add_child(child_with_layout)
         root.add_child(child_without_layout)
 
-        result = filter_no_layout(root)
+        result = filter_not_rendered(root)
 
         assert result is not None
         assert len(result.children) == 1
@@ -101,7 +101,7 @@ class TestFilterNoLayout:
         )
         node.add_child(Text("Text content"))
 
-        result = filter_no_layout(node)
+        result = filter_not_rendered(node)
 
         assert result is not None
         assert len(result.children) == 1
@@ -118,7 +118,7 @@ class TestFilterNoLayout:
         parent.add_child(child)
         grandparent.add_child(parent)
 
-        result = filter_no_layout(grandparent)
+        result = filter_not_rendered(grandparent)
 
         # Parent should be removed, child should be gone too
         assert result is not None
@@ -132,7 +132,7 @@ class TestFilterNoLayout:
             styles={"display": "block"},
         )
 
-        result = filter_no_layout(original)
+        result = filter_not_rendered(original)
 
         assert result is not original
         assert result.tag == original.tag
