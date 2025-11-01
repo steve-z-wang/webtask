@@ -19,27 +19,27 @@ class LLMBrowser:
         use_screenshot: bool = True,
     ):
         """Initialize with optional Session, DOM filter configuration, and screenshot setting."""
-        self.session = session
-        self.dom_filter_config = dom_filter_config or DomFilterConfig()
-        self.use_screenshot = use_screenshot
+        self._session = session
+        self._dom_filter_config = dom_filter_config or DomFilterConfig()
+        self._use_screenshot = use_screenshot
         self._pages: Dict[str, Page] = {}
         self._page_counter = 0
-        self.current_page_id: Optional[str] = None
-        self.element_map: Dict[str, DomNode] = {}
+        self._current_page_id: Optional[str] = None
+        self._element_map: Dict[str, DomNode] = {}
 
     def _require_page(self) -> Page:
-        if self.current_page_id is None:
+        if self._current_page_id is None:
             raise RuntimeError(
                 "No active page. Use set_page() to inject a page, "
                 "or create_page() with a session."
             )
-        return self._pages[self.current_page_id]
+        return self._pages[self._current_page_id]
 
     def get_current_page(self) -> Optional[Page]:
         """Get current page or None if no page is active."""
-        if self.current_page_id is None:
+        if self._current_page_id is None:
             return None
-        return self._pages[self.current_page_id]
+        return self._pages[self._current_page_id]
 
     def _get_page_id(self, page: Page) -> Optional[str]:
         for page_id, p in self._pages.items():
@@ -49,22 +49,22 @@ class LLMBrowser:
 
     def set_session(self, session: Session) -> None:
         """Set or update the session for multi-page operations."""
-        self.session = session
+        self._session = session
 
     async def create_page(self, url: Optional[str] = None) -> Page:
         """Create new page and switch to it. Requires a session."""
-        if self.session is None:
+        if self._session is None:
             raise RuntimeError(
                 "Cannot create page: no session available. "
                 "Use set_session() first, or inject a page with set_page()."
             )
 
-        page = await self.session.create_page()
+        page = await self._session.create_page()
         page_id = f"page-{self._page_counter}"
         self._page_counter += 1
         self._pages[page_id] = page
-        self.current_page_id = page_id
-        self.element_map.clear()
+        self._current_page_id = page_id
+        self._element_map.clear()
 
         if url:
             await page.navigate(url)
@@ -80,15 +80,15 @@ class LLMBrowser:
             self._page_counter += 1
             self._pages[page_id] = page
 
-        self.current_page_id = page_id
-        self.element_map.clear()
+        self._current_page_id = page_id
+        self._element_map.clear()
 
     async def close_page(self, page: Optional[Page] = None) -> None:
         """Close page (closes current page if None)."""
         if page is None:
-            if self.current_page_id is None:
+            if self._current_page_id is None:
                 return
-            page = self._pages[self.current_page_id]
+            page = self._pages[self._current_page_id]
 
         page_id = self._get_page_id(page)
         if page_id is None:
@@ -97,13 +97,13 @@ class LLMBrowser:
         await page.close()
         del self._pages[page_id]
 
-        if self.current_page_id == page_id:
+        if self._current_page_id == page_id:
             if self._pages:
-                self.current_page_id = next(iter(self._pages.keys()))
-                self.element_map.clear()
+                self._current_page_id = next(iter(self._pages.keys()))
+                self._element_map.clear()
             else:
-                self.current_page_id = None
-                self.element_map.clear()
+                self._current_page_id = None
+                self._element_map.clear()
 
     async def to_context_block(self) -> Block:
         """Get formatted page context with element IDs for LLM.
@@ -112,8 +112,8 @@ class LLMBrowser:
             Block with text context and optional screenshot image (based on self.use_screenshot)
         """
 
-        if self.current_page_id is None:
-            self.element_map = {}
+        if self._current_page_id is None:
+            self._element_map = {}
             lines = ["Page:"]
             lines.append("  URL: (no page loaded)")
             lines.append("")
@@ -125,10 +125,10 @@ class LLMBrowser:
         url = page.url
 
         context_str, element_map = await DomContextBuilder.build_context(
-            page=page, dom_filter_config=self.dom_filter_config
+            page=page, dom_filter_config=self._dom_filter_config
         )
 
-        self.element_map = element_map
+        self._element_map = element_map
 
         lines = ["Page:"]
         if url:
@@ -147,23 +147,23 @@ class LLMBrowser:
 
         # Optionally include screenshot with bounding boxes
         image = None
-        if self.use_screenshot and element_map:
+        if self._use_screenshot and element_map:
             image = await BoundingBoxRenderer.render(page=page, element_map=element_map)
 
         return Block(text="\n".join(lines), image=image)
 
     def _get_selector(self, element_id: str):
-        if element_id not in self.element_map:
+        if element_id not in self._element_map:
             raise KeyError(f"Element ID '{element_id}' not found")
 
         # element_map already contains original unfiltered nodes from DomContextBuilder
-        node = self.element_map[element_id]
+        node = self._element_map[element_id]
         return node.get_x_path()
 
     async def navigate(self, url: str) -> None:
         """Navigate to URL. Auto-creates a page if none exists yet and session is available."""
-        if self.current_page_id is None:
-            if self.session is None:
+        if self._current_page_id is None:
+            if self._session is None:
                 raise RuntimeError(
                     "Cannot navigate: no page available and no session to create one. "
                     "Use set_page() to inject a page, or set_session() to enable page creation."
