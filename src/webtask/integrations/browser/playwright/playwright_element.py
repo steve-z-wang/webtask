@@ -20,7 +20,7 @@ class PlaywrightElement(Element):
             locator: Playwright Locator or ElementHandle
         """
         self._locator = locator
-        
+
     async def get_tag_name(self) -> str:
         """
         Get the tag name of the element.
