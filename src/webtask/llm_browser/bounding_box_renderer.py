@@ -131,6 +131,7 @@ class BoundingBoxRenderer:
         color: str = "red",
         line_width: int = 2,
         font_size: int = 12,
+        full_page: bool = False,
     ) -> Image:
         """Render screenshot with bounding boxes for each element in element_map.
 
@@ -140,6 +141,7 @@ class BoundingBoxRenderer:
             color: Box and label color (default: "red")
             line_width: Border width in pixels (default: 2)
             font_size: Label font size (default: 12)
+            full_page: Capture full scrollable page (default: False, viewport only)
 
         Returns:
             Image object with bounding boxes
@@ -151,7 +153,7 @@ class BoundingBoxRenderer:
         await page.evaluate(draw_script)
 
         # Take screenshot
-        screenshot_bytes = await page.screenshot()
+        screenshot_bytes = await page.screenshot(full_page=full_page)
 
         # Remove boxes from browser
         remove_script = BoundingBoxRenderer._generate_remove_script()

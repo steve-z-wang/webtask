@@ -105,8 +105,12 @@ class LLMBrowser:
                 self._current_page_id = None
                 self._element_map.clear()
 
-    async def to_context_block(self) -> Block:
+    async def to_context_block(self, full_page: bool = False) -> Block:
         """Get formatted page context with element IDs for LLM.
+
+        Args:
+            full_page: Capture full scrollable page (default: False, viewport only)
+                      Use True for element selection, False for agent actions.
 
         Returns:
             Block with text context and optional screenshot image (based on self.use_screenshot)
@@ -148,7 +152,9 @@ class LLMBrowser:
         # Optionally include screenshot with bounding boxes
         image = None
         if self._use_screenshot and element_map:
-            image = await BoundingBoxRenderer.render(page=page, element_map=element_map)
+            image = await BoundingBoxRenderer.render(
+                page=page, element_map=element_map, full_page=full_page
+            )
 
         return Block(text="\n".join(lines), image=image)
 
