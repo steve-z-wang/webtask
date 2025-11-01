@@ -1,26 +1,21 @@
 """Collapse single-child wrapper elements."""
 
-from typing import Set
 from ....dom.domnode import DomNode, Text
+from ....dom.utils import is_interactive_element
 
 
-def collapse_single_child_wrappers(
-    node: DomNode, interactive_tags: Set[str] = None
-) -> DomNode:
+def collapse_single_child_wrappers(node: DomNode) -> DomNode:
     """Collapse single-child wrapper elements.
 
-    Never collapses interactive tags (button, input, label, etc.) since they
+    Never collapses interactive elements (based on web standards) since they
     have semantic meaning that should be preserved for the LLM.
     """
-    if interactive_tags is None:
-        interactive_tags = {"a", "button", "input", "select", "textarea", "label"}
-
     new_children = []
     for child in node.children:
         if isinstance(child, Text):
             new_children.append(Text(child.content))
         elif isinstance(child, DomNode):
-            collapsed_child = collapse_single_child_wrappers(child, interactive_tags)
+            collapsed_child = collapse_single_child_wrappers(child)
             new_children.append(collapsed_child)
 
     has_attributes = bool(node.attrib)
@@ -29,8 +24,8 @@ def collapse_single_child_wrappers(
 
     has_meaningful_text = any(c.content.strip() for c in text_children)
 
-    # Never collapse interactive tags - they have semantic meaning
-    is_interactive = node.tag in interactive_tags
+    # Never collapse interactive elements - they have semantic meaning
+    is_interactive = is_interactive_element(node)
 
     if (
         not has_attributes

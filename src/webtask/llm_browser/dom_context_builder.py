@@ -3,6 +3,7 @@
 from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
+from ..dom.utils import is_interactive_element
 from .dom_filter_config import DomFilterConfig
 from .filters.visibility import filter_not_rendered
 from .filters.semantic import (
@@ -51,12 +52,10 @@ class DomContextBuilder:
             root = filter_presentational_roles(root)
 
         if dom_filter_config.filter_empty and root is not None:
-            root = filter_empty(root, dom_filter_config.interactive_tags)
+            root = filter_empty(root)
 
         if dom_filter_config.collapse_wrappers and root is not None:
-            root = collapse_single_child_wrappers(
-                root, dom_filter_config.interactive_tags
-            )
+            root = collapse_single_child_wrappers(root)
 
         if root is None:
             return None, {}
@@ -75,25 +74,16 @@ class DomContextBuilder:
         Non-interactive nodes still appear in context but without IDs.
         Only interactive elements get IDs and go into element_map.
 
-        An element is considered interactive if:
-        - Its tag is in interactive_tags (e.g., button, input, a)
-        - Its role attribute is in interactive_roles (e.g., role="button")
+        Interactive elements are determined by web standards (HTML and ARIA specs).
+        See is_interactive_element() in dom/utils/is_interactive.py for details.
         """
         element_map = {}
         tag_counters: Dict[str, int] = {}
 
         for node in root.traverse():
             if isinstance(node, DomNode):
-                # Check if element is interactive by tag or role
-                is_interactive_tag = node.tag in dom_filter_config.interactive_tags
-                element_role = node.attrib.get("role")
-                is_interactive_role = (
-                    element_role in dom_filter_config.interactive_roles
-                    if element_role
-                    else False
-                )
-
-                if is_interactive_tag or is_interactive_role:
+                # Check if element is interactive
+                if is_interactive_element(node):
                     tag = node.tag
                     count = tag_counters.get(tag, 0)
                     element_id = f"{tag}-{count}"

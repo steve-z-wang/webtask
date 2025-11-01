@@ -34,6 +34,9 @@ class DomFilterConfig:
             "aria-expanded",
             "aria-hidden",
             "aria-disabled",
+            "aria-haspopup",  # Indicates interactive popup/menu elements
+            "tabindex",  # Indicates keyboard focusable elements
+            "onclick",  # Indicates click handler
             "type",
             "name",
             "placeholder",
@@ -48,26 +51,4 @@ class DomFilterConfig:
 
     filter_presentational_roles: bool = True
     filter_empty: bool = True
-    interactive_tags: Set[str] = field(
-        default_factory=lambda: {"a", "button", "input", "select", "textarea", "label"}
-    )
-    interactive_roles: Set[str] = field(
-        default_factory=lambda: {
-            "button",
-            "link",
-            "checkbox",
-            "radio",
-            "switch",
-            "tab",
-            "menuitem",
-            "menuitemcheckbox",
-            "menuitemradio",
-            "option",
-            "textbox",
-            "searchbox",
-            "combobox",
-            "slider",
-            "spinbutton",
-        }
-    )
     collapse_wrappers: bool = True
