@@ -33,8 +33,15 @@ class StepHistory:
             lines.append("")
             lines.append(f"Step {i}:")
 
+            # Show completion status and message first
+            lines.append(
+                f"  Status: {'Complete' if step.proposal.complete else 'Incomplete'}"
+            )
+            lines.append(f"  Message: {step.proposal.message}")
+
+            # Show actions and execution results
             for j, (action, execution) in enumerate(
-                zip(step.proposals, step.executions), 1
+                zip(step.proposal.actions, step.executions), 1
             ):
                 lines.append(f"  Action {j}:")
                 lines.append(f"    Tool: {action.tool_name}")
@@ -45,10 +52,5 @@ class StepHistory:
                 )
                 if execution.error:
                     lines.append(f"    Error: {execution.error}")
-
-            lines.append(
-                f"  Verification: {'Complete' if step.verification.complete else 'Incomplete'}"
-            )
-            lines.append(f"  Message: {step.verification.message}")
 
         return Block("\n".join(lines))

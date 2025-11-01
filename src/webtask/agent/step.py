@@ -1,4 +1,4 @@
-"""Step - represents a complete agent cycle (proposal → execution → verification)."""
+"""Step - represents a complete agent cycle (proposal → execution)."""
 
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
@@ -22,20 +22,20 @@ class ExecutionResult:
 
 
 @dataclass
-class VerificationResult:
-    """Result of verifying task completion."""
+class ProposalResult:
+    """Result from proposer including completion status and actions."""
 
     complete: bool
     message: str
+    actions: List[Action]
 
 
 @dataclass
 class Step:
     """Represents one complete agent cycle."""
 
-    proposals: List[Action]
+    proposal: ProposalResult
     executions: List[ExecutionResult]
-    verification: VerificationResult
 
 
 @dataclass

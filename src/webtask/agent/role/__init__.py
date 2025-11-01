@@ -1,7 +1,6 @@
-"""Agent roles - Proposer, Executer, Verifier."""
+"""Agent roles - Proposer and Executer."""
 
 from .proposer import Proposer
 from .executer import Executer
-from .verifier import Verifier
 
-__all__ = ["Proposer", "Executer", "Verifier"]
+__all__ = ["Proposer", "Executer"]

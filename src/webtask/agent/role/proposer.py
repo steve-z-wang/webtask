@@ -1,17 +1,16 @@
-"""Proposer - proposes next action based on context."""
+"""Proposer - proposes next action and checks completion."""
 
-from typing import List
 from ...llm import LLM, Context, Block
 from ...prompts import get_prompt
 from ...utils import parse_json
-from ..step import Action
+from ..step import Action, ProposalResult
 from ..step_history import StepHistory
 from ...llm_browser import LLMBrowser
 from ..tool import ToolRegistry
 
 
 class Proposer:
-    """Proposes the next action to take based on context."""
+    """Proposes the next action to take and determines if task is complete."""
 
     def __init__(
         self,
@@ -36,17 +35,26 @@ class Proposer:
         context.append(await self.llm_browser.to_context_block())
         return context
 
-    async def propose(self) -> List[Action]:
-        """Propose the next actions to take."""
+    async def propose(self) -> ProposalResult:
+        """Propose the next actions to take and determine if task is complete."""
         context = await self._build_context()
         response = await self.llm.generate(context)
-        action_data = parse_json(response)
-        actions_list = action_data.get("actions", [])
+        data = parse_json(response)
 
-        if not actions_list:
-            return []
+        # Parse completion status and message
+        complete = data.get("complete")
+        message = data.get("message")
 
+        if complete is None or not message:
+            raise ValueError(
+                f"LLM response missing 'complete' or 'message' field.\n"
+                f"LLM response: {response}"
+            )
+
+        # Parse actions
+        actions_list = data.get("actions", [])
         actions = []
+
         for action_dict in actions_list:
             reason = action_dict.get("reason")
             tool_name = action_dict.get("tool")
@@ -74,4 +82,4 @@ class Proposer:
                 Action(reason=reason, tool_name=tool_name, parameters=parameters)
             )
 
-        return actions
+        return ProposalResult(complete=bool(complete), message=message, actions=actions)

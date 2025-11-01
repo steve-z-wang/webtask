@@ -125,7 +125,7 @@ class PlaywrightElement(Element):
             text: Text to type
             delay: Delay between keystrokes in milliseconds (None = instant)
         """
-        await self._locator.type(text, delay=delay, timeout=100)
+        await self._locator.type(text, delay=delay, timeout=30000)
 
     async def upload_file(self, file_path: str):
         """

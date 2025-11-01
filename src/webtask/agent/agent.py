@@ -9,7 +9,7 @@ from ..llm_browser.dom_filter_config import DomFilterConfig
 from .tool import ToolRegistry
 from .step_history import StepHistory
 from .step import Step, TaskResult
-from .role import Proposer, Executer, Verifier
+from .role import Proposer, Executer
 
 
 class Agent:
@@ -60,7 +60,6 @@ class Agent:
         self.current_task: Optional[str] = None
         self.proposer: Optional[Proposer] = None
         self.executer: Optional[Executer] = None
-        self.verifier: Optional[Verifier] = None
 
     def _register_tools(self) -> None:
         from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
@@ -91,11 +90,11 @@ class Agent:
         for i in range(max_steps):
             step = await self.run_step()
 
-            if step.verification.complete:
+            if step.proposal.complete:
                 return TaskResult(
                     completed=True,
                     steps=self.step_history.get_all(),
-                    message=step.verification.message,
+                    message=step.proposal.message,
                 )
 
         return TaskResult(
@@ -121,14 +120,13 @@ class Agent:
             self.llm, task, self.step_history, self.tool_registry, self.llm_browser
         )
         self.executer = Executer(self.tool_registry, self.action_delay)
-        self.verifier = Verifier(self.llm, task, self.step_history, self.llm_browser)
 
     async def run_step(self) -> Step:
         """
         Execute one step of the current task.
 
         Returns:
-            Step with proposals, executions, and verification result
+            Step with proposal (including completion status) and execution results
 
         Raises:
             RuntimeError: If no task is set (call set_task first)
@@ -141,38 +139,34 @@ class Agent:
         step_num = len(self.step_history.get_all()) + 1
         self.logger.debug(f"=== Starting Step {step_num} ===")
 
-        self.logger.debug("Phase 1: Proposing actions...")
-        actions = await self.proposer.propose()
-        self.logger.debug(f"Proposed {len(actions)} action(s)")
-        for i, action in enumerate(actions, 1):
+        # Phase 1: Propose actions and check completion
+        self.logger.debug("Phase 1: Proposing actions and checking completion...")
+        proposal = await self.proposer.propose()
+        self.logger.debug(f"Complete: {proposal.complete}")
+        self.logger.debug(f"Message: {proposal.message}")
+        self.logger.debug(f"Proposed {len(proposal.actions)} action(s)")
+        for i, action in enumerate(proposal.actions, 1):
             self.logger.debug(f"  Action {i}: {action.tool_name}")
             self.logger.debug(f"    Reason: {action.reason}")
             self.logger.debug(f"    Parameters: {action.parameters}")
 
-        self.logger.debug("Phase 2: Executing actions...")
-        exec_results = await self.executer.execute(actions)
-        success_count = sum(1 for r in exec_results if r.success)
-        self.logger.debug(
-            f"Execution complete: {success_count}/{len(exec_results)} successful"
-        )
+        # Phase 2: Execute actions (if any)
+        exec_results = []
+        if proposal.actions:
+            self.logger.debug("Phase 2: Executing actions...")
+            exec_results = await self.executer.execute(proposal.actions)
+            success_count = sum(1 for r in exec_results if r.success)
+            self.logger.debug(
+                f"Execution complete: {success_count}/{len(exec_results)} successful"
+            )
 
-        # Wait for page to stabilize before verification
-        if actions:
+            # Wait for page to stabilize
             self.logger.debug(
                 f"Phase 3: Waiting {self.action_delay}s for page to stabilize..."
             )
             await wait(self.action_delay)
 
-        self.logger.debug("Phase 4: Verifying task completion...")
-        verify_result = await self.verifier.verify(actions, exec_results)
-        self.logger.debug(
-            f"Verification result: {'Complete' if verify_result.complete else 'Incomplete'}"
-        )
-        self.logger.debug(f"Verification message: {verify_result.message}")
-
-        step = Step(
-            proposals=actions, executions=exec_results, verification=verify_result
-        )
+        step = Step(proposal=proposal, executions=exec_results)
         self.step_history.add_step(step)
 
         self.logger.debug(f"=== Step {step_num} Complete ===\n")
@@ -185,7 +179,6 @@ class Agent:
         self.current_task = None
         self.proposer = None
         self.executer = None
-        self.verifier = None
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """
