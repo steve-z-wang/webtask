@@ -40,7 +40,7 @@ class ToolRegistry:
         """Clear all registered tools from the registry."""
         self._tools.clear()
 
-    def to_context_block(self) -> Block:
-        """Convert tool registry to context block for LLM."""
+    def get_tools_context(self) -> Block:
+        """Get formatted tools context for LLM."""
         schemas = [tool.to_schema() for tool in self._tools.values()]
         return Block(f"Tools:\n{json.dumps(schemas, indent=2)}")

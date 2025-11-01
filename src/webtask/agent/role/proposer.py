@@ -4,7 +4,7 @@ from ...llm import LLM, Context, Block
 from ...prompts import get_prompt
 from ...utils import parse_json
 from ..step import Action, ProposalResult
-from ..step_history import StepHistory
+from ..task_context import TaskContext
 from ...llm_browser import LLMBrowser
 from ..tool import ToolRegistry
 
@@ -15,24 +15,36 @@ class Proposer:
     def __init__(
         self,
         llm: LLM,
-        task: str,
-        step_history: StepHistory,
+        task_context: TaskContext,
         tool_registry: ToolRegistry,
         llm_browser: LLMBrowser,
     ):
         self.llm = llm
-        self.task = task
-        self.step_history = step_history
+        self.task_context = task_context
         self.tool_registry = tool_registry
         self.llm_browser = llm_browser
 
     async def _build_context(self) -> Context:
         system = get_prompt("proposer_system")
         context = Context(system=system)
-        context.append(Block(f"Task:\n{self.task}"))
-        context.append(self.step_history.to_context_block())
-        context.append(self.tool_registry.to_context_block())
-        context.append(await self.llm_browser.to_context_block())
+
+        # Add task (TaskContext owns formatting)
+        context.append(self.task_context.get_task_context())
+
+        # Add resources if available (TaskContext owns formatting)
+        resources_context = self.task_context.get_resources_context()
+        if resources_context:
+            context.append(resources_context)
+
+        # Add step history (TaskContext owns formatting)
+        context.append(self.task_context.get_steps_context())
+
+        # Add available tools
+        context.append(self.tool_registry.get_tools_context())
+
+        # Add current page context (text + optional screenshots)
+        context.append(await self.llm_browser.get_page_context())
+
         return context
 
     async def propose(self) -> ProposalResult:

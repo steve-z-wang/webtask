@@ -100,8 +100,8 @@ The agent sees both text (DOM tree with element IDs) and visual context (screens
 
 **Step-by-step mode** - Same as high-level but you control the loop:
 - `agent.set_task(description)` - Set the task
-- `agent.execute_step()` - Execute one step (propose → execute → verify)
-- `agent.clear_history()` - Reset for new task
+- `agent.run_step()` - Execute one step (propose → execute → verify)
+- Setting a new task automatically resets history
 
 **Low-level mode** - You call methods directly:
 - `agent.navigate(url)` - Go to a page

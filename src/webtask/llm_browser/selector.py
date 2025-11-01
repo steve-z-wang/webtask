@@ -20,7 +20,7 @@ class NaturalSelector:
     async def select(self, description: str) -> Element:
         """Select element by natural language description."""
         # Use full_page=True to see elements below the fold
-        page_context = await self.llm_browser.to_context_block(full_page=True)
+        page_context = await self.llm_browser.get_page_context(full_page=True)
 
         system = get_prompt("selector_system")
 
@@ -40,10 +40,10 @@ class NaturalSelector:
             raise ValueError("LLM response missing 'element_id' field")
 
         try:
-            selector = self.llm_browser._get_selector(element_id)
+            xpath = self.llm_browser._get_xpath(element_id)
         except KeyError:
             raise ValueError(f"Element ID '{element_id}' not found in page context")
 
         page = self.llm_browser.get_current_page()
-        element = await page.select_one(selector)
+        element = await page.select_one(xpath)
         return element
