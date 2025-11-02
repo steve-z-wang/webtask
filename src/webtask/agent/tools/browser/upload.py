@@ -2,17 +2,17 @@
 
 from typing import Type, TYPE_CHECKING
 from ...tool import Tool
-from ...llm_schemas import UploadParams
+from ...schemas import UploadParams
 
 if TYPE_CHECKING:
     from ....llm_browser import LLMBrowser
-    from ...task_context import TaskContext
+    from ...task import Task
 
 
 class UploadTool(Tool[UploadParams]):
     """Tool for uploading file resources to input elements."""
 
-    def __init__(self, llm_browser: "LLMBrowser", task_context: "TaskContext"):
+    def __init__(self, llm_browser: "LLMBrowser", task_context: "Task"):
         """
         Initialize upload tool.
 

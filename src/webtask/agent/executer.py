@@ -2,10 +2,10 @@
 
 import time
 from typing import List, Optional
-from ..step import ExecutionResult
-from ..llm_schemas import Action
-from ..tool import ToolRegistry
-from ...utils import wait
+from .step import ExecutionResult
+from .schemas import Action
+from .tool import ToolRegistry
+from ..utils import wait
 
 
 class Executer:

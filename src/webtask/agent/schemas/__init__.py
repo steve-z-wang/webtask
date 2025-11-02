@@ -1,18 +1,20 @@
 """LLM response schemas - all Pydantic models for structured LLM outputs."""
 
-from .actions import (
+from .params import (
     ToolParams,
+    ClickParams,
+    FillParams,
+    NavigateParams,
+    TypeParams,
+    UploadParams,
+)
+from .actions import (
     Action,
     ClickAction,
     FillAction,
     NavigateAction,
     TypeAction,
     UploadAction,
-    ClickParams,
-    FillParams,
-    NavigateParams,
-    TypeParams,
-    UploadParams,
 )
 from .proposal import Proposal
 from .selector import SelectorResponse

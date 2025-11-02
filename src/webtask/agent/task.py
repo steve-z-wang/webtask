@@ -7,7 +7,7 @@ from ..llm import Block
 
 
 @dataclass
-class TaskContext:
+class Task:
     """
     Container for all task-scoped state.
 
@@ -15,7 +15,7 @@ class TaskContext:
     Owns task description, resources, and execution history.
     """
 
-    task: str
+    description: str
     """Task description in natural language."""
 
     resources: Dict[str, str] = field(default_factory=dict)
@@ -58,25 +58,27 @@ class TaskContext:
                     params_str = ", ".join(
                         f"{k}={v}" for k, v in action.parameters.model_dump().items()
                     )
-                    action_line = f"    {j+1}. {action.tool}({params_str}) - {action.reason}"
+                    action_line = (
+                        f"    {j+1}. {action.tool}({params_str}) - {action.reason}"
+                    )
                     summary_lines.append(action_line)
 
                     # Show execution result
                     if j < len(step.executions):
                         exec_result = step.executions[j]
                         if exec_result.success:
-                            summary_lines.append(f"       ✓ Success")
+                            summary_lines.append("       ✓ Success")
                         else:
-                            summary_lines.append(f"       ✗ Failed: {exec_result.error}")
+                            summary_lines.append(
+                                f"       ✗ Failed: {exec_result.error}"
+                            )
 
             # Show overall step result
             if step.proposal.complete:
-                summary_lines.append(
-                    f"  Status: ✓ Task marked complete"
-                )
+                summary_lines.append("  Status: ✓ Task marked complete")
                 summary_lines.append(f"  Message: {step.proposal.message}")
             else:
-                summary_lines.append(f"  Status: Continuing...")
+                summary_lines.append("  Status: Continuing...")
                 summary_lines.append(f"  Message: {step.proposal.message}")
 
         return "\n".join(summary_lines)
@@ -93,7 +95,7 @@ class TaskContext:
         Returns:
             Block containing the task description
         """
-        return Block(f"Task:\n{self.task}")
+        return Block(f"Task:\n{self.description}")
 
     def get_resources_context(self) -> Optional[Block]:
         """

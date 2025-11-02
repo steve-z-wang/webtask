@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 from typing import Optional, List
-from .llm_schemas import Proposal
+from .schemas import Proposal
 
 
 class ExecutionResult(BaseModel):

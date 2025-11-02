@@ -1,11 +1,11 @@
 """Proposer - proposes next action and checks completion."""
 
-from ...llm import LLM, Context, Block
-from ...prompts import get_prompt
-from ..llm_schemas import Proposal
-from ..task_context import TaskContext
-from ...llm_browser import LLMBrowser
-from ..tool import ToolRegistry
+from ..llm import LLM, Context
+from ..prompts import get_prompt
+from .schemas import Proposal
+from .task import Task
+from ..llm_browser import LLMBrowser
+from .tool import ToolRegistry
 
 
 class Proposer:
@@ -14,7 +14,7 @@ class Proposer:
     def __init__(
         self,
         llm: LLM,
-        task_context: TaskContext,
+        task_context: Task,
         tool_registry: ToolRegistry,
         llm_browser: LLMBrowser,
     ):
@@ -57,8 +57,8 @@ class Proposer:
         # Validate logical consistency: cannot be complete AND have actions
         if proposal.complete and proposal.actions:
             raise ValueError(
-                f"Invalid LLM response: cannot set complete=True AND propose actions.\n"
-                f"If task is complete, actions list must be empty."
+                "Invalid LLM response: cannot set complete=True AND propose actions.\n"
+                "If task is complete, actions list must be empty."
             )
 
         return proposal

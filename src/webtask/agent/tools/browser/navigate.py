@@ -2,7 +2,7 @@
 
 from typing import Type
 from ...tool import Tool
-from ...llm_schemas import NavigateParams
+from ...schemas import NavigateParams
 from ....llm_browser import LLMBrowser
 
 

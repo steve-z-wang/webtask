@@ -7,9 +7,10 @@ from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
 from ..llm_browser.dom_filter_config import DomFilterConfig
 from .tool import ToolRegistry
-from .task_context import TaskContext
+from .task import Task
 from .step import Step, TaskResult
-from .role import Proposer, Executer
+from .proposer import Proposer
+from .executer import Executer
 
 
 class Agent:
@@ -53,7 +54,7 @@ class Agent:
             self.llm_browser.set_page(page)
 
         self.tool_registry = ToolRegistry()
-        self._task_context: Optional[TaskContext] = None
+        self._task_context: Optional[Task] = None
         self.proposer: Optional[Proposer] = None
         self.executer: Optional[Executer] = None
 
@@ -76,7 +77,9 @@ class Agent:
 
         # Register upload tool if task context with resources exists
         if self._task_context and self._task_context.resources:
-            self.tool_registry.register(UploadTool(self.llm_browser, self._task_context))
+            self.tool_registry.register(
+                UploadTool(self.llm_browser, self._task_context)
+            )
 
     async def execute(
         self,
@@ -128,8 +131,8 @@ class Agent:
             resources: Optional dict of file resources (name -> path)
         """
         # Create new task context (replaces any existing task)
-        self._task_context = TaskContext(
-            task=task, resources=resources or {}, max_steps=max_steps
+        self._task_context = Task(
+            description=task, resources=resources or {}, max_steps=max_steps
         )
 
         # Initialize roles

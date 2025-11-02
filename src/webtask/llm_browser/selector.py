@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from ..llm import LLM, Context
 from ..prompts import get_prompt
 from ..browser import Element
-from ..agent.llm_schemas import SelectorResponse
+from ..agent.schemas import SelectorResponse
 
 if TYPE_CHECKING:
     from .llm_browser import LLMBrowser
@@ -35,7 +35,9 @@ class NaturalSelector:
 
         if not selector_response.element_id:
             if selector_response.error:
-                raise ValueError(f"No matching element found: {selector_response.error}")
+                raise ValueError(
+                    f"No matching element found: {selector_response.error}"
+                )
             raise ValueError("LLM response missing 'element_id' field")
 
         try:
