@@ -50,21 +50,36 @@ class TaskContext:
         for i, step in enumerate(self.steps, 1):
             summary_lines.append(f"\nStep {i}:")
 
-            # Show proposed actions
+            # Show proposed actions and their execution results
             if step.proposal.actions:
-                summary_lines.append("  Actions:")
-                for action in step.proposal.actions:
-                    summary_lines.append(
-                        f"    - {action.tool_name}: {action.reason}"
-                    )
+                summary_lines.append("  Actions taken:")
+                for j, action in enumerate(step.proposal.actions):
+                    # Show action
+                    action_line = f"    {j+1}. {action.tool_name}"
+                    if action.parameters:
+                        # Show key parameters for context
+                        params_str = ", ".join(f"{k}={v}" for k, v in list(action.parameters.items())[:2])
+                        action_line += f" ({params_str})"
+                    action_line += f" - {action.reason}"
+                    summary_lines.append(action_line)
 
-            # Show result
+                    # Show execution result
+                    if j < len(step.executions):
+                        exec_result = step.executions[j]
+                        if exec_result.success:
+                            summary_lines.append(f"       ✓ Success")
+                        else:
+                            summary_lines.append(f"       ✗ Failed: {exec_result.error}")
+
+            # Show overall step result
             if step.proposal.complete:
                 summary_lines.append(
-                    f"  Result: ✓ Task complete - {step.proposal.message}"
+                    f"  Status: ✓ Task marked complete"
                 )
+                summary_lines.append(f"  Message: {step.proposal.message}")
             else:
-                summary_lines.append(f"  Result: {step.proposal.message}")
+                summary_lines.append(f"  Status: Continuing...")
+                summary_lines.append(f"  Message: {step.proposal.message}")
 
         return "\n".join(summary_lines)
 

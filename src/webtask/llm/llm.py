@@ -40,23 +40,31 @@ class LLM(ABC):
 
         return total_tokens
 
-    async def generate(self, context: Context) -> str:
+    async def generate(self, context: Context, json_mode: bool = False) -> str:
         """Generate text based on context.
 
         This is a wrapper that handles token checking, then delegates to _generate().
+
+        Args:
+            context: Full Context object with system, blocks (text + images), etc.
+            json_mode: If True, force the LLM to return valid JSON (provider-specific)
+
+        Returns:
+            Generated text response
         """
         total_tokens = self._check_token_limit(context)
         self.logger.debug(f"LLM API call - Total tokens: {total_tokens}")
-        response = await self._generate(context)
+        response = await self._generate(context, json_mode=json_mode)
 
         return response
 
     @abstractmethod
-    async def _generate(self, context: Context) -> str:
+    async def _generate(self, context: Context, json_mode: bool = False) -> str:
         """Subclasses implement actual LLM call.
 
         Args:
             context: Full Context object with system, blocks (text + images), etc.
+            json_mode: If True, force the LLM to return valid JSON (provider-specific)
 
         Returns:
             Generated text response

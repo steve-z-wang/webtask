@@ -147,26 +147,39 @@ class GeminiLLM(LLM):
 
         return content
 
-    async def _generate(self, context: Context) -> str:
+    async def _generate(self, context: Context, json_mode: bool = False) -> str:
         """
         Internal method for actual text generation using Gemini API.
 
-        Supports multimodal content (text + images).
+        Supports multimodal content (text + images) and JSON mode.
 
         Args:
             context: Context object with system, blocks (text + images), etc.
+            json_mode: If True, force the LLM to return valid JSON
 
         Returns:
             Generated text response from Gemini
         """
         self.logger.info(
-            f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}"
+            f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}, "
+            f"json_mode: {json_mode}"
         )
 
         # Build content (may include images)
         content = self._build_content(context)
 
-        response = await self.model.generate_content_async(content)
+        # Use JSON mode if requested
+        if json_mode:
+            # Create a new generation config with JSON mime type
+            generation_config = genai.GenerationConfig(
+                temperature=self.temperature,
+                response_mime_type="application/json",
+            )
+            response = await self.model.generate_content_async(
+                content, generation_config=generation_config
+            )
+        else:
+            response = await self.model.generate_content_async(content)
 
         # Log token usage if available
         if hasattr(response, "usage_metadata") and response.usage_metadata:

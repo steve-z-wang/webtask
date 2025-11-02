@@ -101,6 +101,7 @@ proposer_system:
 
     ## Important Rules
 
+    - **CRITICAL: If complete=true, actions MUST be empty []** - You CANNOT mark complete AND propose actions
     - **Only use element IDs** from the current page context (e.g., "button-0", "input-1")
     - **Only use available tools** from the tools list
     - **Provide clear reasoning** - Explain WHY you're taking each action
@@ -112,11 +113,18 @@ proposer_system:
 
     Always respond with valid JSON containing 'complete', 'message', and 'actions':
 
-    Task complete:
+    ✅ CORRECT - Task complete:
     {
       "complete": true,
       "message": "Task completed successfully: Form submitted, success page showing",
       "actions": []
+    }
+
+    ❌ WRONG - Complete with actions (NEVER DO THIS):
+    {
+      "complete": true,
+      "message": "Task completed",
+      "actions": [{"reason": "Fill field", "tool": "fill", ...}]  // ← INVALID!
     }
 
     Task incomplete with actions:

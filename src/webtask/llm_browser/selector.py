@@ -28,7 +28,7 @@ class NaturalSelector:
         context.append(page_context)  # Keep Block with image, don't convert to string
         context.append(f'\nWhich element_id matches this description: "{description}"?')
 
-        response = await self.llm.generate(context)
+        response = await self.llm.generate(context, json_mode=True)
         data = parse_json(response)
 
         element_id = data.get("element_id")

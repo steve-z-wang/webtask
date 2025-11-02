@@ -134,14 +134,15 @@ class OpenAILLM(LLM):
 
         return content
 
-    async def _generate(self, context: Context) -> str:
+    async def _generate(self, context: Context, json_mode: bool = False) -> str:
         """
         Internal method for actual text generation using OpenAI API.
 
-        Supports multimodal content (text + images).
+        Supports multimodal content (text + images) and JSON mode.
 
         Args:
             context: Context object with system, blocks (text + images), etc.
+            json_mode: If True, force the LLM to return valid JSON
 
         Returns:
             Generated text response from OpenAI
@@ -150,17 +151,25 @@ class OpenAILLM(LLM):
         user_content = self._build_user_content(context)
 
         self.logger.info(
-            f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}"
+            f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}, "
+            f"json_mode: {json_mode}"
         )
 
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=[
+        # Build API call kwargs
+        api_kwargs: Dict[str, Any] = {
+            "model": self.model,
+            "messages": [
                 {"role": "system", "content": context.system},
                 {"role": "user", "content": user_content},
             ],
-            temperature=self.temperature,
-        )
+            "temperature": self.temperature,
+        }
+
+        # Add JSON mode if requested
+        if json_mode:
+            api_kwargs["response_format"] = {"type": "json_object"}
+
+        response = await self.client.chat.completions.create(**api_kwargs)
 
         # Log token usage if available
         if response.usage:

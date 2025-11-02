@@ -50,7 +50,7 @@ class Proposer:
     async def propose(self) -> ProposalResult:
         """Propose the next actions to take and determine if task is complete."""
         context = await self._build_context()
-        response = await self.llm.generate(context)
+        response = await self.llm.generate(context, json_mode=True)
         data = parse_json(response)
 
         # Parse completion status and message
@@ -92,6 +92,14 @@ class Proposer:
 
             actions.append(
                 Action(reason=reason, tool_name=tool_name, parameters=parameters)
+            )
+
+        # Validate logical consistency: cannot be complete AND have actions
+        if complete and actions:
+            raise ValueError(
+                f"Invalid LLM response: cannot set complete=True AND propose actions.\n"
+                f"If task is complete, actions list must be empty.\n"
+                f"LLM response: {response}"
             )
 
         return ProposalResult(complete=bool(complete), message=message, actions=actions)
