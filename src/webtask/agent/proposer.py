@@ -6,6 +6,7 @@ from .schemas import Proposal
 from .task import Task
 from ..llm_browser import LLMBrowser
 from .tool import ToolRegistry
+from .throttler import Throttler
 
 
 class Proposer:
@@ -17,11 +18,13 @@ class Proposer:
         task_context: Task,
         tool_registry: ToolRegistry,
         llm_browser: LLMBrowser,
+        throttler: Throttler,
     ):
         self.llm = llm
         self.task_context = task_context
         self.tool_registry = tool_registry
         self.llm_browser = llm_browser
+        self.throttler = throttler
 
     async def _build_context(self) -> Context:
         system = get_prompt("proposer_system")
@@ -49,6 +52,9 @@ class Proposer:
     async def propose(self) -> Proposal:
         """Propose the next actions to take and determine if task is complete."""
         context = await self._build_context()
+
+        # Throttle before LLM call
+        await self.throttler.wait_if_needed()
         response = await self.llm.generate(context, use_json=True)
 
         # Parse JSON response into Pydantic model

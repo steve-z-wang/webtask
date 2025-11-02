@@ -11,6 +11,7 @@ from .task import Task
 from .step import Step, TaskResult
 from .proposer import Proposer
 from .executer import Executer
+from .throttler import Throttler
 
 
 class Agent:
@@ -135,11 +136,18 @@ class Agent:
             description=task, resources=resources or {}, max_steps=max_steps
         )
 
-        # Initialize roles
+        # Create throttler for pacing operations
+        throttler = Throttler(delay=self.action_delay)
+
+        # Initialize roles with shared throttler
         self.proposer = Proposer(
-            self.llm, self._task_context, self.tool_registry, self.llm_browser
+            self.llm,
+            self._task_context,
+            self.tool_registry,
+            self.llm_browser,
+            throttler,
         )
-        self.executer = Executer(self.tool_registry, self.action_delay)
+        self.executer = Executer(self.tool_registry, throttler)
 
         # Register tools (including upload tool if resources available)
         self._register_tools()
@@ -154,8 +162,6 @@ class Agent:
         Raises:
             RuntimeError: If no task is set (call set_task first)
         """
-        from ..utils import wait
-
         if self._task_context is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
@@ -182,12 +188,6 @@ class Agent:
             self.logger.debug(
                 f"Execution complete: {success_count}/{len(exec_results)} successful"
             )
-
-            # Wait for page to stabilize
-            self.logger.debug(
-                f"Phase 3: Waiting {self.action_delay}s for page to stabilize..."
-            )
-            await wait(self.action_delay)
 
         step = Step(proposal=proposal, executions=exec_results)
         self._task_context.add_step(step)
