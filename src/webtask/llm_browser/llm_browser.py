@@ -1,6 +1,6 @@
 """LLMBrowser - bridges text interface with browser operations."""
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Union
 from ..browser import Page, Session
 from ..dom.domnode import DomNode
 from .dom_filter_config import DomFilterConfig
@@ -105,8 +105,8 @@ class LLMBrowser:
                 self._current_page_id = None
                 self._element_map.clear()
 
-    async def to_context_block(self, full_page: bool = False) -> Block:
-        """Get formatted page context with element IDs for LLM.
+    async def get_page_context(self, full_page: bool = False) -> Block:
+        """Get formatted page context for LLM.
 
         Args:
             full_page: Capture full scrollable page (default: False, viewport only)
@@ -158,7 +158,8 @@ class LLMBrowser:
 
         return Block(text="\n".join(lines), image=image)
 
-    def _get_selector(self, element_id: str):
+    def _get_xpath(self, element_id: str):
+        """Get XPath for element by ID."""
         if element_id not in self._element_map:
             raise KeyError(f"Element ID '{element_id}' not found")
 
@@ -182,22 +183,22 @@ class LLMBrowser:
     async def click(self, element_id: str) -> None:
         """Click element by ID."""
         page = self._require_page()
-        selector = self._get_selector(element_id)
-        element = await page.select_one(selector)
+        xpath = self._get_xpath(element_id)
+        element = await page.select_one(xpath)
         await element.click()
 
     async def fill(self, element_id: str, value: str) -> None:
         """Fill element by ID with value."""
         page = self._require_page()
-        selector = self._get_selector(element_id)
-        element = await page.select_one(selector)
+        xpath = self._get_xpath(element_id)
+        element = await page.select_one(xpath)
         await element.fill(value)
 
     async def type(self, element_id: str, text: str, delay: float = 80) -> None:
         """Type text into element by ID character by character."""
         page = self._require_page()
-        selector = self._get_selector(element_id)
-        element = await page.select_one(selector)
+        xpath = self._get_xpath(element_id)
+        element = await page.select_one(xpath)
         await element.type(text, delay=delay)
 
     async def keyboard_type(
@@ -210,3 +211,16 @@ class LLMBrowser:
         """
         page = self._require_page()
         await page.keyboard_type(text, clear=clear, delay=delay)
+
+    async def upload(self, element_id: str, file_paths: Union[str, List[str]]) -> None:
+        """
+        Upload file(s) to input element.
+
+        Args:
+            element_id: Element ID from DOM (e.g., "input-5")
+            file_paths: Single file path or list of file paths
+        """
+        page = self._require_page()
+        xpath = self._get_xpath(element_id)
+        element = await page.select_one(xpath)
+        await element.upload_file(file_paths)

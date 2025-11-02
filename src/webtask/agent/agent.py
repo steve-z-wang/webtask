@@ -1,15 +1,17 @@
 """Agent - main interface for web automation."""
 
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
 from ..llm_browser.dom_filter_config import DomFilterConfig
 from .tool import ToolRegistry
-from .step_history import StepHistory
+from .task import Task
 from .step import Step, TaskResult
-from .role import Proposer, Executer
+from .proposer import Proposer
+from .executer import Executer
+from .throttler import Throttler
 
 
 class Agent:
@@ -53,26 +55,38 @@ class Agent:
             self.llm_browser.set_page(page)
 
         self.tool_registry = ToolRegistry()
-        self.step_history = StepHistory()
-
-        self._register_tools()
-
-        self.current_task: Optional[str] = None
+        self._task_context: Optional[Task] = None
         self.proposer: Optional[Proposer] = None
         self.executer: Optional[Executer] = None
 
     def _register_tools(self) -> None:
-        from .tools.browser import NavigateTool, ClickTool, FillTool, TypeTool
+        from .tools.browser import (
+            NavigateTool,
+            ClickTool,
+            FillTool,
+            TypeTool,
+            UploadTool,
+        )
 
         self.tool_registry.clear()
 
+        # Always register basic tools
         self.tool_registry.register(NavigateTool(self.llm_browser))
         self.tool_registry.register(ClickTool(self.llm_browser))
         self.tool_registry.register(FillTool(self.llm_browser))
         self.tool_registry.register(TypeTool(self.llm_browser))
 
+        # Register upload tool if task context with resources exists
+        if self._task_context and self._task_context.resources:
+            self.tool_registry.register(
+                UploadTool(self.llm_browser, self._task_context)
+            )
+
     async def execute(
-        self, task: str, max_steps: int = 10, clear_history: bool = True
+        self,
+        task: str,
+        max_steps: int = 10,
+        resources: Optional[Dict[str, str]] = None,
     ) -> TaskResult:
         """
         Execute a task autonomously.
@@ -80,12 +94,12 @@ class Agent:
         Args:
             task: Task description in natural language
             max_steps: Maximum number of steps before giving up
-            clear_history: Clear step history before starting (default: True)
+            resources: Optional dict of file resources (name -> path)
 
         Returns:
             TaskResult with completion status, steps, and final message
         """
-        self.set_task(task, clear_history=clear_history)
+        self.set_task(task, max_steps=max_steps, resources=resources)
 
         for i in range(max_steps):
             step = await self.run_step()
@@ -93,33 +107,50 @@ class Agent:
             if step.proposal.complete:
                 return TaskResult(
                     completed=True,
-                    steps=self.step_history.get_all(),
+                    steps=self._task_context.steps,
                     message=step.proposal.message,
                 )
 
         return TaskResult(
             completed=False,
-            steps=self.step_history.get_all(),
+            steps=self._task_context.steps,
             message=f"Task not completed after {max_steps} steps",
         )
 
-    def set_task(self, task: str, clear_history: bool = True) -> None:
+    def set_task(
+        self,
+        task: str,
+        max_steps: int = 10,
+        resources: Optional[Dict[str, str]] = None,
+    ) -> None:
         """
         Set current task for step-by-step execution.
 
         Args:
             task: Task description in natural language
-            clear_history: Clear step history before starting (default: True)
+            max_steps: Maximum steps before giving up
+            resources: Optional dict of file resources (name -> path)
         """
-        self.current_task = task
-
-        if clear_history:
-            self.step_history.clear()
-
-        self.proposer = Proposer(
-            self.llm, task, self.step_history, self.tool_registry, self.llm_browser
+        # Create new task context (replaces any existing task)
+        self._task_context = Task(
+            description=task, resources=resources or {}, max_steps=max_steps
         )
-        self.executer = Executer(self.tool_registry, self.action_delay)
+
+        # Create throttler for pacing operations
+        throttler = Throttler(delay=self.action_delay)
+
+        # Initialize roles with shared throttler
+        self.proposer = Proposer(
+            self.llm,
+            self._task_context,
+            self.tool_registry,
+            self.llm_browser,
+            throttler,
+        )
+        self.executer = Executer(self.tool_registry, throttler)
+
+        # Register tools (including upload tool if resources available)
+        self._register_tools()
 
     async def run_step(self) -> Step:
         """
@@ -131,12 +162,10 @@ class Agent:
         Raises:
             RuntimeError: If no task is set (call set_task first)
         """
-        from ..utils import wait
-
-        if self.current_task is None or self.proposer is None:
+        if self._task_context is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
-        step_num = len(self.step_history.get_all()) + 1
+        step_num = self._task_context.step_count + 1
         self.logger.debug(f"=== Starting Step {step_num} ===")
 
         # Phase 1: Propose actions and check completion
@@ -146,9 +175,9 @@ class Agent:
         self.logger.debug(f"Message: {proposal.message}")
         self.logger.debug(f"Proposed {len(proposal.actions)} action(s)")
         for i, action in enumerate(proposal.actions, 1):
-            self.logger.debug(f"  Action {i}: {action.tool_name}")
+            self.logger.debug(f"  Action {i}: {action.tool}")
             self.logger.debug(f"    Reason: {action.reason}")
-            self.logger.debug(f"    Parameters: {action.parameters}")
+            self.logger.debug(f"    Parameters: {action.parameters.model_dump()}")
 
         # Phase 2: Execute actions (if any)
         exec_results = []
@@ -160,25 +189,12 @@ class Agent:
                 f"Execution complete: {success_count}/{len(exec_results)} successful"
             )
 
-            # Wait for page to stabilize
-            self.logger.debug(
-                f"Phase 3: Waiting {self.action_delay}s for page to stabilize..."
-            )
-            await wait(self.action_delay)
-
         step = Step(proposal=proposal, executions=exec_results)
-        self.step_history.add_step(step)
+        self._task_context.add_step(step)
 
         self.logger.debug(f"=== Step {step_num} Complete ===\n")
 
         return step
-
-    def clear_history(self) -> None:
-        """Clear step history and task state."""
-        self.step_history.clear()
-        self.current_task = None
-        self.proposer = None
-        self.executer = None
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """

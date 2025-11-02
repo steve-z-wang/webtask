@@ -1,6 +1,6 @@
 """Playwright element implementation."""
 
-from typing import Optional
+from typing import List, Optional, Union
 from playwright.async_api import Locator
 from ....browser import Element
 
@@ -127,11 +127,11 @@ class PlaywrightElement(Element):
         """
         await self._locator.type(text, delay=delay, timeout=30000)
 
-    async def upload_file(self, file_path: str):
+    async def upload_file(self, file_path: Union[str, List[str]]):
         """
-        Upload a file to a file input element.
+        Upload file(s) to a file input element.
 
         Args:
-            file_path: Path to the file to upload
+            file_path: Single file path or list of file paths
         """
         await self._locator.set_input_files(file_path, timeout=100)

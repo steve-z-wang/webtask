@@ -1,15 +1,9 @@
 """Click tool for clicking elements."""
 
 from typing import Type
-from pydantic import Field
-from ...tool import Tool, ToolParams
+from ...tool import Tool
+from ...schemas import ClickParams
 from ....llm_browser import LLMBrowser
-
-
-class ClickParams(ToolParams):
-    """Parameters for click tool."""
-
-    element_id: str = Field(description="ID of the element to click")
 
 
 class ClickTool(Tool[ClickParams]):

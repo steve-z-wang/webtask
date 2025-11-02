@@ -3,8 +3,8 @@
 from typing import TYPE_CHECKING
 from ..llm import LLM, Context
 from ..prompts import get_prompt
-from ..utils import parse_json
 from ..browser import Element
+from ..agent.schemas import SelectorResponse
 
 if TYPE_CHECKING:
     from .llm_browser import LLMBrowser
@@ -20,7 +20,7 @@ class NaturalSelector:
     async def select(self, description: str) -> Element:
         """Select element by natural language description."""
         # Use full_page=True to see elements below the fold
-        page_context = await self.llm_browser.to_context_block(full_page=True)
+        page_context = await self.llm_browser.get_page_context(full_page=True)
 
         system = get_prompt("selector_system")
 
@@ -28,22 +28,25 @@ class NaturalSelector:
         context.append(page_context)  # Keep Block with image, don't convert to string
         context.append(f'\nWhich element_id matches this description: "{description}"?')
 
-        response = await self.llm.generate(context)
-        data = parse_json(response)
+        response = await self.llm.generate(context, use_json=True)
 
-        element_id = data.get("element_id")
-        error = data.get("error")
+        # Parse JSON response into Pydantic model
+        selector_response = SelectorResponse.model_validate_json(response)
 
-        if not element_id:
-            if error:
-                raise ValueError(f"No matching element found: {error}")
+        if not selector_response.element_id:
+            if selector_response.error:
+                raise ValueError(
+                    f"No matching element found: {selector_response.error}"
+                )
             raise ValueError("LLM response missing 'element_id' field")
 
         try:
-            selector = self.llm_browser._get_selector(element_id)
+            xpath = self.llm_browser._get_xpath(selector_response.element_id)
         except KeyError:
-            raise ValueError(f"Element ID '{element_id}' not found in page context")
+            raise ValueError(
+                f"Element ID '{selector_response.element_id}' not found in page context"
+            )
 
         page = self.llm_browser.get_current_page()
-        element = await page.select_one(selector)
+        element = await page.select_one(xpath)
         return element

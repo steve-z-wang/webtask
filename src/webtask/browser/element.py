@@ -1,7 +1,7 @@
 """Element base class for browser element management."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -108,11 +108,11 @@ class Element(ABC):
         pass
 
     @abstractmethod
-    async def upload_file(self, file_path: str):
+    async def upload_file(self, file_path: Union[str, List[str]]):
         """
-        Upload a file to a file input element.
+        Upload file(s) to a file input element.
 
         Args:
-            file_path: Path to the file to upload
+            file_path: Single file path (str) or multiple file paths (List[str])
         """
         pass
