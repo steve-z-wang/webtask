@@ -166,9 +166,9 @@ class Agent:
         self.logger.debug(f"Message: {proposal.message}")
         self.logger.debug(f"Proposed {len(proposal.actions)} action(s)")
         for i, action in enumerate(proposal.actions, 1):
-            self.logger.debug(f"  Action {i}: {action.tool_name}")
+            self.logger.debug(f"  Action {i}: {action.tool}")
             self.logger.debug(f"    Reason: {action.reason}")
-            self.logger.debug(f"    Parameters: {action.parameters}")
+            self.logger.debug(f"    Parameters: {action.parameters.model_dump()}")
 
         # Phase 2: Execute actions (if any)
         exec_results = []

@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, TypeVar, Generic, Type
-from .tool_params import ToolParams
+from ..llm_schemas import ToolParams
 
 
 TParams = TypeVar("TParams", bound=ToolParams)

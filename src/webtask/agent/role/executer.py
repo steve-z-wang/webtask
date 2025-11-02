@@ -2,7 +2,8 @@
 
 import time
 from typing import List, Optional
-from ..step import Action, ExecutionResult
+from ..step import ExecutionResult
+from ..llm_schemas import Action
 from ..tool import ToolRegistry
 from ...utils import wait
 
@@ -25,9 +26,9 @@ class Executer:
                     await wait(self.action_delay - elapsed)
 
             try:
-                tool = self.tool_registry.get(action.tool_name)
-                params = tool.validate_parameters(action.parameters)
-                await tool.execute(params)
+                tool = self.tool_registry.get(action.tool)
+                # action.parameters is already a validated Pydantic model
+                await tool.execute(action.parameters)
                 self.last_action_time = time.time()
                 results.append(ExecutionResult(success=True))
 

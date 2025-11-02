@@ -1,13 +1,9 @@
-"""Base ToolParams class for tool parameters."""
+"""Base ToolParams class for tool parameters.
 
-from typing import Dict, Any
-from pydantic import BaseModel
+DEPRECATED: Import from agent.llm_schemas instead.
+This file remains for backward compatibility.
+"""
 
+from ..llm_schemas import ToolParams
 
-class ToolParams(BaseModel):
-    """Base class for tool parameters using Pydantic for validation."""
-
-    @classmethod
-    def schema(cls) -> Dict[str, Any]:
-        """Generate JSON schema for LLM tool calling."""
-        return cls.model_json_schema()
+__all__ = ["ToolParams"]

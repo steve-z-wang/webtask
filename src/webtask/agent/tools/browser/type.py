@@ -1,16 +1,9 @@
 """Type tool for typing text into form elements."""
 
 from typing import Type
-from pydantic import Field
-from ...tool import Tool, ToolParams
+from ...tool import Tool
+from ...llm_schemas import TypeParams
 from ....llm_browser import LLMBrowser
-
-
-class TypeParams(ToolParams):
-    """Parameters for type tool."""
-
-    element_id: str = Field(description="ID of the element to type into")
-    text: str = Field(description="Text to type into the element")
 
 
 class TypeTool(Tool[TypeParams]):

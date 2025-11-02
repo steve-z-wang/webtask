@@ -1,15 +1,9 @@
 """Navigate tool for navigating to URLs."""
 
 from typing import Type
-from pydantic import Field
-from ...tool import Tool, ToolParams
+from ...tool import Tool
+from ...llm_schemas import NavigateParams
 from ....llm_browser import LLMBrowser
-
-
-class NavigateParams(ToolParams):
-    """Parameters for navigate tool."""
-
-    url: str = Field(description="URL to navigate to")
 
 
 class NavigateTool(Tool[NavigateParams]):

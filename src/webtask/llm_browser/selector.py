@@ -3,8 +3,8 @@
 from typing import TYPE_CHECKING
 from ..llm import LLM, Context
 from ..prompts import get_prompt
-from ..utils import parse_json
 from ..browser import Element
+from ..agent.llm_schemas import SelectorResponse
 
 if TYPE_CHECKING:
     from .llm_browser import LLMBrowser
@@ -28,21 +28,22 @@ class NaturalSelector:
         context.append(page_context)  # Keep Block with image, don't convert to string
         context.append(f'\nWhich element_id matches this description: "{description}"?')
 
-        response = await self.llm.generate(context, json_mode=True)
-        data = parse_json(response)
+        response = await self.llm.generate(context, use_json=True)
 
-        element_id = data.get("element_id")
-        error = data.get("error")
+        # Parse JSON response into Pydantic model
+        selector_response = SelectorResponse.model_validate_json(response)
 
-        if not element_id:
-            if error:
-                raise ValueError(f"No matching element found: {error}")
+        if not selector_response.element_id:
+            if selector_response.error:
+                raise ValueError(f"No matching element found: {selector_response.error}")
             raise ValueError("LLM response missing 'element_id' field")
 
         try:
-            xpath = self.llm_browser._get_xpath(element_id)
+            xpath = self.llm_browser._get_xpath(selector_response.element_id)
         except KeyError:
-            raise ValueError(f"Element ID '{element_id}' not found in page context")
+            raise ValueError(
+                f"Element ID '{selector_response.element_id}' not found in page context"
+            )
 
         page = self.llm_browser.get_current_page()
         element = await page.select_one(xpath)

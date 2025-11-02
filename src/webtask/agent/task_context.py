@@ -54,13 +54,11 @@ class TaskContext:
             if step.proposal.actions:
                 summary_lines.append("  Actions taken:")
                 for j, action in enumerate(step.proposal.actions):
-                    # Show action
-                    action_line = f"    {j+1}. {action.tool_name}"
-                    if action.parameters:
-                        # Show key parameters for context
-                        params_str = ", ".join(f"{k}={v}" for k, v in list(action.parameters.items())[:2])
-                        action_line += f" ({params_str})"
-                    action_line += f" - {action.reason}"
+                    # Show action with parameters
+                    params_str = ", ".join(
+                        f"{k}={v}" for k, v in action.parameters.model_dump().items()
+                    )
+                    action_line = f"    {j+1}. {action.tool}({params_str}) - {action.reason}"
                     summary_lines.append(action_line)
 
                     # Show execution result

@@ -1,21 +1,12 @@
 """Upload tool for file uploads."""
 
-from typing import List, Type, TYPE_CHECKING
-from pydantic import Field
-from ...tool import Tool, ToolParams
+from typing import Type, TYPE_CHECKING
+from ...tool import Tool
+from ...llm_schemas import UploadParams
 
 if TYPE_CHECKING:
     from ....llm_browser import LLMBrowser
     from ...task_context import TaskContext
-
-
-class UploadParams(ToolParams):
-    """Parameters for upload tool."""
-
-    element_id: str = Field(description="Element ID of the file input (e.g., 'input-5')")
-    resource_names: List[str] = Field(
-        description="List of resource names to upload (e.g., ['photo1', 'photo2'])"
-    )
 
 
 class UploadTool(Tool[UploadParams]):
