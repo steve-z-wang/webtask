@@ -71,7 +71,7 @@ python -m twine upload dist/*
 2. **Multimodal Context**: LLM receives both text (DOM tree) and visual (screenshot with bounding boxes) context
 3. **XPath from Original DOM**: Element XPaths computed from unfiltered DOM tree to match actual browser state
 4. **Separation of Concerns**: DOM layer is pure data structures, doesn't know about LLMs or browsers
-5. **Propose-Execute-Verify Loop**: Three specialized agent roles work together autonomously
+5. **Propose-Execute Loop**: Proposer both suggests actions AND checks completion, Executer runs actions
 6. **Composable Context Building**: Block system supports text + images for multimodal LLM APIs
 7. **Lazy Initialization**: Browser launches only when first agent is created
 
@@ -82,21 +82,22 @@ src/webtask/
 ├── webtask.py              # Webtask manager - browser lifecycle, lazy init
 ├── agent/                  # Agent orchestration
 │   ├── agent.py           # Main agent interface (3 modes: execute/step/imperative)
-│   ├── step.py            # Action, ExecutionResult, VerificationResult, Step, TaskResult
-│   ├── step_history.py    # Tracks completed agent cycles
-│   ├── role/              # Agent roles for propose-execute-verify loop
-│   │   ├── proposer.py    # Proposes next action(s)
-│   │   ├── executer.py    # Executes actions
-│   │   └── verifier.py    # Verifies task completion
-│   ├── tool/              # Tool infrastructure
-│   │   ├── tool.py        # Base Tool class
-│   │   ├── tool_params.py # Pydantic-based parameter schemas
-│   │   └── tool_registry.py # Manages available tools
+│   ├── step.py            # ExecutionResult, Step, TaskResult
+│   ├── task.py            # TaskContext - manages task state & history
+│   ├── proposer.py        # Proposes next actions AND checks completion
+│   ├── executer.py        # Executes actions
+│   ├── tool.py            # Base Tool class + ToolRegistry
+│   ├── schemas/           # Pydantic models for LLM responses
+│   │   ├── params.py      # ToolParams (ClickParams, FillParams, etc.)
+│   │   ├── actions.py     # Action union (ClickAction, FillAction, etc.)
+│   │   ├── proposal.py    # Proposal model
+│   │   └── selector.py    # SelectorResponse
 │   └── tools/browser/     # Concrete browser action tools
 │       ├── navigate.py
 │       ├── click.py
 │       ├── fill.py        # Fill form fields by element_id
-│       └── type.py        # Type into elements by element_id
+│       ├── type.py        # Type into elements by element_id
+│       └── upload.py      # Upload files by element_id
 ├── llm_browser/           # Bridge between LLM text and browser operations
 │   ├── llm_browser.py    # Element ID mapping, context building, action execution
 │   ├── dom_context_builder.py  # Builds text DOM context
@@ -176,14 +177,22 @@ src/webtask/
 
 **Step System** (`agent/step.py`)
 - Tracks full cycles instead of just actions
-- **Step** = Action + ExecutionResult + VerificationResult
-- **StepHistory** stores completed cycles for agent reasoning
+- **Step** = Proposal + ExecutionResult(s)
+- **TaskContext** (`agent/task.py`) manages task state and stores step history for agent reasoning
 - **TaskResult** returned from `execute()` with completion status
 
-**Roles** (`agent/role/`)
-- **Proposer**: Analyzes task + history + page → proposes Action(s)
-- **Executer**: Executes Action(s) → returns ExecutionResult(s)
-- **Verifier**: Checks if task complete → returns VerificationResult
+**Agent Roles**
+- **Proposer** (`agent/proposer.py`): Analyzes task + history + page → proposes Action(s) AND checks if task is complete
+- **Executer** (`agent/executer.py`): Executes Action(s) → returns ExecutionResult(s)
+
+**Pydantic Schemas** (`agent/schemas/`)
+- Centralized location for all LLM response models
+- **params.py**: ToolParams base class + all parameter classes (ClickParams, FillParams, etc.)
+- **actions.py**: Action union (ClickAction, FillAction, etc.) with nested typed parameters
+- **proposal.py**: Proposal model (complete, message, actions)
+- **selector.py**: SelectorResponse for natural language selection
+- LLM returns JSON strings, app deserializes with `Proposal.model_validate_json(response)`
+- Type-safe with automatic Pydantic validation
 
 **Block System** (`llm/context.py`)
 - Composable context building
@@ -191,10 +200,10 @@ src/webtask/
 - **Context**: System prompt + list of user Blocks
 - Components provide `to_context_block()` method
 
-**Tools** (`agent/tool/`, `agent/tools/`)
-- Define actions agent can perform (navigate, click, type)
-- Tool has name, description, Pydantic parameters
-- ToolRegistry provides schemas to LLM
+**Tools** (`agent/tool.py`, `agent/tools/`)
+- Define actions agent can perform (navigate, click, type, fill, upload)
+- Tool has name, description, Pydantic parameters (from `agent/schemas/params.py`)
+- ToolRegistry (in `agent/tool.py`) provides schemas to LLM
 - Tool implementations hold reference to LLMBrowser for execution
 
 **DOM Processing** (`dom/`)
@@ -227,11 +236,10 @@ src/webtask/
 7. LLMBrowser converts element ID → DomNode → XPath (from original node)
 8. Browser executes XPath selection
 
-**Propose-Execute-Verify Loop**
-1. Proposer looks at task + page + history → decides next Action(s)
+**Propose-Execute Loop**
+1. Proposer looks at task + page + history → proposes Action(s) AND determines if task is complete
 2. Executer runs Action(s) → returns ExecutionResult(s)
-3. Verifier checks if task complete → returns VerificationResult
-4. Repeat until done or max steps reached
+3. Repeat until task complete or max steps reached
 
 **Type vs Fill**
 - `type`: Uses click + keyboard typing (more realistic, slower)

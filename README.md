@@ -57,10 +57,10 @@ agent.set_task("add 2 items to cart")
 for i in range(10):
     step = await agent.run_step()
 
-    print(f"Step {i+1}: {len(step.proposals)} actions")
-    print(f"Verification: {step.verification.message}")
+    print(f"Step {i+1}: {len(step.proposal.actions)} actions")
+    print(f"Status: {step.proposal.message}")
 
-    if step.verification.complete:
+    if step.proposal.complete:
         break
 
 # Useful for debugging, progress tracking, or custom control flow
@@ -91,16 +91,15 @@ No CSS selectors. No XPath. Just describe what you want.
 ## How it works
 
 **High-level mode** - The agent loop:
-1. Proposer looks at the page (text DOM + screenshot with bounding boxes) and task, decides next action
-2. Executer runs it (navigate, click, fill, type)
-3. Verifier checks if task complete by looking at updated page
-4. Repeat until done
+1. Proposer looks at the page (text DOM + screenshot with bounding boxes) and task, proposes next actions AND checks if task is complete
+2. Executer runs the actions (navigate, click, fill, type)
+3. Repeat until task is complete
 
 The agent sees both text (DOM tree with element IDs) and visual context (screenshot with labeled bounding boxes) for more accurate understanding.
 
 **Step-by-step mode** - Same as high-level but you control the loop:
 - `agent.set_task(description)` - Set the task
-- `agent.run_step()` - Execute one step (propose → execute → verify)
+- `agent.run_step()` - Execute one step (propose → execute)
 - Setting a new task automatically resets history
 
 **Low-level mode** - You call methods directly:
