@@ -30,19 +30,22 @@ class Agent:
         action_delay: float = 1.0,
         dom_filter_config: Optional[DomFilterConfig] = None,
         use_screenshot: bool = True,
+        selector_llm: Optional[LLM] = None,
     ):
         """
         Initialize agent.
 
         Args:
-            llm: LLM instance for reasoning
+            llm: LLM instance for reasoning (task planning, completion checking)
             session: Optional Session instance for multi-page support
             page: Optional Page instance to use as initial page
             action_delay: Delay in seconds after actions (default: 1.0)
             dom_filter_config: Configuration for DOM filtering
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
+            selector_llm: Optional separate LLM for element selection (defaults to main llm)
         """
         self.llm = llm
+        self.selector_llm = selector_llm or llm
         self.session = session
         self.action_delay = action_delay
         self.dom_filter_config = dom_filter_config
@@ -264,7 +267,7 @@ class Agent:
         """
         from ..llm_browser.selector import NaturalSelector
 
-        selector = NaturalSelector(self.llm, self.llm_browser)
+        selector = NaturalSelector(self.selector_llm, self.llm_browser)
         return await selector.select(description)
 
     async def wait_for_idle(self, timeout: int = 30000):
