@@ -1,7 +1,7 @@
 """Tests for empty node filter."""
 
 import pytest
-from webtask.llm_browser.filters.semantic.empty import filter_empty
+from webtask.dom_processing.filters.filter_empty import filter_empty
 from webtask.dom.domnode import DomNode, Text
 
 

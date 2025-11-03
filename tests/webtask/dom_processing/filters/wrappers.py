@@ -1,7 +1,9 @@
 """Tests for wrapper collapse filter."""
 
 import pytest
-from webtask.llm_browser.filters.semantic.wrappers import collapse_single_child_wrappers
+from webtask.dom_processing.filters.filter_wrappers import (
+    collapse_single_child_wrappers,
+)
 from webtask.dom.domnode import DomNode, Text
 
 

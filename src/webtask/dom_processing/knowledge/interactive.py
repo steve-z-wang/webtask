@@ -1,6 +1,10 @@
-"""Utility to determine if a DOM element is interactive."""
+"""Knowledge: Determine if a DOM element is interactive.
 
-from ..domnode import DomNode
+Pure function that answers: "Is this element interactive?"
+Based on HTML and ARIA web standards.
+"""
+
+from ...dom.domnode import DomNode
 
 # Standard interactive HTML tags (from HTML spec)
 INTERACTIVE_TAGS = {"a", "button", "input", "select", "textarea", "label"}
@@ -25,7 +29,7 @@ INTERACTIVE_ROLES = {
 }
 
 
-def is_interactive_element(node: DomNode) -> bool:
+def is_interactive(node: DomNode) -> bool:
     """Check if a DOM element is interactive based on web standards.
 
     An element is considered interactive if it matches any of these criteria:
@@ -35,13 +39,21 @@ def is_interactive_element(node: DomNode) -> bool:
     4. Has aria-haspopup attribute (indicates it opens a popup/menu)
     5. Has onclick attribute (has click handler)
 
-    These criteria are based on HTML and ARIA web standards, not user configuration.
+    These criteria are based on HTML and ARIA web standards.
 
     Args:
         node: DOM node to check
 
     Returns:
         True if element is interactive, False otherwise
+
+    Example:
+        >>> node = DomNode(tag="button")
+        >>> is_interactive(node)
+        True
+        >>> node = DomNode(tag="div", attrib={"onclick": "handleClick()"})
+        >>> is_interactive(node)
+        True
     """
     # Check if tag is interactive (HTML standard)
     if node.tag in INTERACTIVE_TAGS:

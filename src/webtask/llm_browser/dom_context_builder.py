@@ -4,8 +4,8 @@ from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
 from .dom_filter_config import DomFilterConfig
-from .filters.visibility import filter_not_rendered
-from .filters.semantic import (
+from ..dom_processing.filters import (
+    filter_not_rendered,
     filter_attributes,
     filter_presentational_roles,
     filter_empty,

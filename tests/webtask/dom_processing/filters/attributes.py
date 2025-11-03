@@ -1,7 +1,7 @@
 """Tests for attribute filter."""
 
 import pytest
-from webtask.llm_browser.filters.semantic.attributes import filter_attributes
+from webtask.dom_processing.filters.filter_attributes import filter_attributes
 from webtask.dom.domnode import DomNode, Text
 
 

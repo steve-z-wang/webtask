@@ -1,7 +1,7 @@
 """Tests for not rendered filter."""
 
 import pytest
-from webtask.llm_browser.filters.visibility.not_rendered import filter_not_rendered
+from webtask.dom_processing.filters.filter_not_rendered import filter_not_rendered
 from webtask.dom.domnode import DomNode, Text, BoundingBox
 
 

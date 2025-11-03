@@ -1,7 +1,7 @@
 """Serialize DomNode tree to JSON with complete data."""
 
-from typing import Any, Dict, List, Union
-from ..domnode import DomNode, Text, BoundingBox
+from typing import Any, Dict, Union
+from ...dom.domnode import DomNode, Text
 
 
 def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
@@ -22,10 +22,7 @@ def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
         Dictionary with complete node data
     """
     if isinstance(node, Text):
-        return {
-            "type": "text",
-            "content": node.content
-        }
+        return {"type": "text", "content": node.content}
 
     # Serialize bounding box if present
     bounds_dict = None
@@ -34,15 +31,12 @@ def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
             "x": node.bounds.x,
             "y": node.bounds.y,
             "width": node.bounds.width,
-            "height": node.bounds.height
+            "height": node.bounds.height,
         }
 
     # Filter metadata to avoid circular references
     # Skip 'original_node' as it causes infinite recursion
-    filtered_metadata = {
-        k: v for k, v in node.metadata.items()
-        if k != "original_node"
-    }
+    filtered_metadata = {k: v for k, v in node.metadata.items() if k != "original_node"}
 
     # Recursively serialize children
     children_list = []
@@ -53,10 +47,10 @@ def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
         "type": "element",
         "tag": node.tag,
         "attributes": dict(node.attrib),  # All HTML attributes
-        "styles": dict(node.styles),      # Computed styles from CDP
-        "bounds": bounds_dict,            # Bounding box or None
-        "metadata": filtered_metadata,    # Extra data (element_id, etc)
-        "children": children_list
+        "styles": dict(node.styles),  # Computed styles from CDP
+        "bounds": bounds_dict,  # Bounding box or None
+        "metadata": filtered_metadata,  # Extra data (element_id, etc)
+        "children": children_list,
     }
 
 
@@ -71,5 +65,6 @@ def serialize_tree_to_json_string(node: Union[DomNode, Text], indent: int = 2) -
         Formatted JSON string
     """
     import json
+
     data = serialize_to_json(node)
     return json.dumps(data, indent=indent, ensure_ascii=False)

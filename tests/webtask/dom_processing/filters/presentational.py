@@ -1,7 +1,7 @@
 """Tests for presentational roles filter."""
 
 import pytest
-from webtask.llm_browser.filters.semantic.presentational import (
+from webtask.dom_processing.filters.filter_presentational import (
     filter_presentational_roles,
 )
 from webtask.dom.domnode import DomNode, Text
