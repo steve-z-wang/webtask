@@ -5,6 +5,7 @@ from ..llm import LLM, Context
 from ..prompts import get_prompt
 from ..browser import Element
 from ..agent.schemas import SelectorResponse
+from ..utils.json_parser import parse_json
 
 if TYPE_CHECKING:
     from .llm_browser import LLMBrowser
@@ -30,8 +31,9 @@ class NaturalSelector:
 
         response = await self.llm.generate(context, use_json=True)
 
-        # Parse JSON response into Pydantic model
-        selector_response = SelectorResponse.model_validate_json(response)
+        # Clean JSON (remove markdown fences if present) and parse into Pydantic model
+        cleaned_json_dict = parse_json(response)
+        selector_response = SelectorResponse.model_validate(cleaned_json_dict)
 
         if not selector_response.element_id:
             if selector_response.error:

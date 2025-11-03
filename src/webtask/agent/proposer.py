@@ -7,6 +7,7 @@ from .task import Task
 from ..llm_browser import LLMBrowser
 from .tool import ToolRegistry
 from .throttler import Throttler
+from ..utils.json_parser import parse_json
 
 
 class Proposer:
@@ -57,8 +58,9 @@ class Proposer:
         await self.throttler.wait_if_needed()
         response = await self.llm.generate(context, use_json=True)
 
-        # Parse JSON response into Pydantic model
-        proposal = Proposal.model_validate_json(response)
+        # Clean JSON (remove markdown fences if present) and parse into Pydantic model
+        cleaned_json_dict = parse_json(response)
+        proposal = Proposal.model_validate(cleaned_json_dict)
 
         # Validate logical consistency: cannot be complete AND have actions
         if proposal.complete and proposal.actions:
