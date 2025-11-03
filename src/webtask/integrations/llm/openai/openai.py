@@ -1,22 +1,8 @@
 """OpenAI LLM implementation."""
 
 from typing import Optional, List, Dict, Any
-import tiktoken
 from openai import AsyncOpenAI
 from ....llm import LLM, Context
-
-# Model max token limits
-MODEL_MAX_TOKENS = {
-    "gpt-4": 8192,
-    "gpt-4-32k": 32768,
-    "gpt-4-turbo": 128000,
-    "gpt-4-turbo-preview": 128000,
-    "gpt-3.5-turbo": 4096,
-    "gpt-3.5-turbo-16k": 16384,
-    "gpt-4.1": 128000,
-    "gpt-4.1-mini": 128000,
-    "gpt-5-nano": 400000,
-}
 
 
 class OpenAILLM(LLM):
@@ -28,27 +14,22 @@ class OpenAILLM(LLM):
 
     def __init__(
         self,
-        max_tokens: int,
         client: AsyncOpenAI,
         model: str,
         temperature: float,
-        encoding_name: str = "cl100k_base",
     ):
         """
         Initialize OpenAILLM (use create factory instead).
 
         Args:
-            max_tokens: Maximum token limit for prompts
             client: AsyncOpenAI client instance
             model: Model name
             temperature: Temperature for generation
-            encoding_name: Tiktoken encoding name
         """
-        super().__init__(max_tokens)
+        super().__init__()
         self.model = model
         self.temperature = temperature
         self.client = client
-        self.encoding = tiktoken.get_encoding(encoding_name)
 
     @classmethod
     def create(
@@ -56,16 +37,14 @@ class OpenAILLM(LLM):
         model: str = "gpt-4",
         api_key: Optional[str] = None,
         temperature: float = 1,
-        max_tokens: Optional[int] = None,
     ) -> "OpenAILLM":
         """
-        Create an OpenAILLM instance with automatic encoding and max_tokens detection.
+        Create an OpenAILLM instance.
 
         Args:
             model: Model name (e.g., "gpt-4", "gpt-3.5-turbo")
             api_key: OpenAI API key (if None, uses OPENAI_API_KEY env var)
             temperature: Temperature for generation (0.0 to 2.0)
-            max_tokens: Override max tokens (if None, auto-detect from model)
 
         Returns:
             OpenAILLM instance
@@ -74,37 +53,8 @@ class OpenAILLM(LLM):
             >>> llm = OpenAILLM.create(model="gpt-4")
             >>> response = await llm.generate("You are helpful", "Hello!")
         """
-        # Get encoding for model
-        try:
-            encoding = tiktoken.encoding_for_model(model)
-            encoding_name = encoding.name
-        except KeyError:
-            # Default to cl100k_base for unknown models (GPT-4 encoding)
-            encoding_name = "cl100k_base"
-
-        # Auto-detect max_tokens if not provided
-        if max_tokens is None:
-            max_tokens = MODEL_MAX_TOKENS.get(model)
-            if max_tokens is None:
-                raise ValueError(
-                    f"Unknown model: {model}. Please specify max_tokens manually."
-                )
-
         client = AsyncOpenAI(api_key=api_key)
-
-        return cls(max_tokens, client, model, temperature, encoding_name)
-
-    def count_tokens(self, text: str) -> int:
-        """
-        Count tokens in text using tiktoken.
-
-        Args:
-            text: Text to tokenize and count
-
-        Returns:
-            Number of tokens in the text
-        """
-        return len(self.encoding.encode(text))
+        return cls(client, model, temperature)
 
     def _build_user_content(self, context: Context) -> List[Dict[str, Any]] | str:
         """Build user message content, supporting both text and images.
@@ -134,9 +84,9 @@ class OpenAILLM(LLM):
 
         return content
 
-    async def _generate(self, context: Context, use_json: bool = False) -> str:
+    async def generate(self, context: Context, use_json: bool = False) -> str:
         """
-        Internal method for actual text generation using OpenAI API.
+        Generate text using OpenAI API.
 
         Supports multimodal content (text + images) and JSON mode.
 

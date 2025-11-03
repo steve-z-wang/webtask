@@ -4,15 +4,6 @@ from typing import Optional, List, Any
 import google.generativeai as genai
 from ....llm import LLM, Context
 
-# Model max token limits
-MODEL_MAX_TOKENS = {
-    "gemini-pro": 32768,
-    "gemini-1.5-pro": 2097152,  # 2M tokens
-    "gemini-1.5-flash": 1048576,  # 1M tokens
-    "gemini-2.0-flash": 1048576,  # 1M tokens
-    "gemini-2.5-flash": 1048576,  # 1M tokens
-}
-
 
 class GeminiLLM(LLM):
     """
@@ -23,7 +14,6 @@ class GeminiLLM(LLM):
 
     def __init__(
         self,
-        max_tokens: int,
         model: genai.GenerativeModel,
         model_name: str,
         temperature: float,
@@ -32,12 +22,11 @@ class GeminiLLM(LLM):
         Initialize GeminiLLM (use create factory instead).
 
         Args:
-            max_tokens: Maximum token limit for prompts
             model: Gemini GenerativeModel instance
             model_name: Model name
             temperature: Temperature for generation
         """
-        super().__init__(max_tokens)
+        super().__init__()
         self.model_name = model_name
         self.temperature = temperature
         self.model = model
@@ -48,16 +37,14 @@ class GeminiLLM(LLM):
         model: str = "gemini-2.5-flash",
         api_key: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
     ) -> "GeminiLLM":
         """
-        Create a GeminiLLM instance with automatic max_tokens detection.
+        Create a GeminiLLM instance.
 
         Args:
             model: Model name (e.g., "gemini-2.5-flash", "gemini-1.5-pro")
             api_key: Google API key (if None, uses GOOGLE_API_KEY env var)
             temperature: Temperature for generation (0.0 to 2.0)
-            max_tokens: Override max tokens (if None, auto-detect from model)
 
         Returns:
             GeminiLLM instance
@@ -66,14 +53,6 @@ class GeminiLLM(LLM):
             >>> llm = GeminiLLM.create(model="gemini-2.5-flash")
             >>> response = await llm.generate("You are helpful", "Hello!")
         """
-        # Auto-detect max_tokens if not provided
-        if max_tokens is None:
-            max_tokens = MODEL_MAX_TOKENS.get(model)
-            if max_tokens is None:
-                raise ValueError(
-                    f"Unknown model: {model}. Please specify max_tokens manually."
-                )
-
         # Configure API key
         if api_key:
             genai.configure(api_key=api_key)
@@ -86,30 +65,7 @@ class GeminiLLM(LLM):
             ),
         )
 
-        return cls(max_tokens, gemini_model, model, temperature)
-
-    def count_tokens(self, text: str) -> int:
-        """
-        Count tokens in text using Gemini's API.
-
-        Args:
-            text: Text to tokenize and count
-
-        Returns:
-            Number of tokens in the text
-
-        Note:
-            This makes an API call to Gemini's count_tokens endpoint.
-            Falls back to character-based approximation if API fails.
-        """
-        try:
-            result = self.model.count_tokens(text)
-            return result.total_tokens
-        except Exception as e:
-            # Fallback to character-based approximation if API fails
-            # Rough estimate: ~4 chars per token
-            self.logger.warning(f"Token counting API failed, using approximation: {e}")
-            return len(text) // 4
+        return cls(gemini_model, model, temperature)
 
     def _build_content(self, context: Context) -> List[Any] | str:
         """Build content for Gemini API, supporting both text and images.
@@ -147,9 +103,9 @@ class GeminiLLM(LLM):
 
         return content
 
-    async def _generate(self, context: Context, use_json: bool = False) -> str:
+    async def generate(self, context: Context, use_json: bool = False) -> str:
         """
-        Internal method for actual text generation using Gemini API.
+        Generate text using Gemini API.
 
         Supports multimodal content (text + images) and JSON mode.
 
