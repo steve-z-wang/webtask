@@ -86,27 +86,36 @@ class Cookies:
     """
 
     @staticmethod
-    def from_string(cookie_string: str) -> List[Cookie]:
+    def from_string(cookie_string: str, domain: str) -> List[Cookie]:
         """
         Parse cookie string to list of Cookie objects.
 
         Args:
             cookie_string: Cookie string (e.g., "name1=value1; name2=value2")
+            domain: Domain for all cookies (e.g., ".google.com", "example.com")
 
         Returns:
             List of Cookie objects
 
         Example:
-            >>> cookies = Cookies.from_string("session_id=abc123; user_pref=dark")
+            >>> cookies = Cookies.from_string("session_id=abc123; user_pref=dark", domain=".example.com")
             >>> len(cookies)
             2
+            >>> cookies[0].domain
+            '.example.com'
         """
         cookies = []
         for pair in cookie_string.split(";"):
             pair = pair.strip()
             if "=" in pair:
                 name, value = pair.split("=", 1)
-                cookies.append(Cookie(name=name.strip(), value=value.strip()))
+                cookies.append(
+                    Cookie(
+                        name=name.strip(),
+                        value=value.strip(),
+                        domain=domain,
+                    )
+                )
 
         return cookies
 
