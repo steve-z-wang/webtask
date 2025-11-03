@@ -103,19 +103,6 @@ class DomNode:
         """Create deep copy without children."""
         return DomNode(data=self.data.copy())
 
-    def is_visible(self) -> bool:
-        """Check if element is visible."""
-        if self.styles.get("display") == "none":
-            return False
-        if self.styles.get("visibility") == "hidden":
-            return False
-        try:
-            if float(self.styles.get("opacity", "1")) == 0:
-                return False
-        except (ValueError, TypeError):
-            pass
-        return True
-
     def has_zero_size(self) -> bool:
         if not self.bounds:
             return False
