@@ -3,7 +3,6 @@
 from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
-from ..dom.utils import is_interactive_element
 from .dom_filter_config import DomFilterConfig
 from .filters.visibility import filter_not_rendered
 from .filters.semantic import (
