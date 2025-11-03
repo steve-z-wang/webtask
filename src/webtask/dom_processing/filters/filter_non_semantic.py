@@ -74,7 +74,11 @@ def _collapse_non_semantic_wrappers(node: DomNode) -> DomNode:
     text_children = [c for c in new_children if isinstance(c, Text)]
 
     # Collapse if: exactly one element child AND no semantic value AND no text children
-    if len(element_children) == 1 and not has_semantic_value(node) and len(text_children) == 0:
+    if (
+        len(element_children) == 1
+        and not has_semantic_value(node)
+        and len(text_children) == 0
+    ):
         return element_children[0]
 
     new_node = node.copy()
