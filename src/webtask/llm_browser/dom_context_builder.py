@@ -69,32 +69,30 @@ class DomContextBuilder:
     def _assign_element_ids(
         root: DomNode, dom_filter_config: DomFilterConfig
     ) -> Dict[str, DomNode]:
-        """Assign element IDs only to interactive nodes.
+        """Assign element IDs to ALL nodes.
 
-        Non-interactive nodes still appear in context but without IDs.
-        Only interactive elements get IDs and go into element_map.
+        All elements get IDs and appear in element_map, allowing LLM to reference any element.
+        For bounding boxes, caller should filter to only interactive elements.
 
-        Interactive elements are determined by web standards (HTML and ARIA specs).
-        See is_interactive_element() in dom/utils/is_interactive.py for details.
+        Returns:
+            element_map: Maps element_id -> original unfiltered node
         """
         element_map = {}
         tag_counters: Dict[str, int] = {}
 
         for node in root.traverse():
             if isinstance(node, DomNode):
-                # Check if element is interactive
-                if is_interactive_element(node):
-                    tag = node.tag
-                    count = tag_counters.get(tag, 0)
-                    element_id = f"{tag}-{count}"
+                tag = node.tag
+                count = tag_counters.get(tag, 0)
+                element_id = f"{tag}-{count}"
 
-                    node.metadata["element_id"] = element_id
+                node.metadata["element_id"] = element_id
 
-                    # Map to original unfiltered node for correct XPath computation
-                    original_node = node.metadata.get("original_node", node)
-                    element_map[element_id] = original_node
+                # Map to original unfiltered node for correct XPath computation
+                original_node = node.metadata.get("original_node", node)
+                element_map[element_id] = original_node
 
-                    tag_counters[tag] = count + 1
+                tag_counters[tag] = count + 1
 
         return element_map
 

@@ -152,8 +152,18 @@ class LLMBrowser:
         # Optionally include screenshot with bounding boxes
         image = None
         if self._use_screenshot and element_map:
+            # Filter to only interactive elements for bounding boxes
+            # (All elements have IDs in text context, but only show boxes for interactive ones)
+            from ..dom.utils import is_interactive_element
+
+            interactive_elements = {
+                element_id: node
+                for element_id, node in element_map.items()
+                if is_interactive_element(node)
+            }
+
             image = await BoundingBoxRenderer.render(
-                page=page, element_map=element_map, full_page=full_page
+                page=page, element_map=interactive_elements, full_page=full_page
             )
 
         return Block(text="\n".join(lines), image=image)
