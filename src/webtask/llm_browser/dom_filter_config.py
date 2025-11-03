@@ -41,6 +41,7 @@ class DomFilterConfig:
             "name",
             "placeholder",
             "value",
+            "accept",  # File input accepted types (e.g., "image/*")
             "alt",
             "title",
             "disabled",
