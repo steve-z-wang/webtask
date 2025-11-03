@@ -13,8 +13,6 @@ from .dom import (
     DomSnapshot,
 )
 
-from .llm_browser.dom_filter_config import DomFilterConfig
-
 from .llm import (
     Context,
     Block,
@@ -40,8 +38,6 @@ __all__ = [
     "parse_cdp",
     # Snapshot
     "DomSnapshot",
-    # Config
-    "DomFilterConfig",
     # LLM
     "Context",
     "Block",

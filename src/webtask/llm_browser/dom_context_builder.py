@@ -3,7 +3,6 @@
 from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
-from .dom_filter_config import DomFilterConfig
 from ..dom_processing.filters import (
     filter_not_rendered,
     filter_attributes,
@@ -17,57 +16,50 @@ class DomContextBuilder:
     """Static builder for creating LLM context from DOM."""
 
     @staticmethod
-    async def build_context(
-        page: Page,
-        dom_filter_config: Optional[DomFilterConfig] = None,
-    ) -> tuple[Optional[str], Dict[str, DomNode]]:
+    async def build_context(page: Page) -> tuple[Optional[str], Dict[str, DomNode]]:
         """Build context string and element map from page.
+
+        Applies all filters using knowledge functions (no configuration needed).
 
         Returns: (context_string, element_map)
                  context_string is None if all elements filtered out
                  element_map maps element_id -> original unfiltered node
         """
-
-        dom_filter_config = dom_filter_config or DomFilterConfig()
-
         snapshot = await page.get_snapshot()
         root = snapshot.root
 
         # Add reference to original nodes before filtering
         root = DomContextBuilder._add_node_reference(root)
 
-        # Apply visibility filters
-        if dom_filter_config.filter_not_rendered and root is not None:
+        # Apply all filters
+        if root is not None:
             root = filter_not_rendered(root)
 
         if root is None:
             return None, {}
 
-        # Apply semantic filters
-        if dom_filter_config.filter_attributes and root is not None:
-            root = filter_attributes(root, dom_filter_config.kept_attributes)
+        if root is not None:
+            root = filter_attributes(root)
 
-        if dom_filter_config.filter_presentational_roles and root is not None:
+        if root is not None:
             root = filter_presentational_roles(root)
 
-        if dom_filter_config.filter_empty and root is not None:
+        if root is not None:
             root = filter_empty(root)
 
-        if dom_filter_config.collapse_wrappers and root is not None:
+        if root is not None:
             root = collapse_single_child_wrappers(root)
 
         if root is None:
             return None, {}
 
-        element_map = DomContextBuilder._assign_element_ids(root, dom_filter_config)
+        element_map = DomContextBuilder._assign_element_ids(root)
         context_str = DomContextBuilder._serialize_context(root)
 
         return context_str, element_map
 
     @staticmethod
-    def _assign_element_ids(
-        root: DomNode, dom_filter_config: DomFilterConfig
-    ) -> Dict[str, DomNode]:
+    def _assign_element_ids(root: DomNode) -> Dict[str, DomNode]:
         """Assign element IDs to ALL nodes.
 
         All elements get IDs and appear in element_map, allowing LLM to reference any element.

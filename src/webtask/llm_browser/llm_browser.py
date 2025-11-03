@@ -3,7 +3,6 @@
 from typing import Dict, List, Optional, Union
 from ..browser import Page, Session
 from ..dom.domnode import DomNode
-from .dom_filter_config import DomFilterConfig
 from ..llm import Block
 from .dom_context_builder import DomContextBuilder
 from .bounding_box_renderer import BoundingBoxRenderer
@@ -15,12 +14,10 @@ class LLMBrowser:
     def __init__(
         self,
         session: Optional[Session] = None,
-        dom_filter_config: Optional[DomFilterConfig] = None,
         use_screenshot: bool = True,
     ):
-        """Initialize with optional Session, DOM filter configuration, and screenshot setting."""
+        """Initialize with optional Session and screenshot setting."""
         self._session = session
-        self._dom_filter_config = dom_filter_config or DomFilterConfig()
         self._use_screenshot = use_screenshot
         self._pages: Dict[str, Page] = {}
         self._page_counter = 0
@@ -128,9 +125,7 @@ class LLMBrowser:
         page = self._require_page()
         url = page.url
 
-        context_str, element_map = await DomContextBuilder.build_context(
-            page=page, dom_filter_config=self._dom_filter_config
-        )
+        context_str, element_map = await DomContextBuilder.build_context(page=page)
 
         self._element_map = element_map
 

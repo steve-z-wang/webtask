@@ -4,7 +4,6 @@ from typing import Optional
 from .browser import Browser
 from .llm import LLM
 from .agent import Agent
-from .llm_browser.dom_filter_config import DomFilterConfig
 
 
 class Webtask:
@@ -36,7 +35,6 @@ class Webtask:
         llm: LLM,
         cookies=None,
         action_delay: float = 1.0,
-        dom_filter_config: Optional[DomFilterConfig] = None,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
@@ -46,7 +44,6 @@ class Webtask:
             llm: LLM instance for reasoning (task planning, completion checking)
             cookies: Optional cookies for the session
             action_delay: Delay in seconds after actions (default: 1.0)
-            dom_filter_config: Configuration for DOM filtering
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
         """
@@ -56,7 +53,6 @@ class Webtask:
             llm,
             session=session,
             action_delay=action_delay,
-            dom_filter_config=dom_filter_config,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
         )

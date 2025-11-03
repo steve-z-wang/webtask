@@ -5,7 +5,6 @@ from typing import Dict, List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
-from ..llm_browser.dom_filter_config import DomFilterConfig
 from .tool import ToolRegistry
 from .task import Task
 from .step import Step, TaskResult
@@ -28,7 +27,6 @@ class Agent:
         session: Optional[Session] = None,
         page: Optional[Page] = None,
         action_delay: float = 1.0,
-        dom_filter_config: Optional[DomFilterConfig] = None,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ):
@@ -40,7 +38,6 @@ class Agent:
             session: Optional Session instance for multi-page support
             page: Optional Page instance to use as initial page
             action_delay: Delay in seconds after actions (default: 1.0)
-            dom_filter_config: Configuration for DOM filtering
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
         """
@@ -48,11 +45,10 @@ class Agent:
         self.selector_llm = selector_llm or llm
         self.session = session
         self.action_delay = action_delay
-        self.dom_filter_config = dom_filter_config
         self.use_screenshot = use_screenshot
         self.logger = logging.getLogger(__name__)
 
-        self.llm_browser = LLMBrowser(session, dom_filter_config, use_screenshot)
+        self.llm_browser = LLMBrowser(session, use_screenshot)
 
         if page is not None:
             self.llm_browser.set_page(page)
