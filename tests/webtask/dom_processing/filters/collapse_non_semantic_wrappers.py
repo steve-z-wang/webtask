@@ -1,15 +1,15 @@
 """Tests for wrapper collapse filter."""
 
 import pytest
-from webtask.dom_processing.filters.filter_wrappers import (
-    collapse_single_child_wrappers,
+from webtask.dom_processing.filters.filter_non_semantic import (
+    _collapse_non_semantic_wrappers,
 )
 from webtask.dom.domnode import DomNode, Text
 
 
 @pytest.mark.unit
-class TestCollapseSingleChildWrappers:
-    """Tests for collapse_single_child_wrappers function."""
+class TestCollapseNonSemanticWrappers:
+    """Tests for collapse_non_semantic_wrappers function."""
 
     def test_collapses_wrapper_with_single_element_child(self):
         """Test collapses wrapper element with single element child."""
@@ -17,7 +17,7 @@ class TestCollapseSingleChildWrappers:
         child = DomNode(tag="span", attrib={"id": "child"})
         wrapper.add_child(child)
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # Wrapper should be collapsed, returning child directly
         assert result is child or (
@@ -25,16 +25,16 @@ class TestCollapseSingleChildWrappers:
         )
 
     def test_keeps_wrapper_with_attributes(self):
-        """Test keeps wrapper that has attributes."""
-        wrapper = DomNode(tag="div", attrib={"id": "wrapper"})
-        child = DomNode(tag="span", attrib={"id": "child"})
+        """Test keeps wrapper that has semantic attributes."""
+        wrapper = DomNode(tag="div", attrib={"role": "navigation"})
+        child = DomNode(tag="span", attrib={"role": "button"})
         wrapper.add_child(child)
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
-        # Wrapper has attributes, so it should not be collapsed
+        # Wrapper has semantic attributes, so it should not be collapsed
         assert result.tag == "div"
-        assert result.attrib == {"id": "wrapper"}
+        assert result.attrib == {"role": "navigation"}
         assert len(result.children) == 1
 
     def test_keeps_wrapper_with_multiple_element_children(self):
@@ -46,7 +46,7 @@ class TestCollapseSingleChildWrappers:
         wrapper.add_child(child1)
         wrapper.add_child(child2)
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # Wrapper has 2 children, so it should not be collapsed
         assert result.tag == "div"
@@ -58,7 +58,7 @@ class TestCollapseSingleChildWrappers:
         wrapper.add_child(Text("Important text"))
         wrapper.add_child(DomNode(tag="span", attrib={"id": "child"}))
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # Wrapper has meaningful text, so it should not be collapsed
         assert result.tag == "div"
@@ -70,7 +70,7 @@ class TestCollapseSingleChildWrappers:
         wrapper.add_child(Text("   \n\t   "))
         wrapper.add_child(DomNode(tag="span", attrib={"id": "child"}))
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # Whitespace-only text doesn't count as meaningful, so collapse
         # Result should be the span
@@ -83,7 +83,7 @@ class TestCollapseSingleChildWrappers:
         node.add_child(Text("Hello"))
         node.add_child(Text(" World"))
 
-        result = collapse_single_child_wrappers(node)
+        result = _collapse_non_semantic_wrappers(node)
 
         # No element children (len(element_children) != 1), so keep as-is
         assert result.tag == "p"
@@ -99,7 +99,7 @@ class TestCollapseSingleChildWrappers:
         middle.add_child(inner)
         outer.add_child(middle)
 
-        result = collapse_single_child_wrappers(outer)
+        result = _collapse_non_semantic_wrappers(outer)
 
         # Both outer and middle should be collapsed, leaving only inner
         assert result.tag == "span"
@@ -107,33 +107,33 @@ class TestCollapseSingleChildWrappers:
 
     def test_partially_collapses_mixed_structure(self):
         """Test partially collapses when only some wrappers are collapsible."""
-        # root (has attrib) > wrapper1 (no attrib, 1 child) > wrapper2 (no attrib, 1 child) > leaf
-        root = DomNode(tag="div", attrib={"id": "root"})
+        # root (has semantic attrib) > wrapper1 (no attrib, 1 child) > wrapper2 (no attrib, 1 child) > leaf
+        root = DomNode(tag="div", attrib={"role": "main"})
         wrapper1 = DomNode(tag="section", attrib={})
         wrapper2 = DomNode(tag="article", attrib={})
-        leaf = DomNode(tag="span", attrib={"id": "leaf"})
+        leaf = DomNode(tag="span", attrib={"role": "button"})
 
         wrapper2.add_child(leaf)
         wrapper1.add_child(wrapper2)
         root.add_child(wrapper1)
 
-        result = collapse_single_child_wrappers(root)
+        result = _collapse_non_semantic_wrappers(root)
 
-        # Root has attributes, so it's kept
+        # Root has semantic attributes, so it's kept
         # wrapper1 and wrapper2 should be collapsed
         assert result.tag == "div"
-        assert result.attrib == {"id": "root"}
+        assert result.attrib == {"role": "main"}
         assert len(result.children) == 1
         # Child should be the leaf (wrappers collapsed)
         assert result.children[0].tag == "span"
-        assert result.children[0].attrib == {"id": "leaf"}
+        assert result.children[0].attrib == {"role": "button"}
 
     def test_preserves_text_children_in_result(self):
         """Test preserves text children when not collapsing."""
         node = DomNode(tag="div", attrib={"id": "test"})
         node.add_child(Text("Text content"))
 
-        result = collapse_single_child_wrappers(node)
+        result = _collapse_non_semantic_wrappers(node)
 
         # Not collapsed because no element children
         assert result.tag == "div"
@@ -144,7 +144,7 @@ class TestCollapseSingleChildWrappers:
         """Test empty wrapper (no children) is not collapsed."""
         wrapper = DomNode(tag="div", attrib={})
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # No element children (len != 1), so not collapsed
         assert result.tag == "div"
@@ -155,7 +155,7 @@ class TestCollapseSingleChildWrappers:
         wrapper = DomNode(tag="p", attrib={})
         wrapper.add_child(Text("Just text"))
 
-        result = collapse_single_child_wrappers(wrapper)
+        result = _collapse_non_semantic_wrappers(wrapper)
 
         # No element children (len != 1), so not collapsed
         assert result.tag == "p"
@@ -163,15 +163,15 @@ class TestCollapseSingleChildWrappers:
 
     def test_creates_new_node(self):
         """Test creates new nodes when not collapsing."""
-        original = DomNode(tag="div", attrib={"id": "test"})
+        original = DomNode(tag="div", attrib={"role": "group"})
         child = DomNode(tag="span")
         original.add_child(child)
 
-        result = collapse_single_child_wrappers(original)
+        result = _collapse_non_semantic_wrappers(original)
 
-        # Should NOT collapse because div has attributes
+        # Should NOT collapse because div has semantic attributes
         # Creates new node copy instead
         assert result.tag == "div"
-        assert result.attrib == {"id": "test"}
+        assert result.attrib == {"role": "group"}
         assert len(result.children) == 1
         assert result.children[0].tag == "span"

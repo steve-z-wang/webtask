@@ -4,11 +4,8 @@ from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
 from ..dom_processing.filters import (
-    filter_not_rendered,
-    filter_attributes,
-    filter_presentational_roles,
-    filter_empty,
-    collapse_single_child_wrappers,
+    filter_non_rendered,
+    filter_non_semantic,
 )
 
 
@@ -31,25 +28,12 @@ class DomContextBuilder:
         # Add reference to original nodes before filtering
         root = DomContextBuilder._add_node_reference(root)
 
-        # Apply all filters
-        if root is not None:
-            root = filter_not_rendered(root)
-
+        # Apply filters
+        root = filter_non_rendered(root)
         if root is None:
             return None, {}
 
-        if root is not None:
-            root = filter_attributes(root)
-
-        if root is not None:
-            root = filter_presentational_roles(root)
-
-        if root is not None:
-            root = filter_empty(root)
-
-        if root is not None:
-            root = collapse_single_child_wrappers(root)
-
+        root = filter_non_semantic(root)
         if root is None:
             return None, {}
 

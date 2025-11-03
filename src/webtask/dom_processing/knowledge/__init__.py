@@ -5,17 +5,14 @@ based on web standards (HTML, ARIA, etc.). They don't modify anything, just retu
 """
 
 from .interactive import is_interactive
-from .preservation import should_keep_when_not_rendered
-from .presentational import is_presentational_role
-from .empty import is_empty_element
-from .rendering import is_not_rendered
-from .attributes import is_semantic_attribute
+from .semantic import has_semantic_value, is_presentational_role, is_semantic_attribute
+from .rendering import is_not_rendered, should_keep_when_not_rendered
 
 __all__ = [
     "is_interactive",
     "should_keep_when_not_rendered",
     "is_presentational_role",
-    "is_empty_element",
+    "has_semantic_value",
     "is_not_rendered",
     "is_semantic_attribute",
 ]

@@ -1,13 +1,15 @@
 """Tests for not rendered filter."""
 
 import pytest
-from webtask.dom_processing.filters.filter_not_rendered import filter_not_rendered
+from webtask.dom_processing.filters.filter_non_rendered import (
+    _remove_non_rendered_elements,
+)
 from webtask.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.mark.unit
-class TestFilterNotRendered:
-    """Tests for filter_not_rendered function."""
+class TestRemoveNonRenderedElements:
+    """Tests for remove_non_rendered_elements function."""
 
     def test_removes_elements_without_styles_or_bounds(self):
         """Test removes elements with no layout data."""
@@ -18,7 +20,7 @@ class TestFilterNotRendered:
             bounds=None,
         )
 
-        result = filter_not_rendered(node)
+        result = _remove_non_rendered_elements(node)
 
         assert result is None
 
@@ -31,7 +33,7 @@ class TestFilterNotRendered:
             bounds=None,
         )
 
-        result = filter_not_rendered(node)
+        result = _remove_non_rendered_elements(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -45,7 +47,7 @@ class TestFilterNotRendered:
             bounds=BoundingBox(10, 10, 100, 50),
         )
 
-        result = filter_not_rendered(node)
+        result = _remove_non_rendered_elements(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -59,7 +61,7 @@ class TestFilterNotRendered:
             bounds=BoundingBox(10, 10, 100, 50),
         )
 
-        result = filter_not_rendered(node)
+        result = _remove_non_rendered_elements(node)
 
         assert result is not None
         assert result.tag == "div"
@@ -87,7 +89,7 @@ class TestFilterNotRendered:
         root.add_child(child_with_layout)
         root.add_child(child_without_layout)
 
-        result = filter_not_rendered(root)
+        result = _remove_non_rendered_elements(root)
 
         assert result is not None
         assert len(result.children) == 1
@@ -101,7 +103,7 @@ class TestFilterNotRendered:
         )
         node.add_child(Text("Text content"))
 
-        result = filter_not_rendered(node)
+        result = _remove_non_rendered_elements(node)
 
         assert result is not None
         assert len(result.children) == 1
@@ -118,7 +120,7 @@ class TestFilterNotRendered:
         parent.add_child(child)
         grandparent.add_child(parent)
 
-        result = filter_not_rendered(grandparent)
+        result = _remove_non_rendered_elements(grandparent)
 
         # Parent should be removed, child should be gone too
         assert result is not None
@@ -132,7 +134,7 @@ class TestFilterNotRendered:
             styles={"display": "block"},
         )
 
-        result = filter_not_rendered(original)
+        result = _remove_non_rendered_elements(original)
 
         assert result is not original
         assert result.tag == original.tag

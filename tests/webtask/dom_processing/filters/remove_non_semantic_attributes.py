@@ -1,13 +1,15 @@
 """Tests for attribute filter."""
 
 import pytest
-from webtask.dom_processing.filters.filter_attributes import filter_attributes
+from webtask.dom_processing.filters.filter_non_semantic import (
+    _remove_non_semantic_attributes,
+)
 from webtask.dom.domnode import DomNode, Text
 
 
 @pytest.mark.unit
-class TestFilterAttributes:
-    """Tests for filter_attributes function."""
+class TestRemoveNonSemanticAttributes:
+    """Tests for remove_non_semantic_attributes function."""
 
     def test_keeps_semantic_attributes(self):
         """Test keeps semantic attributes like role, aria-label, type."""
@@ -23,7 +25,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         # Semantic attributes should be kept
         assert result.attrib == {
@@ -48,7 +50,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         # All attributes should be removed (none are semantic)
         assert result.attrib == {}
@@ -68,7 +70,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {
             "type": "text",
@@ -95,7 +97,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {
             "aria-checked": "true",
@@ -118,7 +120,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {
             "tabindex": "0",
@@ -137,7 +139,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {
             "type": "file",
@@ -159,7 +161,7 @@ class TestFilterAttributes:
 
         root.add_child(child)
 
-        result = filter_attributes(root)
+        result = _remove_non_semantic_attributes(root)
 
         assert result.attrib == {"role": "navigation"}
         assert len(result.children) == 1
@@ -173,7 +175,7 @@ class TestFilterAttributes:
         )
         node.add_child(Text("Hello world"))
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {"role": "text"}
         assert len(result.children) == 1
@@ -192,7 +194,7 @@ class TestFilterAttributes:
             metadata={"cdp_index": 42},
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         # Attributes filtered
         assert result.attrib == {"role": "button"}
@@ -223,7 +225,7 @@ class TestFilterAttributes:
         parent.add_child(child)
         grandparent.add_child(parent)
 
-        result = filter_attributes(grandparent)
+        result = _remove_non_semantic_attributes(grandparent)
 
         # Check all levels
         assert result.attrib == {"role": "form"}
@@ -241,7 +243,7 @@ class TestFilterAttributes:
             attrib={"role": "button", "class": "foo", "data-x": "y"},
         )
 
-        result = filter_attributes(original)
+        result = _remove_non_semantic_attributes(original)
 
         # Result should have filtered attributes
         assert result.attrib == {"role": "button"}
@@ -254,7 +256,7 @@ class TestFilterAttributes:
         """Test node with no attributes remains empty."""
         node = DomNode(tag="div", attrib={})
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {}
 
@@ -270,7 +272,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(node)
+        result = _remove_non_semantic_attributes(node)
 
         assert result.attrib == {
             "alt": "Profile picture",
@@ -290,7 +292,7 @@ class TestFilterAttributes:
             },
         )
 
-        result = filter_attributes(checkbox)
+        result = _remove_non_semantic_attributes(checkbox)
 
         assert result.attrib == {
             "type": "checkbox",
