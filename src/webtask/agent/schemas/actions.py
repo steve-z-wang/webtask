@@ -2,7 +2,14 @@
 
 from pydantic import BaseModel, Field
 from typing import Union, Literal, Annotated
-from .params import ClickParams, FillParams, NavigateParams, TypeParams, UploadParams
+from .params import (
+    ClickParams,
+    FillParams,
+    NavigateParams,
+    TypeParams,
+    UploadParams,
+    MarkCompleteParams,
+)
 
 
 # Action types - using nested parameters
@@ -46,9 +53,24 @@ class UploadAction(BaseModel):
     parameters: UploadParams = Field(description="Upload parameters")
 
 
+class MarkCompleteAction(BaseModel):
+    """Mark complete action - signals task completion."""
+
+    reason: str = Field(description="Why this action is needed")
+    tool: Literal["mark_complete"] = Field(description="Tool name")
+    parameters: MarkCompleteParams = Field(description="Mark complete parameters")
+
+
 # Union of all action types
 # Discriminator needed for Pydantic deserialization (not used in LLM schema generation)
 Action = Annotated[
-    Union[ClickAction, FillAction, NavigateAction, TypeAction, UploadAction],
+    Union[
+        ClickAction,
+        FillAction,
+        NavigateAction,
+        TypeAction,
+        UploadAction,
+        MarkCompleteAction,
+    ],
     Field(discriminator="tool"),
 ]

@@ -71,7 +71,7 @@ python -m twine upload dist/*
 2. **Multimodal Context**: LLM receives both text (DOM tree) and visual (screenshot with bounding boxes) context
 3. **XPath from Original DOM**: Element XPaths computed from unfiltered DOM tree to match actual browser state
 4. **Separation of Concerns**: DOM layer is pure data structures, doesn't know about LLMs or browsers
-5. **Propose-Execute Loop**: Proposer both suggests actions AND checks completion, Executer runs actions
+5. **Role-Based Architecture**: Separate roles (Verifier, Proposer, Planner) with distinct tool registries, Executer runs actions
 6. **Composable Context Building**: Block system supports text + images for multimodal LLM APIs
 7. **Lazy Initialization**: Browser launches only when first agent is created
 
@@ -82,22 +82,28 @@ src/webtask/
 ├── webtask.py              # Webtask manager - browser lifecycle, lazy init
 ├── agent/                  # Agent orchestration
 │   ├── agent.py           # Main agent interface (3 modes: execute/step/imperative)
+│   ├── task_manager.py    # TaskManager - manages task execution with roles
 │   ├── step.py            # ExecutionResult, Step, TaskResult
-│   ├── task.py            # TaskContext - manages task state & history
-│   ├── proposer.py        # Proposes next actions AND checks completion
-│   ├── executer.py        # Executes actions
+│   ├── task.py            # Task - manages task state & history
 │   ├── tool.py            # Base Tool class + ToolRegistry
+│   ├── throttler.py       # Throttler - rate limiting
+│   ├── roles/             # Agent roles with specialized behaviors
+│   │   ├── base_role.py   # BaseRole - abstract base with propose_actions() and execute()
+│   │   ├── proposer.py    # ProposerRole - proposes browser actions
+│   │   └── verifier.py    # VerifierRole - checks task completion
 │   ├── schemas/           # Pydantic models for LLM responses
 │   │   ├── params.py      # ToolParams (ClickParams, FillParams, etc.)
 │   │   ├── actions.py     # Action union (ClickAction, FillAction, etc.)
-│   │   ├── proposal.py    # Proposal model
+│   │   ├── mode.py        # Proposal, Mode enum
 │   │   └── selector.py    # SelectorResponse
-│   └── tools/browser/     # Concrete browser action tools
-│       ├── navigate.py
-│       ├── click.py
-│       ├── fill.py        # Fill form fields by element_id
-│       ├── type.py        # Type into elements by element_id
-│       └── upload.py      # Upload files by element_id
+│   ├── tools/browser/     # Concrete browser action tools
+│   │   ├── navigate.py
+│   │   ├── click.py
+│   │   ├── fill.py        # Fill form fields by element_id
+│   │   ├── type.py        # Type into elements by element_id
+│   │   └── upload.py      # Upload files by element_id
+│   └── tools/control/     # Control tools
+│       └── mark_complete.py # Signal task completion
 ├── llm_browser/           # Bridge between LLM text and browser operations
 │   ├── llm_browser.py    # Element ID mapping, context building, action execution
 │   ├── dom_context_builder.py  # Builds text DOM context
@@ -178,20 +184,31 @@ src/webtask/
 **Step System** (`agent/step.py`)
 - Tracks full cycles instead of just actions
 - **Step** = Proposal + ExecutionResult(s)
-- **TaskContext** (`agent/task.py`) manages task state and stores step history for agent reasoning
+- **Task** (`agent/task.py`) manages task state and stores step history for agent reasoning
 - **TaskResult** returned from `execute()` with completion status
+- Step completion checked by presence of mark_complete action
 
-**Agent Roles**
-- **Proposer** (`agent/proposer.py`): Analyzes task + history + page → proposes Action(s) AND checks if task is complete
-- **Executer** (`agent/executer.py`): Executes Action(s) → returns ExecutionResult(s)
+**TaskManager** (`agent/task_manager.py`)
+- Manages complete task execution
+- Owns Task (state and history) and all roles (VerifierRole, ProposerRole)
+- Runs full cycle: select role → propose_actions() → execute() → create Step → record history
+- Tracks current mode and handles transitions
+- Agent delegates to `task_manager.run_step()`
+
+**Agent Roles** (`agent/roles/`)
+- **BaseRole** (`roles/base_role.py`): Abstract base class with two methods:
+  - `propose_actions()` - thinking phase, calls LLM to decide what to do
+  - `execute(actions)` - doing phase, executes actions using role's tool registry
+- **ProposerRole** (`roles/proposer.py`): Proposes browser actions (navigate, click, fill, type, upload)
+- **VerifierRole** (`roles/verifier.py`): Checks if task is complete (uses mark_complete tool)
 
 **Pydantic Schemas** (`agent/schemas/`)
 - Centralized location for all LLM response models
-- **params.py**: ToolParams base class + all parameter classes (ClickParams, FillParams, etc.)
-- **actions.py**: Action union (ClickAction, FillAction, etc.) with nested typed parameters
-- **proposal.py**: Proposal model (complete, message, actions)
+- **params.py**: ToolParams base class + all parameter classes (ClickParams, FillParams, MarkCompleteParams, etc.)
+- **actions.py**: Action union (ClickAction, FillAction, MarkCompleteAction, etc.) with nested typed parameters
+- **mode.py**: Proposal (unified schema for all roles), Mode enum (PROPOSE, VERIFY, PLAN)
 - **selector.py**: SelectorResponse for natural language selection
-- LLM returns JSON strings, app deserializes with `Proposal.model_validate_json(response)`
+- LLM returns JSON strings, app deserializes with `Proposal.model_validate(response_dict)`
 - Type-safe with automatic Pydantic validation
 
 **Block System** (`llm/context.py`)
@@ -236,10 +253,16 @@ src/webtask/
 7. LLMBrowser converts element ID → DomNode → XPath (from original node)
 8. Browser executes XPath selection
 
-**Propose-Execute Loop**
-1. Proposer looks at task + page + history → proposes Action(s) AND determines if task is complete
-2. Executer runs Action(s) → returns ExecutionResult(s)
-3. Repeat until task complete or max steps reached
+**Task Execution Loop**
+1. TaskManager selects role based on current mode (PROPOSE or VERIFY)
+   - **ProposerRole**: for proposing browser actions to advance task
+   - **VerifierRole**: for checking if task is complete
+2. Role.propose_actions() → calls LLM, returns Proposal (thinking phase)
+3. Role.execute(proposal.actions) → executes actions using role's tool registry (doing phase)
+4. TaskManager creates Step from proposal + execution results
+5. TaskManager records step in task history
+6. TaskManager transitions to next mode based on proposal.next_mode
+7. Repeat until mark_complete action or max steps reached
 
 **Type vs Fill**
 - `type`: Uses click + keyboard typing (more realistic, slower)

@@ -7,6 +7,7 @@ from .params import (
     NavigateParams,
     TypeParams,
     UploadParams,
+    MarkCompleteParams,
 )
 from .actions import (
     Action,
@@ -15,8 +16,9 @@ from .actions import (
     NavigateAction,
     TypeAction,
     UploadAction,
+    MarkCompleteAction,
 )
-from .mode import Mode, ModeResult, VerifyResult, ProposeResult
+from .mode import Mode, ModeResult
 from .selector import SelectorResponse
 
 __all__ = [
@@ -29,17 +31,17 @@ __all__ = [
     "NavigateAction",
     "TypeAction",
     "UploadAction",
+    "MarkCompleteAction",
     # Parameter types
     "ClickParams",
     "FillParams",
     "NavigateParams",
     "TypeParams",
     "UploadParams",
+    "MarkCompleteParams",
     # Mode schemas
     "Mode",
     "ModeResult",
-    "VerifyResult",
-    "ProposeResult",
     # Response models
     "SelectorResponse",
 ]

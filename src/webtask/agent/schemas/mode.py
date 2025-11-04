@@ -1,4 +1,4 @@
-"""Mode schemas - Mode enum and all mode result classes."""
+"""Mode schemas - unified schema for all agent modes."""
 
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -11,29 +11,26 @@ class Mode(str, Enum):
 
     VERIFY = "VERIFY"
     PROPOSE = "PROPOSE"
-    # PLAN = "PLAN"
+    PLAN = "PLAN"
 
 
-class ModeResult(BaseModel):
+class Proposal(BaseModel):
     """
-    Base class for all mode results.
+    Unified proposal schema for all agent roles.
 
-    All modes must return a result with:
-    - message: Explanation of what happened
+    Each role proposes:
+    - message: Explanation of reasoning
     - next_mode: Which mode should run next
+    - actions: List of tool calls (role-specific tools)
+
+    Side effects happen ONLY through tools:
+    - PROPOSE mode: navigate, click, fill, type, upload
+    - VERIFY mode: mark_complete
+    - PLAN mode: create_plan, update_plan
     """
 
-    message: str = Field(description="Explanation of what happened in this mode")
+    message: str = Field(description="Explanation of reasoning for these actions")
     next_mode: Mode = Field(description="Which mode should run next")
-
-
-class VerifyResult(ModeResult):
-    """Result from verify mode - checks if task is complete."""
-
-    complete: bool = Field(description="Whether the task is complete")
-
-
-class ProposeResult(ModeResult):
-    """Result from propose mode - suggests actions to take."""
-
-    actions: List[Action] = Field(description="Actions to execute")
+    actions: List[Action] = Field(
+        default_factory=list, description="Actions to execute (role-specific tools)"
+    )

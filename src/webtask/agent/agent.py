@@ -5,14 +5,8 @@ from typing import Dict, List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
-from .tool import ToolRegistry
-from .task import Task
 from .step import Step, TaskResult
-from .modes import Verifier, Proposer
-from .executer import Executer
-from .throttler import Throttler
-from .schemas.mode import Mode, ProposeResult
-from ..llm import ValidatedLLM
+from .task_manager import TaskManager
 
 
 class Agent:
@@ -55,35 +49,7 @@ class Agent:
         if page is not None:
             self.llm_browser.set_page(page)
 
-        self.tool_registry = ToolRegistry()
-        self._task_context: Optional[Task] = None
-        self.verifier: Optional[Verifier] = None
-        self.proposer: Optional[Proposer] = None
-        self.executer: Optional[Executer] = None
-        self.current_mode: Mode = Mode.PROPOSE
-
-    def _register_tools(self) -> None:
-        from .tools.browser import (
-            NavigateTool,
-            ClickTool,
-            FillTool,
-            TypeTool,
-            UploadTool,
-        )
-
-        self.tool_registry.clear()
-
-        # Always register basic tools
-        self.tool_registry.register(NavigateTool(self.llm_browser))
-        self.tool_registry.register(ClickTool(self.llm_browser))
-        self.tool_registry.register(FillTool(self.llm_browser))
-        self.tool_registry.register(TypeTool(self.llm_browser))
-
-        # Register upload tool if task context with resources exists
-        if self._task_context and self._task_context.resources:
-            self.tool_registry.register(
-                UploadTool(self.llm_browser, self._task_context)
-            )
+        self.task_manager: Optional[TaskManager] = None
 
     async def execute(
         self,
@@ -102,23 +68,18 @@ class Agent:
         Returns:
             TaskResult with completion status, steps, and final message
         """
-        self.set_task(task, max_steps=max_steps, resources=resources)
-
-        for i in range(max_steps):
-            step = await self.run_step()
-
-            if step.is_complete:
-                return TaskResult(
-                    completed=True,
-                    steps=self._task_context.steps,
-                    message=step.result.message,
-                )
-
-        return TaskResult(
-            completed=False,
-            steps=self._task_context.steps,
-            message=f"Task not completed after {max_steps} steps",
+        # Create task manager (creates task, throttler, roles internally)
+        self.task_manager = TaskManager(
+            task_description=task,
+            llm=self.llm,
+            llm_browser=self.llm_browser,
+            action_delay=self.action_delay,
+            max_steps=max_steps,
+            resources=resources,
         )
+
+        # Run autonomous execution loop
+        return await self.task_manager.execute()
 
     def set_task(
         self,
@@ -134,73 +95,31 @@ class Agent:
             max_steps: Maximum steps before giving up
             resources: Optional dict of file resources (name -> path)
         """
-        # Create new task context (replaces any existing task)
-        self._task_context = Task(
-            description=task, resources=resources or {}, max_steps=max_steps
-        )
-
-        # Create throttler for pacing operations
-        throttler = Throttler(delay=self.action_delay)
-
-        # Register tools (including upload tool if resources available)
-        self._register_tools()
-
-        # Create validated LLM wrapper
-        validated_llm = ValidatedLLM(self.llm)
-
-        # Initialize modes with shared dependencies
-        self.verifier = Verifier(
-            validated_llm=validated_llm,
-            task_context=self._task_context,
+        # Create task manager (creates task, throttler, roles internally)
+        self.task_manager = TaskManager(
+            task_description=task,
+            llm=self.llm,
             llm_browser=self.llm_browser,
-            throttler=throttler,
+            action_delay=self.action_delay,
+            max_steps=max_steps,
+            resources=resources,
         )
-
-        self.proposer = Proposer(
-            validated_llm=validated_llm,
-            task_context=self._task_context,
-            llm_browser=self.llm_browser,
-            throttler=throttler,
-            tool_registry=self.tool_registry,
-        )
-
-        self.executer = Executer(self.tool_registry, throttler)
-        self.current_mode = Mode.PROPOSE
 
     async def run_step(self) -> Step:
         """
         Execute one step of the current task.
 
         Returns:
-            Step with mode result and execution results
+            Step with proposal and execution results
 
         Raises:
             RuntimeError: If no task is set (call set_task first)
         """
-        if self._task_context is None or self.verifier is None or self.proposer is None:
+        if self.task_manager is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
-        # Execute current mode
-        if self.current_mode == Mode.VERIFY:
-            mode_result = await self.verifier.execute()
-        else:  # Mode.PROPOSE
-            mode_result = await self.proposer.execute()
-
-        # Execute actions (if ProposeResult)
-        exec_results = []
-        if isinstance(mode_result, ProposeResult):
-            actions = mode_result.actions
-            if actions:
-                exec_results = await self.executer.execute(actions)
-
-        # Transition to next mode
-        self.current_mode = mode_result.next_mode
-
-        # Create and record step
-        step = Step(result=mode_result, executions=exec_results)
-        self._task_context.add_step(step)
-
-        return step
+        # Delegate to task manager
+        return await self.task_manager.run_step()
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """

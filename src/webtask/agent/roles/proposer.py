@@ -1,26 +1,26 @@
-"""Proposer mode - proposes actions to take."""
+"""Proposer role - proposes actions to take."""
 
 from ...llm import Context, ValidatedLLM
-from ..schemas.mode import ProposeResult
+from ..schemas.mode import Proposal
 from ...prompts import get_prompt
-from .base_mode import BaseMode
+from .base_role import BaseRole
 from ..tool import ToolRegistry
 from ..task import Task
 from ...llm_browser import LLMBrowser
-from ..throttler import Throttler
+from ...utils.throttler import Throttler
 
 
-class Proposer(BaseMode[ProposeResult]):
+class ProposerRole(BaseRole):
     """
-    Proposer mode suggests actions to take.
+    Proposer role suggests actions to take.
 
     Context includes:
     - Task description
-    - Available tools (full schemas)
+    - Available browser action tools (navigate, click, fill, type, upload)
     - Previous steps
     - Current page state (detailed)
 
-    Returns ProposeResult with actions and next mode suggestion.
+    Returns ModeResult with browser actions and next mode suggestion.
     """
 
     def __init__(
@@ -29,20 +29,42 @@ class Proposer(BaseMode[ProposeResult]):
         task_context: Task,
         llm_browser: LLMBrowser,
         throttler: Throttler,
-        tool_registry: ToolRegistry,
     ):
         """
-        Initialize proposer with tool registry.
+        Initialize proposer with its own tool registry.
 
         Args:
             validated_llm: LLM wrapper with validation
             task_context: Task state and history
             llm_browser: Browser interface
             throttler: Rate limiter
-            tool_registry: Available tools for actions
         """
         super().__init__(validated_llm, task_context, llm_browser, throttler)
-        self.tool_registry = tool_registry
+        self.llm_browser = llm_browser
+        self.tool_registry = ToolRegistry()
+        self._register_tools()
+
+    def _register_tools(self) -> None:
+        """Register browser action tools available to Proposer mode."""
+        from ..tools.browser import (
+            NavigateTool,
+            ClickTool,
+            FillTool,
+            TypeTool,
+            UploadTool,
+        )
+
+        # Register browser action tools
+        self.tool_registry.register(NavigateTool(self.llm_browser))
+        self.tool_registry.register(ClickTool(self.llm_browser))
+        self.tool_registry.register(FillTool(self.llm_browser))
+        self.tool_registry.register(TypeTool(self.llm_browser))
+
+        # Register upload tool if task has resources
+        if self.task_context.resources:
+            self.tool_registry.register(
+                UploadTool(self.llm_browser, self.task_context)
+            )
 
     async def _build_context(self) -> Context:
         """Build full context for proposing actions."""
@@ -63,14 +85,14 @@ class Proposer(BaseMode[ProposeResult]):
 
         return context
 
-    async def execute(self) -> ProposeResult:
+    async def propose_actions(self) -> Proposal:
         """
-        Execute propose mode.
+        Propose actions to take (thinking phase).
 
-        Analyzes current state and proposes actions to take.
+        Analyzes current state and proposes browser actions.
 
         Returns:
-            ProposeResult with actions and next mode
+            Proposal with browser actions and next mode
         """
         await self.throttler.wait()
 
@@ -80,7 +102,7 @@ class Proposer(BaseMode[ProposeResult]):
 
         # Generate and validate response
         result = await self.validated_llm.generate_validated(
-            context, validator=ProposeResult.model_validate
+            context, validator=Proposal.model_validate
         )
 
         return result

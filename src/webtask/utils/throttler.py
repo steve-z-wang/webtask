@@ -2,7 +2,7 @@
 
 import time
 from typing import Optional
-from ..utils import wait
+from . import wait
 
 
 class Throttler:

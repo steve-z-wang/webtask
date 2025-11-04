@@ -50,3 +50,9 @@ class UploadParams(ToolParams):
     resource_names: List[str] = Field(
         description="List of resource names to upload (e.g., ['photo1', 'photo2'])"
     )
+
+
+class MarkCompleteParams(ToolParams):
+    """Parameters for mark_complete control tool."""
+
+    reason: str = Field(description="Why the task is now complete")

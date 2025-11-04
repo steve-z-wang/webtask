@@ -1,8 +1,8 @@
-"""Step - represents a complete agent cycle (mode execution → action execution)."""
+"""Step - represents a complete agent cycle (propose actions → execute actions)."""
 
 from pydantic import BaseModel
 from typing import Optional, List
-from .schemas.mode import ModeResult, VerifyResult
+from .schemas.mode import Proposal
 
 
 class ExecutionResult(BaseModel):
@@ -15,13 +15,13 @@ class ExecutionResult(BaseModel):
 class Step(BaseModel):
     """Represents one complete agent cycle."""
 
-    result: ModeResult
+    proposal: Proposal
     executions: List[ExecutionResult]
 
     @property
     def is_complete(self) -> bool:
-        """Check if task is complete (only VerifyResult can mark complete)."""
-        return isinstance(self.result, VerifyResult) and self.result.complete
+        """Check if task is complete (mark_complete tool was called)."""
+        return any(action.tool == "mark_complete" for action in self.proposal.actions)
 
 
 class TaskResult(BaseModel):
