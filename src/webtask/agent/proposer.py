@@ -38,9 +38,9 @@ class Proposer:
             context.append(resources_context)
 
         context.append(self.tool_registry.get_tools_context())
-        
+
         context.append(self.task_context.get_steps_context())
-        
+
         context.append(await self.llm_browser.get_page_context())
 
         return context
