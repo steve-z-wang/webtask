@@ -1,6 +1,6 @@
 """Agent roles - different specialized behaviors for the agent."""
 
-from .base_role import BaseRole, ActionResult
+from ..role import BaseRole, ActionResult
 from .verifier import VerifierRole
 from .proposer import ProposerRole
 

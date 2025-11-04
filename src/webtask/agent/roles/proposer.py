@@ -2,9 +2,8 @@
 
 from typing import TYPE_CHECKING
 from ...llm import Context, LLM
-from ..schemas.proposal import Proposal
 from ...prompts import get_prompt
-from .base_role import BaseRole
+from ..role import BaseRole
 from ..tool import ToolRegistry
 from ...llm_browser import LLMBrowser
 from ...utils.throttler import Throttler
@@ -65,9 +64,7 @@ class ProposerRole(BaseRole):
 
         # Register upload tool if task has resources
         if self.task_context.resources:
-            self.tool_registry.register(
-                UploadTool(self.llm_browser, self.task_context)
-            )
+            self.tool_registry.register(UploadTool(self.llm_browser, self.task_context))
 
     async def _build_context(self) -> Context:
         """Build full context for proposing actions."""

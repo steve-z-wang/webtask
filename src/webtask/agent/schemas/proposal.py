@@ -21,11 +21,14 @@ class Action(BaseModel):
     tool: str = Field(description="Tool name")
     parameters: Dict[str, Any] = Field(description="Tool-specific parameters")
 
+
 class RoleType(str, Enum):
     """Agent role types."""
+
     VERIFY = "VERIFY"
     PROPOSE = "PROPOSE"
     PLAN = "PLAN"
+
 
 class Proposal(BaseModel):
     """

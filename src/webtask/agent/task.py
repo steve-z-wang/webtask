@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, TYPE_CHECKING
 from pydantic import BaseModel
 from .schemas.proposal import Proposal, RoleType
-from .roles.base_role import ActionResult
+from .role import ActionResult
 from ..llm import Block
 
 if TYPE_CHECKING:

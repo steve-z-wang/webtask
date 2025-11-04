@@ -2,9 +2,8 @@
 
 from typing import TYPE_CHECKING
 from ...llm import Context, LLM
-from ..schemas.proposal import Proposal
 from ...prompts import get_prompt
-from .base_role import BaseRole
+from ..role import BaseRole
 from ..tool import ToolRegistry
 from ...llm_browser import LLMBrowser
 from ...utils.throttler import Throttler

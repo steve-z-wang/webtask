@@ -52,3 +52,4 @@ test-results/
 # Environment variables
 .env
 testground/
+.pdm-python

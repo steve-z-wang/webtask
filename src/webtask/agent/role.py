@@ -4,15 +4,15 @@ import json
 from abc import ABC, abstractmethod
 from typing import List, Optional, TYPE_CHECKING
 from pydantic import BaseModel, ValidationError
-from ...llm import LLM, Block
-from ...llm_browser import LLMBrowser
-from ...utils.throttler import Throttler
-from ...utils.json_parser import parse_json
-from ..schemas.proposal import Proposal, Action
+from ..llm import LLM, Block
+from ..llm_browser import LLMBrowser
+from ..utils.throttler import Throttler
+from ..utils.json_parser import parse_json
+from .schemas.proposal import Proposal, Action
 
 if TYPE_CHECKING:
-    from ...llm import Context
-    from ..task import Task
+    from ..llm import Context
+    from .task import Task
 
 
 class ActionResult(BaseModel):
