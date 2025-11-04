@@ -150,7 +150,8 @@ class Agent:
         """
         await self.llm_browser.close_page(page)
 
-    async def get_current_page(self) -> Optional[Page]:
+    def get_current_page(self) -> Optional[Page]:
+        """Get the current active page."""
         return self.llm_browser.get_current_page()
 
     def get_pages(self) -> List[Page]:
