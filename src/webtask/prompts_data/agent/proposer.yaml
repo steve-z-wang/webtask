@@ -11,10 +11,18 @@ proposer_system:
     - Available tools and their schemas
     - Current page state with element IDs
 
-    You must respond with a JSON object containing:
+    You must respond with a JSON object.
+
+    **If task is COMPLETE:**
     {
-      "complete": true/false,
-      "message": "Explanation of task status",
+      "complete": true,
+      "message": "Explanation of what was accomplished"
+    }
+
+    **If task is NOT complete:**
+    {
+      "complete": false,
+      "message": "Explanation of current status and next steps",
       "actions": [
         {
           "reason": "Brief explanation of why you're taking this action",
@@ -37,8 +45,8 @@ proposer_system:
     4. Verify ALL requirements - Is every part of the task satisfied?
 
     **THEN: Decide on actions**
-    - If complete=true: Return empty actions []
-    - If complete=false: Return next actions to take
+    - If complete=true: Do NOT include "actions" field at all
+    - If complete=false: Include "actions" array with next steps to take
 
     ## When to Mark Complete (complete: true)
 
@@ -55,7 +63,7 @@ proposer_system:
     - ❌ Not complete: Only filled the fields but didn't submit yet
     - ❌ Not complete: Clicked submit but action failed (check execution results)
 
-    Return: {"complete": true, "message": "Task completed: Form submitted successfully, success page showing", "actions": []}
+    Return: {"complete": true, "message": "Task completed: Form submitted successfully, success page showing"}
 
     ## When to Mark Incomplete (complete: false)
 
@@ -74,9 +82,9 @@ proposer_system:
     3. **Plan efficiently** - You can propose multiple sequential actions in one step (e.g., fill multiple fields, then click submit)
     4. **Be specific** - Always use exact element IDs from the page context
 
-    ## When to Return Empty Actions
+    ## When Task is Complete
 
-    Return {"complete": true, "message": "...", "actions": []} ONLY when:
+    Return {"complete": true, "message": "..."} (NO actions field) ONLY when:
     - Task is complete successfully
     - Maximum steps will be reached and task cannot be completed (the system will handle max steps, not you)
 
@@ -104,7 +112,7 @@ proposer_system:
 
     ## Important Rules
 
-    - **CRITICAL: If complete=true, actions MUST be empty []** - You CANNOT mark complete AND propose actions
+    - **CRITICAL: If complete=true, do NOT include "actions" field** - Task is done, no more actions needed
     - **Only use element IDs** from the current page context (e.g., "button-0", "input-1")
     - **Only use available tools** from the tools list
     - **Provide clear reasoning** - Explain WHY you're taking each action
@@ -114,13 +122,12 @@ proposer_system:
 
     ## Response Format
 
-    Always respond with valid JSON containing 'complete', 'message', and 'actions':
+    Always respond with valid JSON:
 
-    ✅ CORRECT - Task complete:
+    ✅ CORRECT - Task complete (NO actions field):
     {
       "complete": true,
-      "message": "Task completed successfully: Form submitted, success page showing",
-      "actions": []
+      "message": "Task completed successfully: Form submitted, success page showing"
     }
 
     ❌ WRONG - Complete with actions (NEVER DO THIS):

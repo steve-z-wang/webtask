@@ -1,13 +1,17 @@
 """Proposer - proposes next action and checks completion."""
 
+from pydantic import TypeAdapter
 from ..llm import LLM, Context
 from ..prompts import get_prompt
-from .schemas import Proposal
+from .schemas import ProposalResponse
 from .task import Task
 from ..llm_browser import LLMBrowser
 from .tool import ToolRegistry
 from .throttler import Throttler
 from ..utils.json_parser import parse_json
+
+# TypeAdapter for validating discriminated union
+_proposal_adapter = TypeAdapter(ProposalResponse)
 
 
 class Proposer:
@@ -45,7 +49,7 @@ class Proposer:
 
         return context
 
-    async def propose(self) -> Proposal:
+    async def propose(self) -> ProposalResponse:
         """Propose the next actions to take and determine if task is complete."""
         await self.throttler.wait()
 
@@ -56,14 +60,9 @@ class Proposer:
         response = await self.llm.generate(context, use_json=True)
 
         # Clean JSON (remove markdown fences if present) and parse into Pydantic model
+        # Pydantic will automatically return FinalProposal or ActionProposal
+        # based on the 'complete' field (discriminated union)
         cleaned_json_dict = parse_json(response)
-        proposal = Proposal.model_validate(cleaned_json_dict)
-
-        # Validate logical consistency: cannot be complete AND have actions
-        if proposal.complete and proposal.actions:
-            raise ValueError(
-                "Invalid LLM response: cannot set complete=True AND propose actions.\n"
-                "If task is complete, actions list must be empty."
-            )
+        proposal = _proposal_adapter.validate_python(cleaned_json_dict)
 
         return proposal

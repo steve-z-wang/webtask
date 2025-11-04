@@ -16,7 +16,7 @@ from .actions import (
     TypeAction,
     UploadAction,
 )
-from .proposal import Proposal
+from .proposal import Proposal, FinalProposal, ActionProposal, ProposalResponse
 from .selector import SelectorResponse
 
 __all__ = [
@@ -37,5 +37,8 @@ __all__ = [
     "UploadParams",
     # Response models
     "Proposal",
+    "FinalProposal",
+    "ActionProposal",
+    "ProposalResponse",
     "SelectorResponse",
 ]

@@ -51,9 +51,10 @@ class Task:
             summary_lines.append(f"\nStep {i}:")
 
             # Show proposed actions and their execution results
-            if step.proposal.actions:
+            actions = step.proposal.get_actions()
+            if actions:
                 summary_lines.append("  Actions taken:")
-                for j, action in enumerate(step.proposal.actions):
+                for j, action in enumerate(actions):
                     # Show action with parameters
                     params_str = ", ".join(
                         f"{k}={v}" for k, v in action.parameters.model_dump().items()

@@ -172,17 +172,18 @@ class Agent:
         proposal = await self.proposer.propose()
         self.logger.debug(f"Complete: {proposal.complete}")
         self.logger.debug(f"Message: {proposal.message}")
-        self.logger.debug(f"Proposed {len(proposal.actions)} action(s)")
-        for i, action in enumerate(proposal.actions, 1):
+        actions = proposal.get_actions()
+        self.logger.debug(f"Proposed {len(actions)} action(s)")
+        for i, action in enumerate(actions, 1):
             self.logger.debug(f"  Action {i}: {action.tool}")
             self.logger.debug(f"    Reason: {action.reason}")
             self.logger.debug(f"    Parameters: {action.parameters.model_dump()}")
 
         # Phase 2: Execute actions (if any)
         exec_results = []
-        if proposal.actions:
+        if actions:
             self.logger.debug("Phase 2: Executing actions...")
-            exec_results = await self.executer.execute(proposal.actions)
+            exec_results = await self.executer.execute(actions)
             success_count = sum(1 for r in exec_results if r.success)
             self.logger.debug(
                 f"Execution complete: {success_count}/{len(exec_results)} successful"
