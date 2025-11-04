@@ -1,9 +1,35 @@
-"""Task context - all state for a single task execution."""
+"""Task execution - all classes for task state and task executor."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-from .step import Step
+from typing import Dict, List, Optional, TYPE_CHECKING
+from pydantic import BaseModel
+from .schemas.proposal import Proposal, RoleType
+from .roles.base_role import ActionResult
 from ..llm import Block
+
+if TYPE_CHECKING:
+    from ..llm import LLM
+    from ..llm_browser import LLMBrowser
+
+
+class Step(BaseModel):
+    """Represents one complete agent cycle (propose actions → execute actions)."""
+
+    proposal: Proposal
+    executions: List[ActionResult]
+
+    @property
+    def is_complete(self) -> bool:
+        """Check if task is complete (mark_complete tool was called)."""
+        return any(action.tool == "mark_complete" for action in self.proposal.actions)
+
+
+class TaskResult(BaseModel):
+    """Result of executing a task."""
+
+    completed: bool
+    steps: List[Step]
+    message: str
 
 
 @dataclass
@@ -57,7 +83,7 @@ class Task:
                 for j, action in enumerate(actions):
                     # Show action with parameters
                     params_str = ", ".join(
-                        f"{k}={v}" for k, v in action.parameters.model_dump().items()
+                        f"{k}={v}" for k, v in action.parameters.items()
                     )
                     action_line = (
                         f"    {j+1}. {action.tool}({params_str}) - {action.reason}"
@@ -122,3 +148,126 @@ class Task:
             Block containing the formatted step history
         """
         return Block(f"Previous steps:\n{self.get_steps_summary()}")
+
+
+class TaskExecutor:
+    """
+    Executes a task with roles.
+
+    Responsibilities:
+    - Execute task (does NOT own task - Agent owns it)
+    - Create and own throttler (per-task rate limiting)
+    - Create and own roles (VerifierRole, ProposerRole)
+    - Execute full cycle: select role → propose → execute → record step
+    - Track current role and handle transitions
+    - Run autonomous execution loop
+    """
+
+    def __init__(
+        self,
+        task: Task,
+        llm: "LLM",
+        llm_browser: "LLMBrowser",
+        action_delay: float = 1.0,
+    ):
+        """
+        Initialize task executor.
+
+        Args:
+            task: Task to execute (owned by Agent)
+            llm: LLM instance for reasoning
+            llm_browser: Browser interface for page context
+            action_delay: Delay in seconds after actions (default: 1.0)
+        """
+        from .roles import VerifierRole, ProposerRole
+        from ..utils.throttler import Throttler
+
+        self.task = task
+
+        # Create throttler (per-task rate limiting)
+        throttler = Throttler(delay=action_delay)
+
+        # Track current role
+        self.current_role = RoleType.PROPOSE
+
+        # Initialize all roles (validation logic is in BaseRole)
+        self.verifier = VerifierRole(
+            llm=llm,
+            task_context=task,
+            llm_browser=llm_browser,
+            throttler=throttler,
+        )
+
+        self.proposer = ProposerRole(
+            llm=llm,
+            task_context=task,
+            llm_browser=llm_browser,
+            throttler=throttler,
+        )
+
+    async def run_step(self) -> Step:
+        """
+        Execute one complete step of the task.
+
+        Flow:
+        1. Select role based on current role
+        2. Role proposes actions (thinking)
+        3. Role executes actions (doing)
+        4. Create step from proposal + execution results
+        5. Record step in task history
+        6. Transition to next role
+
+        Returns:
+            Step with proposal and execution results
+        """
+        # Select role based on current role
+        if self.current_role == RoleType.VERIFY:
+            current_role = self.verifier
+        elif self.current_role == RoleType.PROPOSE:
+            current_role = self.proposer
+        else:
+            raise ValueError(f"Unknown role: {self.current_role}")
+
+        # Propose actions (thinking)
+        proposal = await current_role.propose_actions()
+
+        # Execute actions (doing)
+        exec_results = []
+        if proposal.actions:
+            exec_results = await current_role.execute(proposal.actions)
+
+        # Create step
+        step = Step(proposal=proposal, executions=exec_results)
+
+        # Record step in task history
+        self.task.add_step(step)
+
+        # Transition to next role
+        self.current_role = proposal.next_role
+
+        return step
+
+    async def execute(self) -> TaskResult:
+        """
+        Execute the task autonomously.
+
+        Runs steps until task is complete or max_steps reached.
+
+        Returns:
+            TaskResult with completion status, steps, and final message
+        """
+        for i in range(self.task.max_steps):
+            step = await self.run_step()
+
+            if step.is_complete:
+                return TaskResult(
+                    completed=True,
+                    steps=self.task.steps,
+                    message=step.proposal.message,
+                )
+
+        return TaskResult(
+            completed=False,
+            steps=self.task.steps,
+            message=f"Task not completed after {self.task.max_steps} steps",
+        )

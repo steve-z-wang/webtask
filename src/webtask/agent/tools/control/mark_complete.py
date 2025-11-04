@@ -16,12 +16,20 @@ class MarkCompleteTool(Tool[MarkCompleteParams]):
     Special control flow tool that signals task completion.
 
     This tool doesn't perform any browser actions - it's a signal
-    that the task is complete. Used by VERIFY mode.
+    that the task is complete. Used by VERIFY role.
     """
 
-    name = "mark_complete"
-    description = "Mark the task as complete. Use this when all task requirements are satisfied and verified on the page."
-    parameters_class = MarkCompleteParams
+    @property
+    def name(self) -> str:
+        return "mark_complete"
+
+    @property
+    def description(self) -> str:
+        return "Mark the task as complete. Use this when all task requirements are satisfied and verified on the page."
+
+    @property
+    def params_class(self):
+        return MarkCompleteParams
 
     async def execute(self, params: MarkCompleteParams):
         """

@@ -1,13 +1,16 @@
 """Proposer role - proposes actions to take."""
 
-from ...llm import Context, ValidatedLLM
-from ..schemas.mode import Proposal
+from typing import TYPE_CHECKING
+from ...llm import Context, LLM
+from ..schemas.proposal import Proposal
 from ...prompts import get_prompt
 from .base_role import BaseRole
 from ..tool import ToolRegistry
-from ..task import Task
 from ...llm_browser import LLMBrowser
 from ...utils.throttler import Throttler
+
+if TYPE_CHECKING:
+    from ..task import Task
 
 
 class ProposerRole(BaseRole):
@@ -25,8 +28,8 @@ class ProposerRole(BaseRole):
 
     def __init__(
         self,
-        validated_llm: ValidatedLLM,
-        task_context: Task,
+        llm: LLM,
+        task_context: "Task",
         llm_browser: LLMBrowser,
         throttler: Throttler,
     ):
@@ -34,12 +37,12 @@ class ProposerRole(BaseRole):
         Initialize proposer with its own tool registry.
 
         Args:
-            validated_llm: LLM wrapper with validation
+            llm: LLM instance for generating responses
             task_context: Task state and history
             llm_browser: Browser interface
             throttler: Rate limiter
         """
-        super().__init__(validated_llm, task_context, llm_browser, throttler)
+        super().__init__(llm, task_context, llm_browser, throttler)
         self.llm_browser = llm_browser
         self.tool_registry = ToolRegistry()
         self._register_tools()
@@ -84,25 +87,3 @@ class ProposerRole(BaseRole):
         context.append(await self.llm_browser.get_page_context())
 
         return context
-
-    async def propose_actions(self) -> Proposal:
-        """
-        Propose actions to take (thinking phase).
-
-        Analyzes current state and proposes browser actions.
-
-        Returns:
-            Proposal with browser actions and next mode
-        """
-        await self.throttler.wait()
-
-        # Build context
-        context = await self._build_context()
-        self.throttler.update_timestamp()
-
-        # Generate and validate response
-        result = await self.validated_llm.generate_validated(
-            context, validator=Proposal.model_validate
-        )
-
-        return result

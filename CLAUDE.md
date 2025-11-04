@@ -82,7 +82,7 @@ src/webtask/
 ├── webtask.py              # Webtask manager - browser lifecycle, lazy init
 ├── agent/                  # Agent orchestration
 │   ├── agent.py           # Main agent interface (3 modes: execute/step/imperative)
-│   ├── task_manager.py    # TaskManager - manages task execution with roles
+│   ├── task_executor.py   # TaskExecutor - executes tasks with roles
 │   ├── step.py            # ExecutionResult, Step, TaskResult
 │   ├── task.py            # Task - manages task state & history
 │   ├── tool.py            # Base Tool class + ToolRegistry
@@ -162,9 +162,10 @@ src/webtask/
   - High-level: `execute(task)` - autonomous loop
   - Step-by-step: `set_task()` + `execute_step()` - manual control
   - Low-level: `navigate()`, `select()`, `wait()` - imperative control
+- **Requires Session** (not optional) - proper abstraction for browser management
 - Multi-page support: `open_page()`, `close_page()`, `set_page()`, `get_pages()`
 - `select()` method uses `NaturalSelector(self.llm, self.llm_browser)` for natural language element selection
-- Creates `LLMBrowser(session, dom_context_config)` - note: NO llm parameter!
+- Creates `LLMBrowser(session, use_screenshot)` - note: NO llm parameter!
 
 **LLMBrowser** (`llm_browser/llm_browser.py`)
 - Pure page management and context building (**NO LLM dependency**)
@@ -188,12 +189,13 @@ src/webtask/
 - **TaskResult** returned from `execute()` with completion status
 - Step completion checked by presence of mark_complete action
 
-**TaskManager** (`agent/task_manager.py`)
-- Manages complete task execution
-- Owns Task (state and history) and all roles (VerifierRole, ProposerRole)
+**TaskExecutor** (`agent/task_executor.py`)
+- Executes a task with roles
+- Does NOT own Task (Agent owns it) - receives Task as parameter
+- Creates throttler and all roles (VerifierRole, ProposerRole)
 - Runs full cycle: select role → propose_actions() → execute() → create Step → record history
 - Tracks current mode and handles transitions
-- Agent delegates to `task_manager.run_step()`
+- Agent delegates to `task_executor.run_step()`
 
 **Agent Roles** (`agent/roles/`)
 - **BaseRole** (`roles/base_role.py`): Abstract base class with two methods:
@@ -254,15 +256,17 @@ src/webtask/
 8. Browser executes XPath selection
 
 **Task Execution Loop**
-1. TaskManager selects role based on current mode (PROPOSE or VERIFY)
+1. Agent creates Task (owns task state and history)
+2. Agent creates TaskExecutor (receives Task, executes it)
+3. TaskExecutor selects role based on current mode (PROPOSE or VERIFY)
    - **ProposerRole**: for proposing browser actions to advance task
    - **VerifierRole**: for checking if task is complete
-2. Role.propose_actions() → calls LLM, returns Proposal (thinking phase)
-3. Role.execute(proposal.actions) → executes actions using role's tool registry (doing phase)
-4. TaskManager creates Step from proposal + execution results
-5. TaskManager records step in task history
-6. TaskManager transitions to next mode based on proposal.next_mode
-7. Repeat until mark_complete action or max steps reached
+4. Role.propose_actions() → calls LLM, returns Proposal (thinking phase)
+5. Role.execute(proposal.actions) → executes actions using role's tool registry (doing phase)
+6. TaskExecutor creates Step from proposal + execution results
+7. TaskExecutor records step in task history
+8. TaskExecutor transitions to next mode based on proposal.next_mode
+9. Repeat until mark_complete action or max steps reached
 
 **Type vs Fill**
 - `type`: Uses click + keyboard typing (more realistic, slower)

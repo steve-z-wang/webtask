@@ -5,23 +5,21 @@ from typing import Dict, List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
-from .step import Step, TaskResult
-from .task_manager import TaskManager
+from .task import Step, TaskResult, Task, TaskExecutor
 
 
 class Agent:
     """
     Main agent interface for web automation.
 
-    Supports multi-page (with Session) and single-page (with injected Page) modes.
+    Requires a Session for browser management and page operations.
     Provides high-level execute() for autonomous task completion and low-level methods for imperative control.
     """
 
     def __init__(
         self,
         llm: LLM,
-        session: Optional[Session] = None,
-        page: Optional[Page] = None,
+        session: Session,
         action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
@@ -31,8 +29,7 @@ class Agent:
 
         Args:
             llm: LLM instance for reasoning (task planning, completion checking)
-            session: Optional Session instance for multi-page support
-            page: Optional Page instance to use as initial page
+            session: Session instance for browser management
             action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
@@ -46,10 +43,8 @@ class Agent:
 
         self.llm_browser = LLMBrowser(session, use_screenshot)
 
-        if page is not None:
-            self.llm_browser.set_page(page)
-
-        self.task_manager: Optional[TaskManager] = None
+        self.task: Optional[Task] = None
+        self.task_executor: Optional[TaskExecutor] = None
 
     async def execute(
         self,
@@ -68,18 +63,23 @@ class Agent:
         Returns:
             TaskResult with completion status, steps, and final message
         """
-        # Create task manager (creates task, throttler, roles internally)
-        self.task_manager = TaskManager(
-            task_description=task,
+        # Create task (Agent owns the task)
+        self.task = Task(
+            description=task,
+            resources=resources or {},
+            max_steps=max_steps,
+        )
+
+        # Create task executor (executes the task)
+        self.task_executor = TaskExecutor(
+            task=self.task,
             llm=self.llm,
             llm_browser=self.llm_browser,
             action_delay=self.action_delay,
-            max_steps=max_steps,
-            resources=resources,
         )
 
         # Run autonomous execution loop
-        return await self.task_manager.execute()
+        return await self.task_executor.execute()
 
     def set_task(
         self,
@@ -95,14 +95,19 @@ class Agent:
             max_steps: Maximum steps before giving up
             resources: Optional dict of file resources (name -> path)
         """
-        # Create task manager (creates task, throttler, roles internally)
-        self.task_manager = TaskManager(
-            task_description=task,
+        # Create task (Agent owns the task)
+        self.task = Task(
+            description=task,
+            resources=resources or {},
+            max_steps=max_steps,
+        )
+
+        # Create task executor (executes the task)
+        self.task_executor = TaskExecutor(
+            task=self.task,
             llm=self.llm,
             llm_browser=self.llm_browser,
             action_delay=self.action_delay,
-            max_steps=max_steps,
-            resources=resources,
         )
 
     async def run_step(self) -> Step:
@@ -115,11 +120,11 @@ class Agent:
         Raises:
             RuntimeError: If no task is set (call set_task first)
         """
-        if self.task_manager is None:
+        if self.task_executor is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
-        # Delegate to task manager
-        return await self.task_manager.run_step()
+        # Delegate to task executor
+        return await self.task_executor.run_step()
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """
@@ -264,5 +269,4 @@ class Agent:
         for page in list(self.llm_browser._pages.values()):
             await self.llm_browser.close_page(page)
 
-        if self.session is not None:
-            await self.session.close()
+        await self.session.close()

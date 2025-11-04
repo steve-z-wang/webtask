@@ -1,10 +1,16 @@
 """Verifier role - checks if task is complete."""
 
-from ...llm import Context
-from ..schemas.mode import Proposal
+from typing import TYPE_CHECKING
+from ...llm import Context, LLM
+from ..schemas.proposal import Proposal
 from ...prompts import get_prompt
 from .base_role import BaseRole
 from ..tool import ToolRegistry
+from ...llm_browser import LLMBrowser
+from ...utils.throttler import Throttler
+
+if TYPE_CHECKING:
+    from ..task import Task
 
 
 class VerifierRole(BaseRole):
@@ -20,17 +26,23 @@ class VerifierRole(BaseRole):
     Returns ModeResult with mark_complete action if task done.
     """
 
-    def __init__(self, validated_llm, task_context, llm_browser, throttler):
+    def __init__(
+        self,
+        llm: LLM,
+        task_context: "Task",
+        llm_browser: LLMBrowser,
+        throttler: Throttler,
+    ):
         """
         Initialize verifier with its own tool registry.
 
         Args:
-            validated_llm: LLM wrapper with validation
+            llm: LLM instance for generating responses
             task_context: Task state and history
             llm_browser: Browser interface
             throttler: Rate limiter
         """
-        super().__init__(validated_llm, task_context, llm_browser, throttler)
+        super().__init__(llm, task_context, llm_browser, throttler)
         self.tool_registry = ToolRegistry()
         self._register_tools()
 
@@ -59,26 +71,3 @@ class VerifierRole(BaseRole):
         context.append(await self.llm_browser.get_page_context())
 
         return context
-
-    async def propose_actions(self) -> Proposal:
-        """
-        Propose actions to take (thinking phase).
-
-        Checks if the current page state indicates task completion.
-        Proposes mark_complete action if task is done.
-
-        Returns:
-            Proposal with mark_complete action if complete
-        """
-        await self.throttler.wait()
-
-        # Build context
-        context = await self._build_context()
-        self.throttler.update_timestamp()
-
-        # Generate and validate response
-        result = await self.validated_llm.generate_validated(
-            context, validator=Proposal.model_validate
-        )
-
-        return result

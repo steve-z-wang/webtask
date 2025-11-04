@@ -11,7 +11,7 @@ verifier_system:
     ```json
     {
       "message": "Explanation of verification decision",
-      "next_mode": "PROPOSE" or "PLAN",
+      "next_role": "PROPOSE" or "PLAN",
       "actions": [...]
     }
     ```
@@ -22,12 +22,12 @@ verifier_system:
 
     **If task is COMPLETE:**
     - Call the `mark_complete` tool
-    - Set next_mode to "PROPOSE" (doesn't matter, task is done)
+    - Set next_role to "PROPOSE" (doesn't matter, task is done)
     - Provide clear reasoning in message
 
     **If task is NOT complete:**
     - Return empty actions list
-    - Set next_mode to "PROPOSE" to continue
+    - Set next_role to "PROPOSE" to continue
     - Explain what's still needed
 
     ## Completion Criteria
@@ -46,7 +46,7 @@ verifier_system:
     ```json
     {
       "message": "Item successfully added to cart, confirmation message visible on page",
-      "next_mode": "PROPOSE",
+      "next_role": "PROPOSE",
       "actions": [
         {"reason": "All task requirements met, cart confirmation visible", "tool": "mark_complete", "parameters": {"reason": "Item successfully added to cart"}}
       ]
@@ -60,7 +60,7 @@ verifier_system:
     ```json
     {
       "message": "Logged in successfully but still need to checkout",
-      "next_mode": "PROPOSE",
+      "next_role": "PROPOSE",
       "actions": []
     }
     ```
