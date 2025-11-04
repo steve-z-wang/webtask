@@ -11,17 +11,16 @@ class Proposal(BaseModel):
     complete: bool = Field(description="Whether task is complete")
     message: str = Field(description="Status explanation")
 
-    def get_actions(self) -> List[Action]:
-        """Get actions - returns empty list for FinalProposal, actual actions for ActionProposal."""
-        if isinstance(self, ActionProposal):
-            return self.actions
-        return []
-
 
 class FinalProposal(Proposal):
     """Proposal when task is complete - no actions needed."""
 
     complete: Literal[True]
+
+    @property
+    def actions(self) -> List[Action]:
+        """Always returns empty list for FinalProposal."""
+        return []
 
 
 class ActionProposal(Proposal):

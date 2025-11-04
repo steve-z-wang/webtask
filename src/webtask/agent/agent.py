@@ -172,7 +172,7 @@ class Agent:
         proposal = await self.proposer.propose()
         self.logger.debug(f"Complete: {proposal.complete}")
         self.logger.debug(f"Message: {proposal.message}")
-        actions = proposal.get_actions()
+        actions = proposal.actions
         self.logger.debug(f"Proposed {len(actions)} action(s)")
         for i, action in enumerate(actions, 1):
             self.logger.debug(f"  Action {i}: {action.tool}")

@@ -51,7 +51,7 @@ class Task:
             summary_lines.append(f"\nStep {i}:")
 
             # Show proposed actions and their execution results
-            actions = step.proposal.get_actions()
+            actions = step.proposal.actions
             if actions:
                 summary_lines.append("  Actions taken:")
                 for j, action in enumerate(actions):
