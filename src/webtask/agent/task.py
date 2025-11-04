@@ -50,9 +50,11 @@ class Task:
         for i, step in enumerate(self.steps, 1):
             summary_lines.append(f"\nStep {i}:")
 
-            # Show proposed actions and their execution results
-            actions = step.proposal.actions
-            if actions:
+            # Show mode result and execution results
+            from .schemas.mode import ProposeResult
+
+            if isinstance(step.result, ProposeResult):
+                actions = step.result.actions
                 summary_lines.append("  Actions taken:")
                 for j, action in enumerate(actions):
                     # Show action with parameters
@@ -75,12 +77,12 @@ class Task:
                             )
 
             # Show overall step result
-            if step.proposal.complete:
+            if step.is_complete:
                 summary_lines.append("  Status: ✓ Task marked complete")
-                summary_lines.append(f"  Message: {step.proposal.message}")
             else:
                 summary_lines.append("  Status: Continuing...")
-                summary_lines.append(f"  Message: {step.proposal.message}")
+
+            summary_lines.append(f"  Message: {step.result.message}")
 
         return "\n".join(summary_lines)
 

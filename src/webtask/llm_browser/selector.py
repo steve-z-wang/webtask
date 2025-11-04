@@ -1,11 +1,10 @@
 """Natural language element selector."""
 
 from typing import TYPE_CHECKING
-from ..llm import LLM, Context
+from ..llm import LLM, Context, ValidatedLLM
 from ..prompts import get_prompt
 from ..browser import Element
 from ..agent.schemas import SelectorResponse
-from ..utils.json_parser import parse_json
 
 if TYPE_CHECKING:
     from .llm_browser import LLMBrowser
@@ -15,7 +14,7 @@ class NaturalSelector:
     """Selects elements using natural language descriptions."""
 
     def __init__(self, llm: LLM, llm_browser: "LLMBrowser"):
-        self.llm = llm
+        self.validated_llm = ValidatedLLM(llm)
         self.llm_browser = llm_browser
 
     async def select(self, description: str) -> Element:
@@ -29,11 +28,10 @@ class NaturalSelector:
         context.append(page_context)  # Keep Block with image, don't convert to string
         context.append(f'\nWhich element_id matches this description: "{description}"?')
 
-        response = await self.llm.generate(context, use_json=True)
-
-        # Clean JSON (remove markdown fences if present) and parse into Pydantic model
-        cleaned_json_dict = parse_json(response)
-        selector_response = SelectorResponse.model_validate(cleaned_json_dict)
+        # Generate and validate response with automatic retry on parse/validation errors
+        selector_response = await self.validated_llm.generate_validated(
+            context, validator=SelectorResponse.model_validate
+        )
 
         if not selector_response.element_id:
             if selector_response.error:

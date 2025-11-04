@@ -8,9 +8,11 @@ from ..llm_browser import LLMBrowser
 from .tool import ToolRegistry
 from .task import Task
 from .step import Step, TaskResult
-from .proposer import Proposer
+from .modes import Verifier, Proposer
 from .executer import Executer
 from .throttler import Throttler
+from .schemas.mode import Mode, ProposeResult
+from ..llm import ValidatedLLM
 
 
 class Agent:
@@ -55,8 +57,10 @@ class Agent:
 
         self.tool_registry = ToolRegistry()
         self._task_context: Optional[Task] = None
+        self.verifier: Optional[Verifier] = None
         self.proposer: Optional[Proposer] = None
         self.executer: Optional[Executer] = None
+        self.current_mode: Mode = Mode.PROPOSE
 
     def _register_tools(self) -> None:
         from .tools.browser import (
@@ -103,11 +107,11 @@ class Agent:
         for i in range(max_steps):
             step = await self.run_step()
 
-            if step.proposal.complete:
+            if step.is_complete:
                 return TaskResult(
                     completed=True,
                     steps=self._task_context.steps,
-                    message=step.proposal.message,
+                    message=step.result.message,
                 )
 
         return TaskResult(
@@ -138,61 +142,63 @@ class Agent:
         # Create throttler for pacing operations
         throttler = Throttler(delay=self.action_delay)
 
-        # Initialize roles with shared throttler
-        self.proposer = Proposer(
-            self.llm,
-            self._task_context,
-            self.tool_registry,
-            self.llm_browser,
-            throttler,
-        )
-        self.executer = Executer(self.tool_registry, throttler)
-
         # Register tools (including upload tool if resources available)
         self._register_tools()
+
+        # Create validated LLM wrapper
+        validated_llm = ValidatedLLM(self.llm)
+
+        # Initialize modes with shared dependencies
+        self.verifier = Verifier(
+            validated_llm=validated_llm,
+            task_context=self._task_context,
+            llm_browser=self.llm_browser,
+            throttler=throttler,
+        )
+
+        self.proposer = Proposer(
+            validated_llm=validated_llm,
+            task_context=self._task_context,
+            llm_browser=self.llm_browser,
+            throttler=throttler,
+            tool_registry=self.tool_registry,
+        )
+
+        self.executer = Executer(self.tool_registry, throttler)
+        self.current_mode = Mode.PROPOSE
 
     async def run_step(self) -> Step:
         """
         Execute one step of the current task.
 
         Returns:
-            Step with proposal (including completion status) and execution results
+            Step with mode result and execution results
 
         Raises:
             RuntimeError: If no task is set (call set_task first)
         """
-        if self._task_context is None or self.proposer is None:
+        if self._task_context is None or self.verifier is None or self.proposer is None:
             raise RuntimeError("No task set. Call set_task() first.")
 
-        step_num = self._task_context.step_count + 1
-        self.logger.debug(f"=== Starting Step {step_num} ===")
+        # Execute current mode
+        if self.current_mode == Mode.VERIFY:
+            mode_result = await self.verifier.execute()
+        else:  # Mode.PROPOSE
+            mode_result = await self.proposer.execute()
 
-        # Phase 1: Propose actions and check completion
-        self.logger.debug("Phase 1: Proposing actions and checking completion...")
-        proposal = await self.proposer.propose()
-        self.logger.debug(f"Complete: {proposal.complete}")
-        self.logger.debug(f"Message: {proposal.message}")
-        actions = proposal.actions
-        self.logger.debug(f"Proposed {len(actions)} action(s)")
-        for i, action in enumerate(actions, 1):
-            self.logger.debug(f"  Action {i}: {action.tool}")
-            self.logger.debug(f"    Reason: {action.reason}")
-            self.logger.debug(f"    Parameters: {action.parameters.model_dump()}")
-
-        # Phase 2: Execute actions (if any)
+        # Execute actions (if ProposeResult)
         exec_results = []
-        if actions:
-            self.logger.debug("Phase 2: Executing actions...")
-            exec_results = await self.executer.execute(actions)
-            success_count = sum(1 for r in exec_results if r.success)
-            self.logger.debug(
-                f"Execution complete: {success_count}/{len(exec_results)} successful"
-            )
+        if isinstance(mode_result, ProposeResult):
+            actions = mode_result.actions
+            if actions:
+                exec_results = await self.executer.execute(actions)
 
-        step = Step(proposal=proposal, executions=exec_results)
+        # Transition to next mode
+        self.current_mode = mode_result.next_mode
+
+        # Create and record step
+        step = Step(result=mode_result, executions=exec_results)
         self._task_context.add_step(step)
-
-        self.logger.debug(f"=== Step {step_num} Complete ===\n")
 
         return step
 

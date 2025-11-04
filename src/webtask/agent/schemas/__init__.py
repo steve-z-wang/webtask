@@ -16,7 +16,7 @@ from .actions import (
     TypeAction,
     UploadAction,
 )
-from .proposal import Proposal, FinalProposal, ActionProposal, ProposalResponse
+from .mode import Mode, ModeResult, VerifyResult, ProposeResult
 from .selector import SelectorResponse
 
 __all__ = [
@@ -35,10 +35,11 @@ __all__ = [
     "NavigateParams",
     "TypeParams",
     "UploadParams",
+    # Mode schemas
+    "Mode",
+    "ModeResult",
+    "VerifyResult",
+    "ProposeResult",
     # Response models
-    "Proposal",
-    "FinalProposal",
-    "ActionProposal",
-    "ProposalResponse",
     "SelectorResponse",
 ]
