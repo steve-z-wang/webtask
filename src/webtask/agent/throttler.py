@@ -23,16 +23,13 @@ class Throttler:
         self.delay = delay
         self.last_operation_time: Optional[float] = None
 
-    async def wait_if_needed(self):
-        """
-        Wait if needed to maintain minimum delay between operations.
-
-        Call this before or after each operation to ensure proper spacing.
-        Automatically tracks timing and waits only the remaining time needed.
-        """
+    async def wait(self):
+        """Wait if needed to maintain minimum delay since last operation."""
         if self.last_operation_time is not None:
             elapsed = time.time() - self.last_operation_time
             if elapsed < self.delay:
                 await wait(self.delay - elapsed)
 
+    def update_timestamp(self):
+        """Update the last operation timestamp to now."""
         self.last_operation_time = time.time()

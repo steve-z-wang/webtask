@@ -20,9 +20,12 @@ class Executer:
         for action in actions:
             try:
                 tool = self.tool_registry.get(action.tool)
+                # Throttle before action
+                await self.throttler.wait()
                 # action.parameters is already a validated Pydantic model
                 await tool.execute(action.parameters)
-                await self.throttler.wait_if_needed()  # Throttle after each action
+                # Update timestamp after action completes
+                self.throttler.update_timestamp()
                 results.append(ExecutionResult(success=True))
 
             except Exception as e:
