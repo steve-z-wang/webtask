@@ -1,9 +1,17 @@
 """Fill tool for filling form elements."""
 
 from typing import Type
+from pydantic import Field
 from ...tool import Tool
-from ...schemas import FillParams
+from ...schemas.params import ToolParams
 from ....llm_browser import LLMBrowser
+
+
+class FillParams(ToolParams):
+    """Parameters for fill action."""
+
+    element_id: str = Field(description="ID of the element to fill")
+    value: str = Field(description="Value to fill into the element")
 
 
 class FillTool(Tool[FillParams]):
