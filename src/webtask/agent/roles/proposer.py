@@ -54,6 +54,7 @@ class ProposerRole(BaseRole):
             FillTool,
             TypeTool,
             UploadTool,
+            WaitTool,
         )
 
         # Register browser action tools
@@ -61,6 +62,7 @@ class ProposerRole(BaseRole):
         self.tool_registry.register(ClickTool(self.llm_browser))
         self.tool_registry.register(FillTool(self.llm_browser))
         self.tool_registry.register(TypeTool(self.llm_browser))
+        self.tool_registry.register(WaitTool())
 
         # Register upload tool if task has resources
         if self.task_context.resources:
