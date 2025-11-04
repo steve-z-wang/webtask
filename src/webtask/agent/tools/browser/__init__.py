@@ -7,4 +7,11 @@ from .type import TypeTool
 from .upload import UploadTool
 from .wait import WaitTool
 
-__all__ = ["NavigateTool", "ClickTool", "FillTool", "TypeTool", "UploadTool", "WaitTool"]
+__all__ = [
+    "NavigateTool",
+    "ClickTool",
+    "FillTool",
+    "TypeTool",
+    "UploadTool",
+    "WaitTool",
+]
