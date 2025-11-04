@@ -52,11 +52,12 @@ class Proposer:
 
     async def propose(self) -> Proposal:
         """Propose the next actions to take and determine if task is complete."""
-        context = await self._build_context()
-
-        # Throttle LLM call (update timestamp before since LLM has no side effects)
         await self.throttler.wait()
+        
+        # Throttle LLM call (update timestamp before since LLM has no side effects)
+        context = await self._build_context()
         self.throttler.update_timestamp()
+        
         response = await self.llm.generate(context, use_json=True)
 
         # Clean JSON (remove markdown fences if present) and parse into Pydantic model
