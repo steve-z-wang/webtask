@@ -31,21 +31,16 @@ class Proposer:
         system = get_prompt("proposer_system")
         context = Context(system=system)
 
-        # Add task (TaskContext owns formatting)
         context.append(self.task_context.get_task_context())
 
-        # Add resources if available (TaskContext owns formatting)
         resources_context = self.task_context.get_resources_context()
         if resources_context:
             context.append(resources_context)
 
-        # Add step history (TaskContext owns formatting)
-        context.append(self.task_context.get_steps_context())
-
-        # Add available tools
         context.append(self.tool_registry.get_tools_context())
-
-        # Add current page context (text + optional screenshots)
+        
+        context.append(self.task_context.get_steps_context())
+        
         context.append(await self.llm_browser.get_page_context())
 
         return context
