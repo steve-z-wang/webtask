@@ -19,7 +19,7 @@ class Agent:
     def __init__(
         self,
         llm: LLM,
-        session: Session,
+        session: Optional[Session] = None,
         action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
@@ -29,7 +29,7 @@ class Agent:
 
         Args:
             llm: LLM instance for reasoning (task planning, completion checking)
-            session: Session instance for browser management
+            session: Optional session instance (can be set later with set_session())
             action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
@@ -41,7 +41,7 @@ class Agent:
         self.use_screenshot = use_screenshot
         self.logger = logging.getLogger(__name__)
 
-        self.llm_browser = LLMBrowser(session, use_screenshot)
+        self.llm_browser = LLMBrowser(session, use_screenshot) if session else None
 
         self.task: Optional[Task] = None
         self.task_executor: Optional[TaskExecutor] = None
@@ -263,6 +263,8 @@ class Agent:
         Args:
             page: Page instance to set as current
         """
+        if self.llm_browser is None:
+            self.llm_browser = LLMBrowser(None, self.use_screenshot)
         self.llm_browser.set_page(page)
 
     def set_session(self, session: Session) -> None:
@@ -275,11 +277,16 @@ class Agent:
             session: Session instance for creating pages
         """
         self.session = session
-        self.llm_browser.set_session(session)
+        if self.llm_browser is None:
+            self.llm_browser = LLMBrowser(session, self.use_screenshot)
+        else:
+            self.llm_browser.set_session(session)
 
     async def close(self) -> None:
         """Close the agent and cleanup all resources."""
-        for page in list(self.llm_browser._pages.values()):
-            await self.llm_browser.close_page(page)
+        if self.llm_browser:
+            for page in list(self.llm_browser._pages.values()):
+                await self.llm_browser.close_page(page)
 
-        await self.session.close()
+        if self.session:
+            await self.session.close()

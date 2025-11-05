@@ -1,7 +1,7 @@
 """Webtask - main manager class for web automation."""
 
 from typing import Optional
-from .browser import Browser
+from .browser import Browser, Session, Page
 from .llm import LLM
 from .agent import Agent
 
@@ -10,7 +10,7 @@ class Webtask:
     """
     Main manager class for web automation.
 
-    Manages browser lifecycle and creates agents with sessions.
+    Manages browser lifecycle and creates agents with various configurations.
     Browser is launched lazily on first agent creation.
     """
 
@@ -21,6 +21,7 @@ class Webtask:
         self.browser: Optional[Browser] = None
 
     async def _ensure_browser(self) -> Browser:
+        """Ensure browser is created (lazy initialization)."""
         if self.browser is None:
             from .integrations.browser.playwright import PlaywrightBrowser
 
@@ -38,14 +39,17 @@ class Webtask:
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
-        """Create agent with new session. Launches browser on first call.
+        """Create agent with new browser session. Launches browser on first call.
 
         Args:
-            llm: LLM instance for reasoning (task planning, completion checking)
+            llm: LLM instance for reasoning
             cookies: Optional cookies for the session
             action_delay: Delay in seconds after actions (default: 1.0)
-            use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
-            selector_llm: Optional separate LLM for element selection (defaults to main llm)
+            use_screenshot: Use screenshots with bounding boxes (default: True)
+            selector_llm: Optional separate LLM for element selection
+
+        Returns:
+            Agent instance with new session
         """
         browser = await self._ensure_browser()
         session = await browser.create_session(cookies=cookies)
@@ -57,6 +61,97 @@ class Webtask:
             selector_llm=selector_llm,
         )
 
+        return agent
+
+    async def create_agent_with_browser(
+        self,
+        llm: LLM,
+        browser: Browser,
+        cookies=None,
+        action_delay: float = 1.0,
+        use_screenshot: bool = True,
+        selector_llm: Optional[LLM] = None,
+    ) -> Agent:
+        """Create agent with existing browser.
+
+        Args:
+            llm: LLM instance for reasoning
+            browser: Existing Browser instance
+            cookies: Optional cookies for the session
+            action_delay: Delay in seconds after actions (default: 1.0)
+            use_screenshot: Use screenshots with bounding boxes (default: True)
+            selector_llm: Optional separate LLM for element selection
+
+        Returns:
+            Agent instance with new session from provided browser
+        """
+        session = await browser.create_session(cookies=cookies)
+        agent = Agent(
+            llm,
+            session=session,
+            action_delay=action_delay,
+            use_screenshot=use_screenshot,
+            selector_llm=selector_llm,
+        )
+
+        return agent
+
+    def create_agent_with_session(
+        self,
+        llm: LLM,
+        session: Session,
+        action_delay: float = 1.0,
+        use_screenshot: bool = True,
+        selector_llm: Optional[LLM] = None,
+    ) -> Agent:
+        """Create agent with existing session.
+
+        Args:
+            llm: LLM instance for reasoning
+            session: Existing Session instance
+            action_delay: Delay in seconds after actions (default: 1.0)
+            use_screenshot: Use screenshots with bounding boxes (default: True)
+            selector_llm: Optional separate LLM for element selection
+
+        Returns:
+            Agent instance with provided session
+        """
+        return Agent(
+            llm,
+            session=session,
+            action_delay=action_delay,
+            use_screenshot=use_screenshot,
+            selector_llm=selector_llm,
+        )
+
+    def create_agent_with_page(
+        self,
+        llm: LLM,
+        page: Page,
+        action_delay: float = 1.0,
+        use_screenshot: bool = True,
+        selector_llm: Optional[LLM] = None,
+    ) -> Agent:
+        """Create agent with existing page (session-less mode).
+
+        Args:
+            llm: LLM instance for reasoning
+            page: Existing Page instance
+            action_delay: Delay in seconds after actions (default: 1.0)
+            use_screenshot: Use screenshots with bounding boxes (default: True)
+            selector_llm: Optional separate LLM for element selection
+
+        Returns:
+            Agent instance with provided page
+        """
+        agent = Agent(
+            llm,
+            session=None,
+            action_delay=action_delay,
+            use_screenshot=use_screenshot,
+            selector_llm=selector_llm,
+        )
+        agent.set_page(page)
         return agent
 
     async def close(self) -> None:
