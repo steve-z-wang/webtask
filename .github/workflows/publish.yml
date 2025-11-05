@@ -5,9 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'prompts/**'
+      - 'src/webtask/**'  # Only library code changes
+      - 'pyproject.toml'  # Version or dependency changes
   workflow_dispatch:  # Allow manual trigger
 
 jobs:

@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'README.md'
+  workflow_dispatch:  # Allow manual trigger
 
 permissions:
   contents: write
