@@ -85,7 +85,7 @@ class PlaywrightBrowser(Browser):
             cookie_dicts = Cookies.to_dict_list(cookies)
             await context.add_cookies(cookie_dicts)
 
-        return PlaywrightSession(context, cookies)
+        return PlaywrightSession(context)
 
     async def close(self):
         """Close the Playwright browser instance."""

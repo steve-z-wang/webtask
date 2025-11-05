@@ -1,25 +1,14 @@
 """Session base class for browser session management."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List
-from .cookies import Cookie
 
 
 class Session(ABC):
     """
     Abstract base class for browser session management.
 
-    Manages browser sessions with cookies and context.
+    Manages browser sessions (contexts) with pages.
     """
-
-    def __init__(self, cookies: Optional[List[Cookie]] = None):
-        """
-        Initialize the session.
-
-        Args:
-            cookies: Optional list of cookies to set for this session
-        """
-        self.cookies = cookies or []
 
     @abstractmethod
     async def create_page(self):
