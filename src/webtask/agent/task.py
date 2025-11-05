@@ -221,6 +221,8 @@ class TaskExecutor:
         llm: "LLM",
         llm_browser: "LLMBrowser",
         action_delay: float = 1.0,
+        screenshot_on_failure: bool = False,
+        failure_screenshot_path: Optional[str] = None,
     ):
         """
         Initialize task executor.
@@ -230,11 +232,16 @@ class TaskExecutor:
             llm: LLM instance for reasoning
             llm_browser: Browser interface for page context
             action_delay: Delay in seconds after actions (default: 1.0)
+            screenshot_on_failure: Whether to capture screenshot when task fails (default: False)
+            failure_screenshot_path: Path to save failure screenshot (default: None, auto-generates)
         """
         from .roles import VerifierRole, ProposerRole
         from ..utils.throttler import Throttler
 
         self.task = task
+        self.llm_browser = llm_browser
+        self.screenshot_on_failure = screenshot_on_failure
+        self.failure_screenshot_path = failure_screenshot_path
 
         # Create throttler (per-task rate limiting)
         throttler = Throttler(delay=action_delay)
@@ -318,8 +325,32 @@ class TaskExecutor:
                     message=step.proposal.message,
                 )
 
+        # Task failed - capture screenshot if enabled
+        if self.screenshot_on_failure:
+            await self._capture_failure_screenshot()
+
         return TaskResult(
             completed=False,
             steps=self.task.steps,
             message=f"Task not completed after {self.task.max_steps} steps",
         )
+
+    async def _capture_failure_screenshot(self) -> None:
+        """Capture screenshot when task fails."""
+        try:
+            page = self.llm_browser.get_current_page()
+            if page is None:
+                return
+
+            # Auto-generate path if not provided
+            if self.failure_screenshot_path:
+                path = self.failure_screenshot_path
+            else:
+                from datetime import datetime
+
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                path = f"task_failure_{timestamp}.png"
+
+            await page.screenshot(path=path)
+        except Exception:
+            pass

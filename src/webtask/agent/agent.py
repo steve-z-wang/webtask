@@ -51,6 +51,8 @@ class Agent:
         task: str,
         max_steps: int = 10,
         resources: Optional[Dict[str, str]] = None,
+        screenshot_on_failure: bool = False,
+        failure_screenshot_path: Optional[str] = None,
     ) -> TaskResult:
         """
         Execute a task autonomously.
@@ -59,6 +61,8 @@ class Agent:
             task: Task description in natural language
             max_steps: Maximum number of steps before giving up
             resources: Optional dict of file resources (name -> path)
+            screenshot_on_failure: Capture screenshot when task fails (default: False)
+            failure_screenshot_path: Path to save failure screenshot (default: auto-generated)
 
         Returns:
             TaskResult with completion status, steps, and final message
@@ -76,6 +80,8 @@ class Agent:
             llm=self.llm,
             llm_browser=self.llm_browser,
             action_delay=self.action_delay,
+            screenshot_on_failure=screenshot_on_failure,
+            failure_screenshot_path=failure_screenshot_path,
         )
 
         # Run autonomous execution loop
@@ -86,6 +92,8 @@ class Agent:
         task: str,
         max_steps: int = 10,
         resources: Optional[Dict[str, str]] = None,
+        screenshot_on_failure: bool = False,
+        failure_screenshot_path: Optional[str] = None,
     ) -> None:
         """
         Set current task for step-by-step execution.
@@ -94,6 +102,8 @@ class Agent:
             task: Task description in natural language
             max_steps: Maximum steps before giving up
             resources: Optional dict of file resources (name -> path)
+            screenshot_on_failure: Capture screenshot when task fails (default: False)
+            failure_screenshot_path: Path to save failure screenshot (default: auto-generated)
         """
         # Create task (Agent owns the task)
         self.task = Task(
@@ -108,6 +118,8 @@ class Agent:
             llm=self.llm,
             llm_browser=self.llm_browser,
             action_delay=self.action_delay,
+            screenshot_on_failure=screenshot_on_failure,
+            failure_screenshot_path=failure_screenshot_path,
         )
 
     async def run_step(self) -> Step:

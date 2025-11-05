@@ -1,7 +1,7 @@
 # TODO
 
 ## Urgent
-- [ ] Add automatic screenshot capture on errors
+- [x] Add automatic screenshot capture on errors
 - [ ] Add debug logic to enable debug
 
 ## Benchmark Evaluation
