@@ -1,12 +1,12 @@
 # webtask
 
-[![PyPI version](https://badge.fury.io/py/pywebtask.svg)](https://badge.fury.io/py/pywebtask)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://img.shields.io/pypi/v/pywebtask.svg)](https://pypi.org/project/pywebtask/)
 [![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/test.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/test.yml)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 LLM-powered web automation library with autonomous agents and natural language selectors.
+
+**[📚 Documentation](https://steve-z-wang.github.io/webtask/)** | **[🐍 PyPI](https://pypi.org/project/pywebtask/)** | **[📊 Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)**
 
 ---
 
@@ -110,21 +110,32 @@ The agent sees both text (DOM tree with element IDs) and visual context (screens
 - `agent.wait_for_idle()` - Wait for network/DOM to stabilize
 - `agent.screenshot(path)` - Capture page screenshot
 
-All modes use the same core: LLM sees cleaned DOM with element IDs like `button-0` instead of raw HTML, plus a screenshot with bounding boxes showing exactly where each element is. Clean input, clean output.
-
-**Available tools for autonomous mode:**
-- `navigate(url)` - Navigate to a URL
-- `click(element_id)` - Click an element
-- `fill(element_id, value)` - Fill form field instantly
-- `type(element_id, text)` - Type text character-by-character with realistic delays
+All modes use the same core: LLM sees cleaned DOM representation plus screenshots with bounding boxes for accurate understanding. No CSS selectors, no XPath - just natural language.
 
 ---
 
-## Status
+## Installation
 
-🚧 Work in progress
+```bash
+pip install pywebtask
+playwright install chromium
+```
 
-Core implementation complete. See [TODO](docs/todo.md) for testing plan and future work.
+Set up your API key:
+```bash
+export GEMINI_API_KEY="your-api-key"  # or OPENAI_API_KEY
+```
+
+---
+
+## Documentation
+
+**[📚 Full Documentation](https://steve-z-wang.github.io/webtask/)**
+
+- [Getting Started](https://steve-z-wang.github.io/webtask/getting-started/) - Installation and first steps
+- [Examples](https://steve-z-wang.github.io/webtask/examples/) - Complete code examples
+- [API Reference](https://steve-z-wang.github.io/webtask/api/) - Detailed API documentation
+- [Architecture](https://steve-z-wang.github.io/webtask/architecture/) - How it works internally
 
 ---
 
@@ -136,12 +147,11 @@ Evaluate webtask on standard web agent benchmarks:
 
 ---
 
-## Install
+## Contributing
 
-```bash
-pip install pywebtask
-playwright install chromium
-```
+See [TODO.md](TODO.md) for planned features and improvements.
+
+Contributions welcome! Open an issue or submit a PR.
 
 ---
 
