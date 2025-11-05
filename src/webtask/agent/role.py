@@ -21,6 +21,13 @@ class ActionResult(BaseModel):
     success: bool
     error: Optional[str] = None
 
+    def __str__(self) -> str:
+        """Format action result for human-readable output."""
+        if self.success:
+            return "✓ Success"
+        else:
+            return f"✗ Failed - {self.error}"
+
 
 class BaseRole(ABC):
     """

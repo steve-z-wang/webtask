@@ -21,6 +21,11 @@ class Action(BaseModel):
     tool: str = Field(description="Tool name")
     parameters: Dict[str, Any] = Field(description="Tool-specific parameters")
 
+    def __str__(self) -> str:
+        """Format action for human-readable output."""
+        params_str = ", ".join(f"{k}={v}" for k, v in self.parameters.items())
+        return f"{self.tool}({params_str}) - {self.reason}"
+
 
 class RoleType(str, Enum):
     """Agent role types."""

@@ -23,6 +23,31 @@ class Step(BaseModel):
         """Check if task is complete (mark_complete tool was called)."""
         return any(action.tool == "mark_complete" for action in self.proposal.actions)
 
+    def __str__(self) -> str:
+        """Format step for human-readable output."""
+        lines = []
+
+        # Show message first (LLM's reasoning)
+        lines.append(f"  Message: {self.proposal.message}")
+
+        # Show actions
+        actions = self.proposal.actions
+        if actions:
+            lines.append("  Actions:")
+            for j, action in enumerate(actions, 1):
+                lines.append(f"    {j}. {action}")
+
+                # Show execution result
+                if j - 1 < len(self.executions):
+                    exec_result = self.executions[j - 1]
+                    lines.append(f"       Result: {exec_result}")
+
+        # Show completion status
+        if self.is_complete:
+            lines.append("  Status: ✓ Task marked complete")
+
+        return "\n".join(lines)
+
 
 class TaskResult(BaseModel):
     """Result of executing a task."""
@@ -30,6 +55,33 @@ class TaskResult(BaseModel):
     completed: bool
     steps: List[Step]
     message: str
+
+    def __str__(self) -> str:
+        """Format task result for human-readable output."""
+        lines = []
+
+        # Header
+        status = "✓ COMPLETED" if self.completed else "✗ FAILED"
+        lines.append(f"\n{'='*60}")
+        lines.append(f"Task Result: {status}")
+        lines.append(f"{'='*60}")
+
+        # Summary
+        lines.append(f"\nMessage: {self.message}")
+        lines.append(f"Total steps: {len(self.steps)}")
+
+        # Step details
+        if self.steps:
+            lines.append(f"\n{'─'*60}")
+            lines.append("Step-by-step execution:")
+            lines.append(f"{'─'*60}")
+
+            for i, step in enumerate(self.steps, 1):
+                lines.append(f"\nStep {i}:")
+                lines.append(str(step))
+
+        lines.append(f"\n{'='*60}\n")
+        return "\n".join(lines)
 
 
 @dataclass
