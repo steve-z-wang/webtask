@@ -169,5 +169,5 @@ Each role has its own tool registry:
 ## Next Steps
 
 - Review [Examples](examples.md) to see architecture in action
-- Read [API Reference](api/) for implementation details
+- Read [API Reference](api/index.md) for implementation details
 - Check the [GitHub repository](https://github.com/steve-z-wang/webtask) for source code

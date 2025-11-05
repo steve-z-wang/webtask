@@ -15,7 +15,7 @@ Stay tuned for updates, tutorials, and announcements about webtask!
 
 - Check out the [Examples](examples.md) for code samples
 - Read the [Getting Started](getting-started.md) guide
-- Explore the [API Reference](api/) for detailed documentation
+- Explore the [API Reference](api/index.md) for detailed documentation
 
 ---
 

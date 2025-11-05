@@ -32,7 +32,7 @@ Want to contribute to webtask?
 
 - [Getting Started](getting-started.md) - Installation and first steps
 - [Examples](examples.md) - Code examples
-- [API Reference](api/) - Complete API documentation
+- [API Reference](api/index.md) - Complete API documentation
 
 ### 🔗 Links
 
