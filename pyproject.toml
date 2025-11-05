@@ -58,7 +58,7 @@ dependencies = [
 Homepage = "https://github.com/steve-z-wang/webtask"
 Repository = "https://github.com/steve-z-wang/webtask"
 Issues = "https://github.com/steve-z-wang/webtask/issues"
-Documentation = "https://github.com/steve-z-wang/webtask#readme"
+Documentation = "https://steve-z-wang.github.io/webtask/"
 
 [project.optional-dependencies]
 dev = [
@@ -69,6 +69,9 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.1.0",
     "pdm>=2.0.0",
+]
+docs = [
+    "mkdocs-material>=9.5.0",
 ]
 
 [tool.setuptools]
@@ -94,6 +97,11 @@ format-check = "black --check src/ tests/"
 # Testing
 test = "pytest tests/ -v --tb=short"
 test-cov = "pytest tests/ --cov=webtask --cov-report=html"
+
+# Documentation
+docs = "mkdocs serve"
+docs-build = "mkdocs build"
+docs-deploy = "mkdocs gh-deploy"
 
 # Combined checks (mimics CI)
 pr = {shell = "./scripts/pr.sh"}
