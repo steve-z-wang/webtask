@@ -1,13 +1,7 @@
 name: Test & Lint
 
 on:
-  workflow_call:  # Can be called by other workflows
-  pull_request:   # Also runs directly on PRs
-    branches:
-      - main
-  push:           # Also runs on push to main
-    branches:
-      - main
+  workflow_call:  # Can be called by other workflows (pr.yml, publish.yml)
 
 jobs:
   test:
