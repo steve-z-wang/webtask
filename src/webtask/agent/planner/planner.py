@@ -19,6 +19,7 @@ class Planner:
 
     Context:
     - Task description and goal
+    - Current page state (screenshot + DOM) - NEW!
     - Execution history (what happened so far)
     - Current subtask backlog
     - Worker/Verifier results
@@ -31,15 +32,17 @@ class Planner:
     Loops until start_work is called (usually after adding one subtask).
     """
 
-    def __init__(self, llm: LLM, logger=None):
+    def __init__(self, llm: LLM, llm_browser: "LLMBrowser", logger=None):
         """
         Initialize planner.
 
         Args:
             llm: LLM instance for generating responses
+            llm_browser: Browser interface for page observation
             logger: Optional ExecutionLogger for tracking execution events
         """
         self._llm = llm
+        self._llm_browser = llm_browser
         self._logger = logger
 
         # Create and register planner tools
@@ -60,22 +63,25 @@ class Planner:
 
     async def _build_context(self, session: "PlannerSession") -> Context:
         """
-        Build context for planner (no page access).
+        Build context for planner with page state.
 
         Includes:
         - Task description and goal
+        - Current page state (screenshot + DOM)
         - Execution history (what happened so far)
         - Subtask queue with status
         """
         from ...prompts import get_prompt
-        from ..context import SubtaskQueueContextBuilder
+        from ..context import SubtaskQueueContextBuilder, LLMBrowserContextBuilder
 
         system = get_prompt("planner_system")
 
         queue_builder = SubtaskQueueContextBuilder(session.task.subtask_queue)
+        browser_ctx = LLMBrowserContextBuilder(self._llm_browser)
 
         blocks = [
             Block(heading="Task Goal", content=session.task.description),
+            await browser_ctx.build_page_context(),
             queue_builder.build_queue_context(),
         ]
 
