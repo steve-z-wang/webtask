@@ -6,11 +6,11 @@ from pydantic import ValidationError
 from ..llm import LLM, Context, Block
 from ..prompts import get_prompt
 from ..browser import Element
-from ..agent.schemas import SelectorResponse
+from .schema import SelectorResponse
 from ..utils.json_parser import parse_json
 
 if TYPE_CHECKING:
-    from .llm_browser import LLMBrowser
+    from ..llm_browser import LLMBrowser
 
 
 class NaturalSelector:

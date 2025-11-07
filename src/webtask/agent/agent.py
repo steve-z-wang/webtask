@@ -5,7 +5,8 @@ from typing import Dict, List, Optional
 from ..llm import LLM
 from ..browser import Page, Session
 from ..llm_browser import LLMBrowser
-from .task import Step, TaskResult, Task, TaskExecutor
+from .task import TaskExecution
+from .task_executor import TaskExecutor
 
 
 class Agent:
@@ -13,7 +14,10 @@ class Agent:
     Main agent interface for web automation.
 
     Requires a Session for browser management and page operations.
-    Provides high-level execute() for autonomous task completion and low-level methods for imperative control.
+
+    Two modes of operation:
+    - High-level autonomous: execute(task) - Agent autonomously plans and executes with scheduler-worker architecture
+    - Low-level imperative: navigate(), select(), wait() - Direct control for manual workflows
     """
 
     def __init__(
@@ -41,102 +45,62 @@ class Agent:
         self.use_screenshot = use_screenshot
         self.logger = logging.getLogger(__name__)
 
-        self.llm_browser = LLMBrowser(session, use_screenshot) if session else None
-
-        self.task: Optional[Task] = None
-        self.task_executor: Optional[TaskExecutor] = None
+        self.llm_browser = LLMBrowser(session, action_delay=action_delay, use_screenshot=use_screenshot) if session else None
 
     async def execute(
         self,
-        task: str,
-        max_steps: int = 10,
+        task_description: str,
+        max_cycles: int = 10,
         resources: Optional[Dict[str, str]] = None,
-        screenshot_on_failure: bool = False,
-        failure_screenshot_path: Optional[str] = None,
-    ) -> TaskResult:
+    ) -> TaskExecution:
         """
-        Execute a task autonomously.
+        Execute a task autonomously using scheduler-worker architecture.
 
         Args:
-            task: Task description in natural language
-            max_steps: Maximum number of steps before giving up
+            task_description: Task description in natural language
+            max_cycles: Maximum scheduler-worker cycles (default: 10)
             resources: Optional dict of file resources (name -> path)
-            screenshot_on_failure: Capture screenshot when task fails (default: False)
-            failure_screenshot_path: Path to save failure screenshot (default: auto-generated)
 
         Returns:
-            TaskResult with completion status, steps, and final message
+            TaskExecution object with execution history (sessions and subtasks)
+
+        Raises:
+            RuntimeError: If no session is available
         """
-        # Create task (Agent owns the task)
-        self.task = Task(
-            description=task,
+        if not self.llm_browser:
+            raise RuntimeError("No session available. Call set_session() first.")
+
+        # Create task execution
+        task = TaskExecution(
+            description=task_description,
             resources=resources or {},
-            max_steps=max_steps,
         )
 
-        # Create task executor (executes the task)
-        self.task_executor = TaskExecutor(
-            task=self.task,
+        # Create execution logger
+        from .execution_logger import ExecutionLogger
+        execution_logger = ExecutionLogger()
+
+        # Create scheduler and worker
+        from .scheduler.scheduler import Scheduler
+        from .worker.worker import Worker
+
+        scheduler = Scheduler(llm=self.llm, logger=execution_logger)
+        worker = Worker(
             llm=self.llm,
             llm_browser=self.llm_browser,
-            action_delay=self.action_delay,
-            screenshot_on_failure=screenshot_on_failure,
-            failure_screenshot_path=failure_screenshot_path,
+            resources=task.resources,
+            logger=execution_logger,
+        )
+
+        # Create task executor
+        task_executor = TaskExecutor(
+            scheduler=scheduler,
+            worker=worker,
+            logger=execution_logger,
         )
 
         # Run autonomous execution loop
-        return await self.task_executor.execute()
-
-    def set_task(
-        self,
-        task: str,
-        max_steps: int = 10,
-        resources: Optional[Dict[str, str]] = None,
-        screenshot_on_failure: bool = False,
-        failure_screenshot_path: Optional[str] = None,
-    ) -> None:
-        """
-        Set current task for step-by-step execution.
-
-        Args:
-            task: Task description in natural language
-            max_steps: Maximum steps before giving up
-            resources: Optional dict of file resources (name -> path)
-            screenshot_on_failure: Capture screenshot when task fails (default: False)
-            failure_screenshot_path: Path to save failure screenshot (default: auto-generated)
-        """
-        # Create task (Agent owns the task)
-        self.task = Task(
-            description=task,
-            resources=resources or {},
-            max_steps=max_steps,
-        )
-
-        # Create task executor (executes the task)
-        self.task_executor = TaskExecutor(
-            task=self.task,
-            llm=self.llm,
-            llm_browser=self.llm_browser,
-            action_delay=self.action_delay,
-            screenshot_on_failure=screenshot_on_failure,
-            failure_screenshot_path=failure_screenshot_path,
-        )
-
-    async def run_step(self) -> Step:
-        """
-        Execute one step of the current task.
-
-        Returns:
-            Step with proposal and execution results
-
-        Raises:
-            RuntimeError: If no task is set (call set_task first)
-        """
-        if self.task_executor is None:
-            raise RuntimeError("No task set. Call set_task() first.")
-
-        # Delegate to task executor
-        return await self.task_executor.run_step()
+        return await task_executor.run(task, max_cycles=max_cycles)
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """
@@ -205,7 +169,7 @@ class Agent:
             RuntimeError: If no page is opened
             ValueError: If LLM fails to find a matching element
         """
-        from ..llm_browser.selector import NaturalSelector
+        from ..naturalselector import NaturalSelector
 
         selector = NaturalSelector(self.selector_llm, self.llm_browser)
         return await selector.select(description)

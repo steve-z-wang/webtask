@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 from ..browser import Page, Session
 from ..dom.domnode import DomNode
 from ..llm import Block
+from ..utils.throttler import Throttler
 from .dom_context_builder import DomContextBuilder
 from .bounding_box_renderer import BoundingBoxRenderer
 
@@ -15,14 +16,23 @@ class LLMBrowser:
         self,
         session: Optional[Session] = None,
         use_screenshot: bool = True,
+        action_delay: float = 1.0,
     ):
-        """Initialize with optional Session and screenshot setting."""
+        """
+        Initialize with optional Session, screenshot setting, and action delay.
+
+        Args:
+            session: Optional browser session
+            use_screenshot: Include screenshots with bounding boxes in context
+            action_delay: Delay in seconds after browser actions (for page stabilization)
+        """
         self._session = session
         self._use_screenshot = use_screenshot
         self._pages: Dict[str, Page] = {}
         self._page_counter = 0
         self._current_page_id: Optional[str] = None
         self._element_map: Dict[str, DomNode] = {}
+        self.throttler = Throttler(delay=action_delay)
 
     def _require_page(self) -> Page:
         if self._current_page_id is None:
@@ -112,6 +122,8 @@ class LLMBrowser:
         Returns:
             Block with text context and optional screenshot image (based on self.use_screenshot)
         """
+        # Wait for page to stabilize after any recent actions
+        await self.throttler.wait()
 
         if self._current_page_id is None:
             self._element_map = {}
@@ -161,7 +173,7 @@ class LLMBrowser:
                 page=page, element_map=interactive_elements, full_page=full_page
             )
 
-        return Block(text="\n".join(lines), image=image)
+        return Block(heading="Current Page", content="\n".join(lines), image=image)
 
     def _get_xpath(self, element_id: str):
         """Get XPath for element by ID."""
@@ -174,6 +186,8 @@ class LLMBrowser:
 
     async def navigate(self, url: str) -> None:
         """Navigate to URL. Auto-creates a page if none exists yet and session is available."""
+        await self.throttler.wait()
+
         if self._current_page_id is None:
             if self._session is None:
                 raise RuntimeError(
@@ -184,27 +198,37 @@ class LLMBrowser:
 
         page = self._require_page()
         await page.navigate(url)
+        self.throttler.update_timestamp()
 
     async def click(self, element_id: str) -> None:
         """Click element by ID."""
+        await self.throttler.wait()
+
         page = self._require_page()
         xpath = self._get_xpath(element_id)
         element = await page.select_one(xpath)
         await element.click()
+        self.throttler.update_timestamp()
 
     async def fill(self, element_id: str, value: str) -> None:
         """Fill element by ID with value."""
+        await self.throttler.wait()
+
         page = self._require_page()
         xpath = self._get_xpath(element_id)
         element = await page.select_one(xpath)
         await element.fill(value)
+        self.throttler.update_timestamp()
 
     async def type(self, element_id: str, text: str, delay: float = 80) -> None:
         """Type text into element by ID character by character."""
+        await self.throttler.wait()
+
         page = self._require_page()
         xpath = self._get_xpath(element_id)
         element = await page.select_one(xpath)
         await element.type(text, delay=delay)
+        self.throttler.update_timestamp()
 
     async def keyboard_type(
         self, text: str, clear: bool = False, delay: float = 80
@@ -214,8 +238,11 @@ class LLMBrowser:
         Does not require selecting an element. The element must be focused first
         (usually by clicking it).
         """
+        await self.throttler.wait()
+
         page = self._require_page()
         await page.keyboard_type(text, clear=clear, delay=delay)
+        self.throttler.update_timestamp()
 
     async def upload(self, element_id: str, file_paths: Union[str, List[str]]) -> None:
         """
@@ -225,7 +252,10 @@ class LLMBrowser:
             element_id: Element ID from DOM (e.g., "input-5")
             file_paths: Single file path or list of file paths
         """
+        await self.throttler.wait()
+
         page = self._require_page()
         xpath = self._get_xpath(element_id)
         element = await page.select_one(xpath)
         await element.upload_file(file_paths)
+        self.throttler.update_timestamp()

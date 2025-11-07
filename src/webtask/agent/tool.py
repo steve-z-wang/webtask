@@ -1,60 +1,51 @@
-"""Base Tool class for agent tools."""
+"""Tool base class and registry for agent tools."""
 
 import json
-from abc import ABC, abstractmethod
-from typing import Dict, Any, TypeVar, Generic, Type, List
-from .schemas import ToolParams
+from typing import Dict, Any, List, TYPE_CHECKING
+from pydantic import BaseModel
 from ..llm import Block
 
+if TYPE_CHECKING:
+    from .tool_call import ProposedToolCall, ToolCall
 
-TParams = TypeVar("TParams", bound=ToolParams)
 
+class Tool:
+    """Base class for agent tools.
 
-class Tool(ABC, Generic[TParams]):
-    """Abstract base class for all agent tools."""
+    Tools must define:
+    - name: str - Tool identifier
+    - description: str - What the tool does
+    - Params: BaseModel - Nested Pydantic model for parameters
+    - async execute(params: Params, **kwargs) -> Any
 
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Tool name identifier."""
-        pass
+    Example:
+        class AddSubtaskTool(Tool):
+            name = "add_subtask"
+            description = "Add a new subtask to the end of the backlog"
 
-    @property
-    @abstractmethod
-    def description(self) -> str:
-        """Human-readable description of what the tool does."""
-        pass
+            class Params(BaseModel):
+                description: str = Field(description="Subtask description")
 
-    @property
-    @abstractmethod
-    def params_class(self) -> Type[TParams]:
-        """Parameters class for this tool."""
-        pass
+            async def execute(self, params: Params, task: "Task") -> None:
+                subtask = Subtask(description=params.description)
+                task.subtasks.append(subtask)
+    """
 
-    def validate_parameters(self, parameters: Dict[str, Any]) -> TParams:
-        """Validate and parse parameters into typed params object."""
-        return self.params_class(**parameters)
+    name: str
+    description: str
+    Params: type[BaseModel]
 
-    @abstractmethod
-    async def execute(self, params: TParams):
-        """Execute the tool with typed parameters."""
-        pass
+    async def execute(self, params: BaseModel, **kwargs) -> Any:
+        """Execute the tool with validated parameters.
 
-    def to_schema(self) -> Dict[str, Any]:
-        """Convert tool to LLM tool schema format."""
-        params_schema = self.params_class.schema()
-        properties = params_schema.get("properties", {})
-        required = params_schema.get("required", [])
+        Args:
+            params: Validated Params instance
+            **kwargs: Additional dependencies (llm_browser, resources, task, etc.)
 
-        for prop in properties.values():
-            prop.pop("title", None)
-
-        return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": properties,
-            "required": required,
-        }
+        Returns:
+            Tool execution result
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
 
 
 class ToolRegistry:
@@ -65,17 +56,11 @@ class ToolRegistry:
 
     def register(self, tool: Tool) -> None:
         """Register a tool in the registry."""
+        if not hasattr(tool, 'name'):
+            raise ValueError(f"Tool must have 'name' attribute")
         if tool.name in self._tools:
             raise ValueError(f"Tool '{tool.name}' is already registered")
         self._tools[tool.name] = tool
-
-    def validate_tool_use(self, tool_name: str, parameters: Dict[str, Any]) -> None:
-        """Validate that tool exists and parameters are correct."""
-        if tool_name not in self._tools:
-            raise ValueError(f"Unknown tool: {tool_name}")
-
-        tool = self._tools[tool_name]
-        tool.validate_parameters(parameters)
 
     def get(self, name: str) -> Tool:
         """Get a tool by name."""
@@ -91,7 +76,40 @@ class ToolRegistry:
         """Clear all registered tools from the registry."""
         self._tools.clear()
 
-    def get_tools_context(self) -> Block:
-        """Get formatted tools context for LLM."""
-        schemas = [tool.to_schema() for tool in self._tools.values()]
-        return Block(f"Tools:\n{json.dumps(schemas, indent=2)}")
+    def validate_proposed_tools(
+        self, proposed_calls: List["ProposedToolCall"]
+    ) -> List["ToolCall"]:
+        """Validate proposed tools upfront, return ToolCall objects."""
+        from .tool_call import ToolCall
+
+        tool_calls = []
+        for proposed in proposed_calls:
+            tool_call = ToolCall.from_proposed(proposed)
+            try:
+                tool = self.get(tool_call.tool)
+                # Validate by instantiating Params
+                tool.Params(**tool_call.parameters)
+            except Exception as e:
+                tool_call.mark_failure(f"Validation error: {e}")
+            tool_calls.append(tool_call)
+        return tool_calls
+
+    async def execute_tool_call(self, tool_call: "ToolCall", **kwargs) -> None:
+        """Execute a validated ToolCall.
+
+        Args:
+            tool_call: The tool call to execute
+            **kwargs: Additional dependencies to pass to tool.execute()
+        """
+        from .tool_call import ToolCall
+
+        if tool_call.executed:
+            return
+
+        try:
+            tool = self.get(tool_call.tool)
+            validated_params = tool.Params(**tool_call.parameters)
+            result = await tool.execute(validated_params, **kwargs)
+            tool_call.mark_success(result=result)
+        except Exception as e:
+            tool_call.mark_failure(str(e))
