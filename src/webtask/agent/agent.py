@@ -85,11 +85,7 @@ class Agent:
         from .worker.worker import Worker
         from .verifier.verifier import Verifier
 
-        planner = Planner(
-            llm=self.llm,
-            llm_browser=self.llm_browser,
-            logger=execution_logger,
-        )
+        planner = Planner(llm=self.llm, logger=execution_logger)
         worker = Worker(
             llm=self.llm,
             llm_browser=self.llm_browser,

@@ -12,37 +12,36 @@ if TYPE_CHECKING:
 
 class Planner:
     """
-    Planner role - plans next subtask incrementally.
+    Planner role - strategic planning at goal level.
 
-    Unlike the old Scheduler which planned all subtasks upfront,
-    Planner sees execution results and plans ONE subtask at a time.
+    Planner focuses on WHAT needs to be done (goals/outcomes), not HOW.
+    Plans ONE goal at a time based on execution results.
 
     Context:
     - Task description and goal
-    - Current page state (screenshot + DOM) - NEW!
-    - Execution history (what happened so far)
+    - Execution history (what succeeded/failed)
     - Current subtask backlog
-    - Worker/Verifier results
+
+    NO page access - Planner operates at strategic level.
+    Worker figures out HOW to achieve goals using page context.
 
     Tools:
-    - add_subtask: Add next subtask to queue
-    - cancel_subtask: Remove a subtask that's no longer needed
-    - start_work: Begin executing the next subtask
+    - add_subtask: Add next goal/outcome to achieve
+    - cancel_subtask: Remove a goal that's no longer needed
+    - start_work: Begin executing the next goal
 
     Loops until start_work is called (usually after adding one subtask).
     """
 
-    def __init__(self, llm: LLM, llm_browser: "LLMBrowser", logger=None):
+    def __init__(self, llm: LLM, logger=None):
         """
         Initialize planner.
 
         Args:
             llm: LLM instance for generating responses
-            llm_browser: Browser interface for page observation
             logger: Optional ExecutionLogger for tracking execution events
         """
         self._llm = llm
-        self._llm_browser = llm_browser
         self._logger = logger
 
         # Create and register planner tools
@@ -63,25 +62,24 @@ class Planner:
 
     async def _build_context(self, session: "PlannerSession") -> Context:
         """
-        Build context for planner with page state.
+        Build context for planner (strategic level only).
 
         Includes:
         - Task description and goal
-        - Current page state (screenshot + DOM)
         - Execution history (what happened so far)
         - Subtask queue with status
+
+        NO page state - Planner operates at goal level, not UI level.
         """
         from ...prompts import get_prompt
-        from ..context import SubtaskQueueContextBuilder, LLMBrowserContextBuilder
+        from ..context import SubtaskQueueContextBuilder
 
         system = get_prompt("planner_system")
 
         queue_builder = SubtaskQueueContextBuilder(session.task.subtask_queue)
-        browser_ctx = LLMBrowserContextBuilder(self._llm_browser)
 
         blocks = [
             Block(heading="Task Goal", content=session.task.description),
-            await browser_ctx.build_page_context(),
             queue_builder.build_queue_context(),
         ]
 
