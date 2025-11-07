@@ -115,8 +115,12 @@ class Verifier:
 
         # Handle max iterations without decision
         if not subtask_decision:
-            # Default to failure if verifier can't decide
-            session.subtask.mark_failed("Verifier could not determine subtask status")
+            # If task is complete but no subtask decision, assume subtask succeeded
+            if session.task_complete:
+                session.subtask.mark_complete()
+            else:
+                # Default to failure if verifier can't decide
+                session.subtask.mark_failed("Verifier could not determine subtask status")
 
         return session
 

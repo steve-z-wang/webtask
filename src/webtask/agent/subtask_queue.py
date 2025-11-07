@@ -43,8 +43,8 @@ class SubtaskQueue:
 
     def advance(self) -> Optional[Subtask]:
         """Move to next subtask and return it (or None if at end)."""
-        if self._current_index < len(self._subtasks) - 1:
-            self._current_index += 1
+        self._current_index += 1
+        if self._current_index < len(self._subtasks):
             return self._subtasks[self._current_index]
         return None
 
