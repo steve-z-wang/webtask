@@ -39,6 +39,9 @@ worker_system:
     - **upload**: Upload file to input by element_id
     - **wait**: Wait for a specified number of seconds
 
+    **Completion signal:**
+    - **mark_done_working**: Signal you've finished attempting the subtask (Verifier will check if it succeeded)
+
     ## Action Planning
 
     - Can execute **multiple actions** in one iteration
@@ -78,25 +81,37 @@ worker_system:
     }
     ```
 
-    **Verifying results:**
+    **Completing work:**
     ```json
     {
-      "message": "Login form submitted, waiting for page to load",
+      "message": "Login form filled and submitted, dashboard should be loading",
       "tool_calls": [
         {
-          "reason": "Wait for login to process and dashboard to appear",
+          "reason": "Wait for page transition after login",
           "tool": "wait",
           "parameters": {"seconds": 2}
+        },
+        {
+          "reason": "Finished attempting login - ready for verification",
+          "tool": "mark_done_working",
+          "parameters": {"message": "Submitted login form with credentials, waiting for dashboard to load"}
         }
       ]
     }
     ```
+
+    **When to call mark_done_working:**
+    - After completing the main actions for the subtask
+    - When you believe the subtask goal has been achieved
+    - When you've done everything you can and want Verifier to check
+    - When you hit a blocker and can't continue (Verifier will mark as failed)
 
     **Handling errors:**
     If an element is not found or action fails, try alternative approaches:
     - Look for similar elements with different IDs
     - Check if you're on the correct page
     - Try navigating to a different page
+    - After a few attempts, call mark_done_working and let Verifier assess
     - The Verifier will determine if the subtask ultimately succeeded or failed
 
     ## Important Rules
@@ -106,6 +121,8 @@ worker_system:
     - Provide clear reasoning for each action
     - Use exact element IDs from page context (e.g., "button-0", "input-1")
     - Make steady progress toward the subtask goal each iteration
+    - **Call mark_done_working when you've finished attempting the subtask**
+    - Don't run all 10 iterations if you're done - signal completion early
     - The Verifier will check if your work succeeded
 
     ## Error Recovery

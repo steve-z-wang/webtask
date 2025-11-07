@@ -48,6 +48,7 @@ class Worker:
         from .tools.type import TypeTool
         from .tools.upload import UploadTool
         from .tools.wait import WaitTool
+        from .tools.mark_done_working import MarkDoneWorkingTool
 
         # Browser action tools
         self._tool_registry.register(NavigateTool())
@@ -57,10 +58,13 @@ class Worker:
         self._tool_registry.register(UploadTool())
         self._tool_registry.register(WaitTool())
 
+        # Completion signal tool
+        self._tool_registry.register(MarkDoneWorkingTool())
+
     async def run(self, session: "WorkerSession") -> "WorkerSession":
         """Execute browser actions for the subtask.
 
-        Worker no longer makes completion decisions - it just executes actions.
+        Worker executes actions and signals when done attempting.
         Verifier will check if work succeeded.
 
         Args:
@@ -106,8 +110,25 @@ class Worker:
             if self._logger:
                 self._logger.log_iteration_complete("Worker", i + 1, iteration.message, len(tool_calls))
 
-        # Worker completes all iterations - Verifier will decide if work succeeded
+            # Check if worker signaled done
+            done_call = self._get_done_signal(tool_calls)
+            if done_call:
+                # Worker finished attempting - exit early
+                break
+
+        # Worker finished - Verifier will decide if work succeeded
         return session
+
+    def _get_done_signal(self, tool_calls) -> Optional["ToolCall"]:
+        """Get mark_done_working tool call if present and successful.
+
+        Returns:
+            The mark_done_working ToolCall if found, None otherwise
+        """
+        for tc in tool_calls:
+            if tc.tool == "mark_done_working" and tc.success:
+                return tc
+        return None
 
     async def _build_context(self, session: "WorkerSession") -> Context:
         """Build LLM context for worker.
