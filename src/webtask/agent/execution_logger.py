@@ -38,17 +38,17 @@ class ExecutionLogger:
         self.logger.info(f"[Task] Complete: {completed}/{total} subtasks done")
 
     # Session-level events (INFO)
-    def log_scheduler_session_start(self, task: "TaskExecution") -> None:
-        """Log when scheduler session begins."""
+    def log_planner_session_start(self, task: "TaskExecution") -> None:
+        """Log when planner session begins."""
         if not self.enabled:
             return
-        self.logger.info("[Scheduler] Planning subtasks...")
+        self.logger.info("[Planner] Planning next subtask...")
 
-    def log_scheduler_session_complete(self, num_iterations: int, num_subtasks: int) -> None:
-        """Log when scheduler session completes."""
+    def log_planner_session_complete(self, num_iterations: int, num_subtasks: int) -> None:
+        """Log when planner session completes."""
         if not self.enabled:
             return
-        self.logger.info(f"[Scheduler] Planning complete: {num_iterations} iterations, {num_subtasks} subtasks created")
+        self.logger.info(f"[Planner] Planning complete: {num_iterations} iterations, {num_subtasks} total subtasks")
 
     def log_worker_session_start(self, subtask: "Subtask", subtask_index: int) -> None:
         """Log when worker session begins."""
@@ -60,7 +60,22 @@ class ExecutionLogger:
         """Log when worker session completes."""
         if not self.enabled:
             return
-        self.logger.info(f"[Worker] Subtask {subtask.status.value}: {num_iterations} iterations")
+        self.logger.info(f"[Worker] Execution complete: {num_iterations} iterations")
+
+    def log_verifier_session_start(self, subtask: "Subtask", subtask_index: int) -> None:
+        """Log when verifier session begins."""
+        if not self.enabled:
+            return
+        self.logger.info(f"[Verifier] Verifying subtask {subtask_index}...")
+
+    def log_verifier_session_complete(self, subtask: "Subtask", num_iterations: int, task_complete: bool) -> None:
+        """Log when verifier session completes."""
+        if not self.enabled:
+            return
+        status_msg = f"Subtask {subtask.status.value}"
+        if task_complete:
+            status_msg += ", Task COMPLETE"
+        self.logger.info(f"[Verifier] {status_msg}: {num_iterations} iterations")
 
     # Iteration-level events (DEBUG)
     def log_iteration_start(self, role: str, iteration_num: int) -> None:
@@ -87,7 +102,7 @@ class ExecutionLogger:
         params_str = self._format_params(tool_call.parameters)
 
         # Log worker actions at INFO level (so users see what's happening)
-        # Log scheduler actions at DEBUG level (less important)
+        # Log planner/verifier actions at DEBUG level (less important)
         if role == "Worker":
             self.logger.info(f"  → {tool_call.tool}({params_str})")
         else:
@@ -119,4 +134,4 @@ class ExecutionLogger:
         """Log when subtask fails and needs replanning."""
         if not self.enabled:
             return
-        self.logger.info(f"[TaskExecutor] Subtask {subtask_index} failed, returning to scheduler for replanning")
+        self.logger.info(f"[TaskExecutor] Subtask {subtask_index} failed, Planner will adapt")

@@ -80,26 +80,33 @@ class Agent:
         from .execution_logger import ExecutionLogger
         execution_logger = ExecutionLogger()
 
-        # Create scheduler and worker
-        from .scheduler.scheduler import Scheduler
+        # Create planner, worker, and verifier
+        from .planner.planner import Planner
         from .worker.worker import Worker
+        from .verifier.verifier import Verifier
 
-        scheduler = Scheduler(llm=self.llm, logger=execution_logger)
+        planner = Planner(llm=self.llm, logger=execution_logger)
         worker = Worker(
             llm=self.llm,
             llm_browser=self.llm_browser,
             resources=task.resources,
             logger=execution_logger,
         )
-
-        # Create task executor
-        task_executor = TaskExecutor(
-            scheduler=scheduler,
-            worker=worker,
+        verifier = Verifier(
+            llm=self.llm,
+            llm_browser=self.llm_browser,
             logger=execution_logger,
         )
 
-        # Run autonomous execution loop
+        # Create task executor
+        task_executor = TaskExecutor(
+            planner=planner,
+            worker=worker,
+            verifier=verifier,
+            logger=execution_logger,
+        )
+
+        # Run adaptive Planner→Worker→Verifier loop
         return await task_executor.run(task, max_cycles=max_cycles)
 
     async def open_page(self, url: Optional[str] = None) -> Page:

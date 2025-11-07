@@ -1,4 +1,4 @@
-"""TaskExecution model for scheduler-worker architecture."""
+"""TaskExecution model for planner-worker-verifier architecture."""
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Union
@@ -11,11 +11,16 @@ class TaskExecution:
 
     description: str
     resources: Dict[str, str] = field(default_factory=dict)
-    history: List[Union["SchedulerSession", "WorkerSession"]] = field(default_factory=list)
+    history: List[Union["PlannerSession", "WorkerSession", "VerifierSession"]] = field(default_factory=list)
     subtask_queue: SubtaskQueue = field(default_factory=SubtaskQueue)
+    complete: bool = False  # Track task completion status
 
-    def add_session(self, session: Union["SchedulerSession", "WorkerSession"]) -> None:
+    def add_session(self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]) -> None:
         self.history.append(session)
+
+    def mark_complete(self) -> None:
+        """Mark task as complete."""
+        self.complete = True
 
     def __str__(self) -> str:
         """Return formatted string representation."""

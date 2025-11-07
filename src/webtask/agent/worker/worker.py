@@ -48,8 +48,6 @@ class Worker:
         from .tools.type import TypeTool
         from .tools.upload import UploadTool
         from .tools.wait import WaitTool
-        from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
-        from .tools.mark_subtask_failed import MarkSubtaskFailedTool
 
         # Browser action tools
         self._tool_registry.register(NavigateTool())
@@ -59,21 +57,19 @@ class Worker:
         self._tool_registry.register(UploadTool())
         self._tool_registry.register(WaitTool())
 
-        # Decision tools
-        self._tool_registry.register(MarkSubtaskCompleteTool())
-        self._tool_registry.register(MarkSubtaskFailedTool())
-
     async def run(self, session: "WorkerSession") -> "WorkerSession":
-        """Execute subtask until decision tool called or max iterations.
+        """Execute browser actions for the subtask.
+
+        Worker no longer makes completion decisions - it just executes actions.
+        Verifier will check if work succeeded.
 
         Args:
             session: WorkerSession with subtask and config, will be filled with iterations
 
         Returns:
-            The same session, now filled with iterations and decision
+            The same session, now filled with iterations
         """
         session.subtask.mark_in_progress()
-        decision_call = None
 
         for i in range(session.max_iterations):
             if self._logger:
@@ -110,32 +106,8 @@ class Worker:
             if self._logger:
                 self._logger.log_iteration_complete("Worker", i + 1, iteration.message, len(tool_calls))
 
-            # Check for decision transition
-            decision_call = self._get_decision(tool_calls)
-            if decision_call:
-                # Update subtask status based on decision
-                if decision_call.tool == "mark_subtask_complete":
-                    session.subtask.mark_complete()
-                elif decision_call.tool == "mark_subtask_failed":
-                    session.subtask.mark_failed(decision_call.result)
-                break
-
-        # Handle max iterations without decision
-        if not decision_call:
-            session.subtask.mark_failed("Reached maximum iterations without completing subtask")
-
+        # Worker completes all iterations - Verifier will decide if work succeeded
         return session
-
-    def _get_decision(self, tool_calls) -> Optional["ToolCall"]:
-        """Get decision tool call if present and successful.
-
-        Returns:
-            The decision ToolCall (mark_subtask_complete or mark_subtask_failed) if found, None otherwise
-        """
-        for tc in tool_calls:
-            if tc.tool in ["mark_subtask_complete", "mark_subtask_failed"] and tc.success:
-                return tc
-        return None
 
     async def _build_context(self, session: "WorkerSession") -> Context:
         """Build LLM context for worker.

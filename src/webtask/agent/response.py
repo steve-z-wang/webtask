@@ -13,11 +13,11 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SchedulerSession:
-    """Session from one scheduler.run() call.
+class PlannerSession:
+    """Session from one planner.run() call.
 
-    Created with task execution and config, passed to scheduler.run() to be filled.
-    Scheduler always ends by calling start_work (or timeout).
+    Created with task execution and config, passed to planner.run() to be filled.
+    Planner always ends by calling start_work (or timeout).
     """
 
     task: "TaskExecution"
@@ -29,7 +29,7 @@ class SchedulerSession:
         self.iterations.append(iteration)
 
     def __str__(self) -> str:
-        lines = [f"Scheduler Session ({len(self.iterations)} iterations)"]
+        lines = [f"Planner Session ({len(self.iterations)} iterations)"]
         for i, iteration in enumerate(self.iterations, 1):
             lines.append(f"  Iteration {i}:")
             lines.append(f"    {iteration.message}")
@@ -58,6 +58,39 @@ class WorkerSession:
         lines = [
             f"Worker Session - Subtask: {self.subtask.description}",
             f"Status: {self.subtask.status.value.upper()}",
+            f"Iterations: {len(self.iterations)}"
+        ]
+        for i, iteration in enumerate(self.iterations, 1):
+            lines.append(f"  Iteration {i}: {iteration.message}")
+            for tc in iteration.tool_calls:
+                lines.append(f"    {tc}")
+        return "\n".join(lines)
+
+
+@dataclass
+class VerifierSession:
+    """Session from one verifier.run() call.
+
+    Created with subtask and worker session, passed to verifier.run() to be filled.
+    Verifier checks if subtask succeeded/failed and if entire task is complete.
+    """
+
+    subtask: "Subtask"
+    worker_session: WorkerSession
+    task: "TaskExecution"
+    max_iterations: int = 3  # Verifier should decide quickly
+    iterations: List[Iteration] = field(default_factory=list)
+    task_complete: bool = False
+    timestamp: datetime = field(default_factory=datetime.now)
+
+    def add_iteration(self, iteration: Iteration) -> None:
+        self.iterations.append(iteration)
+
+    def __str__(self) -> str:
+        lines = [
+            f"Verifier Session - Subtask: {self.subtask.description}",
+            f"Subtask Status: {self.subtask.status.value.upper()}",
+            f"Task Complete: {self.task_complete}",
             f"Iterations: {len(self.iterations)}"
         ]
         for i, iteration in enumerate(self.iterations, 1):
