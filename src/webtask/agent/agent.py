@@ -1,12 +1,18 @@
 """Agent - main interface for web automation."""
 
+import asyncio
 import logging
 from typing import Dict, List, Optional
 from ..llm import LLM
+from ..llm.typed_llm import TypedLLM
 from ..browser import Page, Session
-from ..llm_browser import LLMBrowser
-from .task import TaskExecution
+from .agent_browser import AgentBrowser
+from ..natural_selector import NaturalSelector
+from .task import Task, TaskExecution
 from .task_executor import TaskExecutor
+from .planner.planner import Planner
+from .worker.worker import Worker
+from .verifier.verifier import Verifier
 
 
 class Agent:
@@ -27,6 +33,7 @@ class Agent:
         action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
+        debug: bool = True,
     ):
         """
         Initialize agent.
@@ -37,15 +44,26 @@ class Agent:
             action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
+            debug: Enable debug mode to save context and screenshots for each iteration (default: False)
         """
-        self.llm = llm
-        self.selector_llm = selector_llm or llm
         self.session = session
-        self.action_delay = action_delay
         self.use_screenshot = use_screenshot
+        self.debug = debug
         self.logger = logging.getLogger(__name__)
 
-        self.llm_browser = LLMBrowser(session, action_delay=action_delay, use_screenshot=use_screenshot) if session else None
+        self.typed_llm = TypedLLM(llm)
+        self.typed_selector_llm = TypedLLM(selector_llm or llm)
+
+        # Create shared browser (used by Worker for interactions, Verifier for screenshots)
+        self.agent_browser = AgentBrowser(
+            session=session,
+            use_screenshot=use_screenshot
+        )
+
+        # Create roles (reused across tasks)
+        self.planner = Planner(typed_llm=self.typed_llm, debug=debug)
+        self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug)
+        self.verifier = Verifier(typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug)
 
     async def execute(
         self,
@@ -67,47 +85,30 @@ class Agent:
         Raises:
             RuntimeError: If no session is available
         """
-        if not self.llm_browser:
+        if not self.agent_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
 
-        # Create task execution
-        task = TaskExecution(
+        # Create task definition
+        task = Task(
             description=task_description,
             resources=resources or {},
         )
 
-        # Create execution logger
-        from .execution_logger import ExecutionLogger
-        execution_logger = ExecutionLogger()
+        # Create task execution (state container)
+        task_execution = TaskExecution(task=task)
 
-        # Create planner, worker, and verifier
-        from .planner.planner import Planner
-        from .worker.worker import Worker
-        from .verifier.verifier import Verifier
-
-        planner = Planner(llm=self.llm, logger=execution_logger)
-        worker = Worker(
-            llm=self.llm,
-            llm_browser=self.llm_browser,
-            resources=task.resources,
-            logger=execution_logger,
-        )
-        verifier = Verifier(
-            llm=self.llm,
-            llm_browser=self.llm_browser,
-            logger=execution_logger,
-        )
+        # Update roles for this task
+        self.worker.set_resources(task.resources)
 
         # Create task executor
         task_executor = TaskExecutor(
-            planner=planner,
-            worker=worker,
-            verifier=verifier,
-            logger=execution_logger,
+            planner=self.planner,
+            worker=self.worker,
+            verifier=self.verifier,
         )
 
         # Run adaptive Planner→Worker→Verifier loop
-        return await task_executor.run(task, max_cycles=max_cycles)
+        return await task_executor.run(task_execution, max_cycles=max_cycles)
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """
@@ -122,7 +123,7 @@ class Agent:
         Raises:
             RuntimeError: If no session is available
         """
-        return await self.llm_browser.create_page(url)
+        return await self.agent_browser.create_page(url)
 
     async def close_page(self, page: Optional[Page] = None) -> None:
         """
@@ -131,11 +132,11 @@ class Agent:
         Args:
             page: Page to close (defaults to current page)
         """
-        await self.llm_browser.close_page(page)
+        await self.agent_browser.close_page(page)
 
     def get_current_page(self) -> Optional[Page]:
         """Get the current active page."""
-        return self.llm_browser.get_current_page()
+        return self.agent_browser.get_current_page()
 
     def get_pages(self) -> List[Page]:
         """
@@ -144,12 +145,12 @@ class Agent:
         Returns:
             List of Page instances
         """
-        return list(self.llm_browser._pages.values())
+        return self.agent_browser.get_pages()
 
     @property
     def page_count(self) -> int:
         """Number of open pages."""
-        return len(self.llm_browser._pages)
+        return self.agent_browser.page_count
 
     async def navigate(self, url: str):
         """
@@ -160,7 +161,7 @@ class Agent:
         Args:
             url: URL to navigate to
         """
-        await self.llm_browser.navigate(url)
+        await self.agent_browser.navigate(url)
 
     async def select(self, description: str):
         """
@@ -176,9 +177,7 @@ class Agent:
             RuntimeError: If no page is opened
             ValueError: If LLM fails to find a matching element
         """
-        from ..naturalselector import NaturalSelector
-
-        selector = NaturalSelector(self.selector_llm, self.llm_browser)
+        selector = NaturalSelector(self.typed_selector_llm, self.agent_browser)
         return await selector.select(description)
 
     async def wait_for_idle(self, timeout: int = 30000):
@@ -192,8 +191,7 @@ class Agent:
             RuntimeError: If no page is opened
             TimeoutError: If page doesn't become idle within timeout
         """
-        page = self.llm_browser._require_page()
-        await page.wait_for_idle(timeout=timeout)
+        await self.agent_browser.wait_for_idle(timeout=timeout)
 
     async def wait(self, seconds: float):
         """
@@ -202,8 +200,6 @@ class Agent:
         Args:
             seconds: Number of seconds to wait
         """
-        import asyncio
-
         await asyncio.sleep(seconds)
 
     async def screenshot(
@@ -222,8 +218,7 @@ class Agent:
         Raises:
             RuntimeError: If no page is opened
         """
-        page = self.llm_browser._require_page()
-        return await page.screenshot(path=path, full_page=full_page)
+        return await self.agent_browser.screenshot(path=path, full_page=full_page)
 
     def set_page(self, page: Page) -> None:
         """
@@ -234,9 +229,7 @@ class Agent:
         Args:
             page: Page instance to set as current
         """
-        if self.llm_browser is None:
-            self.llm_browser = LLMBrowser(None, self.use_screenshot)
-        self.llm_browser.set_page(page)
+        self.agent_browser.set_page(page)
 
     def set_session(self, session: Session) -> None:
         """
@@ -248,16 +241,11 @@ class Agent:
             session: Session instance for creating pages
         """
         self.session = session
-        if self.llm_browser is None:
-            self.llm_browser = LLMBrowser(session, self.use_screenshot)
-        else:
-            self.llm_browser.set_session(session)
+        self.agent_browser.set_session(session)
 
     async def close(self) -> None:
         """Close the agent and cleanup all resources."""
-        if self.llm_browser:
-            for page in list(self.llm_browser._pages.values()):
-                await self.llm_browser.close_page(page)
+        await self.agent_browser.close()
 
         if self.session:
             await self.session.close()

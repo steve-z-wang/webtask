@@ -32,9 +32,8 @@ class Block:
         self.image = image
         self.blocks: List["Block"] = []
 
-    def append(self, item: Union["Block", str]) -> "Block":
-        """
-        Append a nested block or text.
+    def with_block(self, item: Union["Block", str]) -> "Block":
+        """Add a nested block or text.
 
         Args:
             item: Block or string to append
@@ -82,12 +81,23 @@ class Context:
         self.system = system
         self.blocks: List[Block] = user if user is not None else []
 
-    def append(self, item: Union[Block, str]) -> "Context":
-        """
-        Append a block or string to user prompt.
+    def with_system(self, system: str) -> "Context":
+        """Set system prompt for this context.
 
         Args:
-            item: Block or string to append
+            system: System prompt text
+
+        Returns:
+            Self for chaining
+        """
+        self.system = system
+        return self
+
+    def with_block(self, item: Union[Block, str]) -> "Context":
+        """Add a block or string to user prompt.
+
+        Args:
+            item: Block or string to add
 
         Returns:
             Self for chaining
@@ -110,7 +120,7 @@ class Context:
         parts = [str(block) for block in self.blocks]
         return "\n\n".join(parts)
 
-    def __str__(self) -> str:
+    def to_text(self) -> str:
         """
         Get full context (system + user) as string.
 
@@ -123,3 +133,32 @@ class Context:
         if self.user:
             parts.append(f"User:\n{self.user}")
         return "\n\n".join(parts)
+
+    def get_images(self) -> List["Image"]:
+        """
+        Extract all images from context blocks.
+
+        Returns:
+            List of Image objects found in all blocks
+        """
+        images = []
+
+        def extract_images_from_block(block: Block):
+            if block.image:
+                images.append(block.image)
+            for nested_block in block.blocks:
+                extract_images_from_block(nested_block)
+
+        for block in self.blocks:
+            extract_images_from_block(block)
+
+        return images
+
+    def __str__(self) -> str:
+        """
+        Get full context (system + user) as string.
+
+        Returns:
+            Formatted context with system and user prompts
+        """
+        return self.to_text()

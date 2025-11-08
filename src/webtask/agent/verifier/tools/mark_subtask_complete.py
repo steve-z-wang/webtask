@@ -13,16 +13,13 @@ class MarkSubtaskCompleteTool(Tool):
     class Params(BaseModel):
         """Parameters for mark_subtask_complete tool."""
 
-        message: str = Field(description="Summary of what was accomplished and verification that requirements were met")
+        details: str = Field(description="Summary of what was accomplished and verification that requirements were met")
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Verification signal.
 
         Args:
             params: Validated parameters
             **kwargs: Unused
-
-        Returns:
-            Summary message
         """
-        return params.message
+        pass

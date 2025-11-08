@@ -15,16 +15,12 @@ class ClickTool(Tool):
 
         element_id: str = Field(description="ID of the element to click")
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Execute click on element.
 
         Args:
             params: Validated parameters
-            **kwargs: llm_browser injected by ToolRegistry
-
-        Returns:
-            Success message
+            **kwargs: worker_browser injected by ToolRegistry
         """
-        llm_browser = kwargs.get("llm_browser")
-        await llm_browser.click(params.element_id)
-        return f"Clicked element {params.element_id}"
+        worker_browser = kwargs.get("worker_browser")
+        await worker_browser.click(params.element_id)

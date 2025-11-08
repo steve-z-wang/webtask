@@ -1,157 +1,114 @@
 """Planner - plans next subtask based on execution history."""
 
-from typing import TYPE_CHECKING, Optional
+from pathlib import Path
 from ..tool import ToolRegistry
-from ..tool_call import ProposedIteration, Iteration, ToolCall
-from ...llm import Context, LLM, Block
-from ...utils import parse_json
-
-if TYPE_CHECKING:
-    from ..task import TaskExecution
+from ..tool_call import ProposedIteration, Iteration
+from ..subtask_queue import SubtaskQueue
+from ...llm import Context, Block
+from ...llm.typed_llm import TypedLLM
+from ...prompts import build_planner_prompt
+from .planner_session import PlannerSession
+from .tools import StartSubtaskTool
 
 
 class Planner:
-    """
-    Planner role - strategic planning at goal level.
+    """Planner role - strategic planning at goal level."""
 
-    Planner focuses on WHAT needs to be done (goals/outcomes), not HOW.
-    Plans ONE goal at a time based on execution results.
-
-    Context:
-    - Task description and goal
-    - Execution history (what succeeded/failed)
-    - Current subtask backlog
-
-    NO page access - Planner operates at strategic level.
-    Worker figures out HOW to achieve goals using page context.
-
-    Tools:
-    - add_subtask: Add next goal/outcome to achieve
-    - cancel_subtask: Remove a goal that's no longer needed
-    - start_work: Begin executing the next goal
-
-    Loops until start_work is called (usually after adding one subtask).
-    """
-
-    def __init__(self, llm: LLM, logger=None):
-        """
-        Initialize planner.
-
-        Args:
-            llm: LLM instance for generating responses
-            logger: Optional ExecutionLogger for tracking execution events
-        """
-        self._llm = llm
-        self._logger = logger
-
-        # Create and register planner tools
+    def __init__(self, typed_llm: TypedLLM, debug: bool = False):
+        self._llm = typed_llm
+        self._debug = debug
         self._tool_registry = ToolRegistry()
-        self._register_tools()
+        self._tool_registry.register(StartSubtaskTool())
 
-    def _register_tools(self) -> None:
-        """Register planner tools."""
-        from .tools import (
-            AddSubtaskTool,
-            CancelSubtaskTool,
-            StartWorkTool,
-        )
+    def _save_debug_context(self, filename: str, context: Context):
+        """Save context (text only, no images in planner) for debugging."""
+        debug_dir = Path("debug")
+        debug_dir.mkdir(exist_ok=True)
 
-        self._tool_registry.register(AddSubtaskTool())
-        self._tool_registry.register(CancelSubtaskTool())
-        self._tool_registry.register(StartWorkTool())
+        paths = {}
 
-    async def _build_context(self, session: "PlannerSession") -> Context:
+        # Save text context
+        text_path = debug_dir / f"{filename}.txt"
+        with open(text_path, "w") as f:
+            f.write(context.to_text())
+        paths["text"] = str(text_path)
+
+        return paths
+
+    def _format_verifier_decision(self, verifier_session) -> Block:
+        """Format verifier decision for planner context.
+
+        Only shows the final decision (tool call) with details, not internal reasoning.
         """
-        Build context for planner (strategic level only).
+        if not verifier_session.iterations:
+            return Block(heading="Last Verifier Decision", content="No verifier decision yet.")
 
-        Includes:
-        - Task description and goal
-        - Execution history (what happened so far)
-        - Subtask queue with status
+        # Get the last iteration's tool calls (should be the decision)
+        last_iteration = verifier_session.iterations[-1]
 
-        NO page state - Planner operates at goal level, not UI level.
-        """
-        from ...prompts import get_prompt
-        from ..context import SubtaskQueueContextBuilder
+        if not last_iteration.tool_calls:
+            return Block(heading="Last Verifier Decision", content="No decision made.")
 
-        system = get_prompt("planner_system")
+        content = ""
+        for tc in last_iteration.tool_calls:
+            status = "✓" if tc.success else "✗"
+            content += f"{status} {tc.description}\n"
 
-        queue_builder = SubtaskQueueContextBuilder(session.task.subtask_queue)
+            # Show details from tool parameters
+            details = tc.parameters.get("details") or tc.parameters.get("failure_reason")
+            if details:
+                label = "Failure reason" if tc.parameters.get("failure_reason") else "Details"
+                content += f"   {label}: {details}\n"
+            if not tc.success and tc.error:
+                content += f"   Error: {tc.error}\n"
 
-        blocks = [
-            Block(heading="Task Goal", content=session.task.description),
-            queue_builder.build_queue_context(),
-        ]
+        return Block(heading="Last Verifier Decision", content=content.strip())
 
-        return Context(system=system, user=blocks)
+    async def _build_context(self, task_description: str, subtask_queue: SubtaskQueue, iterations: list, last_verifier_session=None) -> Context:
+        context = Context() \
+            .with_system(build_planner_prompt()) \
+            .with_block(Block(heading="Task Goal", content=task_description)) \
+            .with_block(self._tool_registry.get_context()) \
+            .with_block(subtask_queue.get_context())
 
-    async def run(self, session: "PlannerSession") -> "PlannerSession":
-        """
-        Run planner until start_work is called.
+        # Add last verifier decision if available
+        if last_verifier_session:
+            verifier_decision = self._format_verifier_decision(last_verifier_session)
+            context = context.with_block(verifier_decision)
 
-        Flow:
-        1. Build context (task goal + execution history)
-        2. Loop:
-           - Call LLM for proposed iteration
-           - Validate and execute tool calls
-           - Check for start_work transition
-        3. Return PlannerSession when start_work called
+        return context
 
-        Args:
-            session: PlannerSession with config, will be filled with iterations
+    async def run(self, task_description: str, subtask_queue: SubtaskQueue, max_iterations: int = 10, session_id: int = 0, last_verifier_session=None) -> PlannerSession:
+        iterations = []
 
-        Returns:
-            The same session, now filled with iterations and decision
-        """
-        start_work_call = None
+        for i in range(max_iterations):
+            context = await self._build_context(task_description, subtask_queue, iterations, last_verifier_session)
 
-        for i in range(session.max_iterations):
-            if self._logger:
-                self._logger.log_iteration_start("Planner", i + 1)
+            # Save debug info if enabled
+            debug_paths = None
+            if self._debug:
+                debug_paths = self._save_debug_context(f"session_{session_id}_planner_iter_{i}", context)
 
-            # Build context (includes past iterations from this session)
-            context = await self._build_context(session)
+            proposed = await self._llm.generate(context, ProposedIteration)
+            tool_calls = self._tool_registry.validate_proposed_tools(proposed.tool_calls)
 
-            # Generate proposed iteration
-            response = await self._llm.generate(context, use_json=True)
-            response_dict = parse_json(response)
-            proposed = ProposedIteration.model_validate(response_dict)
-
-            # Validate upfront
-            tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls
-            )
-
-            # Create iteration (atomic pattern)
-            iteration = Iteration.from_proposed(proposed)
-
-            # Execute each tool call
             for tool_call in tool_calls:
-                await self._tool_registry.execute_tool_call(tool_call, task=session.task)
-                iteration.add_tool_call(tool_call)
-                if self._logger:
-                    self._logger.log_tool_call("Planner", tool_call)
+                await self._tool_registry.execute_tool_call(tool_call, subtask_queue=subtask_queue)
 
-            # Add to session
-            session.add_iteration(iteration)
+            iteration = Iteration(
+                observation=proposed.observation,
+                thinking=proposed.thinking,
+                tool_calls=tool_calls,
+                context=context if self._debug else None,
+                screenshot_path=None  # Planner has no screenshots
+            )
+            iterations.append(iteration)
 
-            if self._logger:
-                self._logger.log_iteration_complete("Planner", i + 1, iteration.message, len(tool_calls))
-
-            # Check for start_work transition
-            start_work_call = self._get_start_work(tool_calls)
-            if start_work_call:
+            if any(tc.tool == "start_subtask" and tc.success for tc in tool_calls):
                 break
 
-        return session
-
-    def _get_start_work(self, tool_calls) -> Optional["ToolCall"]:
-        """Get start_work tool call if present and successful.
-
-        Returns:
-            The start_work ToolCall if found, None otherwise
-        """
-        for tc in tool_calls:
-            if tc.tool == "start_work" and tc.success:
-                return tc
-        return None
+        return PlannerSession(
+            task_description=task_description,
+            max_iterations=max_iterations,
+            iterations=iterations
+        )

@@ -113,3 +113,42 @@ class ToolRegistry:
             tool_call.mark_success(result=result)
         except Exception as e:
             tool_call.mark_failure(str(e))
+
+    def get_context(self) -> Block:
+        """Get formatted context for LLM."""
+        from .tool_call import ProposedToolCall
+
+        # Get ProposedToolCall schema to show tool_call structure
+        tool_call_schema = ProposedToolCall.model_json_schema()
+
+        # Remove title for cleaner display
+        tool_call_schema.pop("title", None)
+        for prop in tool_call_schema.get("properties", {}).values():
+            prop.pop("title", None)
+
+        # Build tool schemas
+        tool_schemas = []
+        for tool in self.get_all():
+            # Get Pydantic schema from tool.Params
+            params_schema = tool.Params.model_json_schema()
+            properties = params_schema.get("properties", {})
+            required = params_schema.get("required", [])
+
+            # Remove title from properties for cleaner schema
+            for prop in properties.values():
+                prop.pop("title", None)
+
+            tool_schemas.append({
+                "tool": tool.name,
+                "description": tool.description,
+                "parameters": properties,
+                "required": required,
+            })
+
+        # Build complete schema
+        complete_schema = {
+            "tool_call_structure": tool_call_schema,
+            "available_tools": tool_schemas
+        }
+
+        return Block(heading="Available Tools", content=json.dumps(complete_schema, indent=2))

@@ -20,15 +20,11 @@ class WaitTool(Tool):
             le=10.0,
         )
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Wait for the specified duration.
 
         Args:
             params: Validated parameters
             **kwargs: Unused
-
-        Returns:
-            Success message
         """
         await asyncio.sleep(params.seconds)
-        return f"Waited for {params.seconds} seconds"

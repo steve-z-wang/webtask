@@ -13,16 +13,13 @@ class MarkTaskCompleteTool(Tool):
     class Params(BaseModel):
         """Parameters for mark_task_complete tool."""
 
-        message: str = Field(description="Summary of what was accomplished and why the task is complete")
+        details: str = Field(description="Summary of what was accomplished and why the task is complete")
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Transition signal.
 
         Args:
             params: Validated parameters
             **kwargs: Unused
-
-        Returns:
-            Summary message
         """
-        return params.message
+        pass

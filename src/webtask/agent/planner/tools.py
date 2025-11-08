@@ -8,71 +8,23 @@ if TYPE_CHECKING:
     from ..task import TaskExecution
 
 
-class AddSubtaskTool(Tool):
-    """Add subtask to end of backlog."""
+class StartSubtaskTool(Tool):
+    """Start a new subtask."""
 
-    name = "add_subtask"
-    description = "Add a new subtask to the end of the backlog"
+    name = "start_subtask"
+    description = "Start a new subtask with the given goal"
 
     class Params(BaseModel):
-        description: str = Field(description="Subtask description")
+        goal: str = Field(description="Subtask goal to achieve")
 
-    async def execute(self, params: Params, **kwargs) -> str:
-        """Append subtask to queue.
+    async def execute(self, params: Params, **kwargs) -> None:
+        """Start a new subtask.
 
         Args:
             params: Validated parameters
-            **kwargs: task injected by ToolRegistry
-
-        Returns:
-            Success message
+            **kwargs: subtask_queue injected by ToolRegistry
         """
-        task = kwargs.get("task")
-        task.subtask_queue.add(params.description)
-        return f"Added subtask: {params.description}"
+        subtask_queue = kwargs.get("subtask_queue")
 
-
-class CancelSubtaskTool(Tool):
-    """Cancel subtask at specific position."""
-
-    name = "cancel_subtask"
-    description = "Cancel a subtask at a specific position in the backlog (marks as canceled, doesn't delete)"
-
-    class Params(BaseModel):
-        index: int = Field(description="Index of subtask to cancel (0-based)")
-
-    async def execute(self, params: Params, **kwargs) -> str:
-        """Mark subtask as canceled.
-
-        Args:
-            params: Validated parameters
-            **kwargs: task injected by ToolRegistry
-
-        Returns:
-            Success message
-        """
-        task = kwargs.get("task")
-        task.subtask_queue.cancel(params.index)
-        return f"Canceled subtask at index {params.index}"
-
-
-class StartWorkTool(Tool):
-    """Signal transition to worker."""
-
-    name = "start_work"
-    description = "Signal that planning is complete and worker should begin executing subtasks"
-
-    class Params(BaseModel):
-        pass
-
-    async def execute(self, params: Params, **kwargs) -> str:
-        """Transition signal - no operation needed.
-
-        Args:
-            params: Validated parameters
-            **kwargs: Unused
-
-        Returns:
-            Success message
-        """
-        return "Starting work on subtasks"
+        # Start new subtask (moves current to history if exists)
+        subtask_queue.start_new(params.goal)

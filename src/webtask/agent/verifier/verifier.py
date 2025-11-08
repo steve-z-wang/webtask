@@ -1,177 +1,163 @@
 """Verifier role - checks if subtask succeeded and if task is complete."""
 
-from typing import Optional
+import os
+from pathlib import Path
+from typing import Optional, TYPE_CHECKING
 from ..tool import ToolRegistry
 from ..tool_call import ProposedIteration, Iteration, ToolCall
-from ..context import IterationContextBuilder, ToolContextBuilder, LLMBrowserContextBuilder
-from ...llm import LLM, Context, Block
-from ...llm_browser import LLMBrowser
-from ...utils import parse_json
+from ...llm import Context, Block
+from ...llm.typed_llm import TypedLLM
+from ...prompts import build_verifier_prompt
+from ...page_context import PageContextBuilder
+from ..worker.worker_session import WorkerSession
+from .verifier_session import VerifierSession
+from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
+from .tools.mark_subtask_failed import MarkSubtaskFailedTool
+from .tools.mark_task_complete import MarkTaskCompleteTool
+from ..worker.tools.wait import WaitTool
+
+if TYPE_CHECKING:
+    from ..agent_browser import AgentBrowser
 
 
 class Verifier:
-    """Verifier checks execution results and task completion.
+    """Verifier role - checks if subtask succeeded and if task is complete."""
 
-    Receives worker session, verifies subtask success/failure, and checks task completion.
-    """
-
-    def __init__(
-        self,
-        llm: LLM,
-        llm_browser: LLMBrowser,
-        logger=None,
-    ):
-        """Initialize Verifier.
-
-        Args:
-            llm: LLM instance for verification decisions
-            llm_browser: Browser interface for page observation
-            logger: Optional ExecutionLogger for tracking verification events
-        """
-        self._llm = llm
-        self._llm_browser = llm_browser
-        self._logger = logger
-
-        # Create and register verifier tools
+    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False):
+        self._llm = typed_llm
+        self._agent_browser = agent_browser
+        self._debug = debug
         self._tool_registry = ToolRegistry()
-        self._register_tools()
-
-    def _register_tools(self) -> None:
-        """Register all verifier tools."""
-        from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
-        from .tools.mark_subtask_failed import MarkSubtaskFailedTool
-        from .tools.mark_task_complete import MarkTaskCompleteTool
-
-        # Verification decision tools
         self._tool_registry.register(MarkSubtaskCompleteTool())
         self._tool_registry.register(MarkSubtaskFailedTool())
         self._tool_registry.register(MarkTaskCompleteTool())
+        self._tool_registry.register(WaitTool())
 
-    async def run(self, session: "VerifierSession") -> "VerifierSession":
-        """Verify subtask and check task completion.
+    def _save_debug_context(self, filename: str, context):
+        """Save context (text + images) for debugging. Returns dict with paths."""
+        debug_dir = Path("debug")
+        debug_dir.mkdir(exist_ok=True)
 
-        Args:
-            session: VerifierSession with subtask, worker results, and task context
+        paths = {}
 
-        Returns:
-            The same session, now filled with verification iterations and decisions
+        # Save text context
+        text_path = debug_dir / f"{filename}.txt"
+        with open(text_path, "w") as f:
+            f.write(context.to_text())
+        paths["text"] = str(text_path)
+
+        # Extract and save images from context
+        images = context.get_images()
+        for i, image in enumerate(images):
+            img_path = debug_dir / f"{filename}_img_{i}.png"
+            image.save(str(img_path))
+            paths[f"image_{i}"] = str(img_path)
+
+        return paths
+
+    async def _build_page_context(self) -> Block:
+        page = self._agent_browser.get_current_page()
+
+        # Wait for page to be idle after worker actions (max 5s)
+        await page.wait_for_idle(timeout=5000)
+
+        block, _ = await PageContextBuilder.build(
+            page=page,
+            include_element_ids=False,
+            with_bounding_boxes=False,
+            full_page_screenshot=False
+        )
+        return block
+
+    def _format_worker_actions(self, worker_iterations: list) -> Block:
+        """Format worker actions for verifier context.
+
+        Only shows the actions taken, not internal reasoning.
         """
+        if not worker_iterations:
+            return Block(heading="Worker Actions", content="No worker actions yet.")
+
+        content = ""
+        for i, iteration in enumerate(worker_iterations, 1):
+            content += f"\n**Iteration {i}**\n"
+            for tc in iteration.tool_calls:
+                status = "✓" if tc.success else "✗"
+                content += f"  {status} {tc.description}\n"
+                if not tc.success and tc.error:
+                    content += f"     Error: {tc.error}\n"
+
+        return Block(heading="Worker Actions", content=content.strip())
+
+    async def _build_context(
+        self,
+        task_description: str,
+        subtask_description: str,
+        worker_iterations: list,
+    ) -> Context:
+        page_context = await self._build_page_context()
+        return Context() \
+            .with_system(build_verifier_prompt()) \
+            .with_block(Block(heading="Task Goal", content=task_description)) \
+            .with_block(Block(heading="Current Subtask", content=subtask_description)) \
+            .with_block(self._format_worker_actions(worker_iterations)) \
+            .with_block(self._tool_registry.get_context()) \
+            .with_block(page_context)
+
+    async def run(
+        self,
+        task_description: str,
+        subtask_description: str,
+        worker_session: WorkerSession,
+        max_iterations: int = 3,
+        session_id: int = 0
+    ) -> VerifierSession:
         subtask_decision = None
-        task_complete_decision = None
+        task_complete = False
+        iterations = []
 
-        for i in range(session.max_iterations):
-            if self._logger:
-                self._logger.log_iteration_start("Verifier", i + 1)
-
-            # Build context (includes worker actions and current page state)
-            context = await self._build_context(session)
-
-            # LLM makes verification decisions
-            response = await self._llm.generate(context, use_json=True)
-            response_dict = parse_json(response)
-            proposed = ProposedIteration.model_validate(response_dict)
-
-            # Validate upfront
-            tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls
+        for i in range(max_iterations):
+            context = await self._build_context(
+                task_description,
+                subtask_description,
+                worker_session.iterations
             )
 
-            # Create iteration (atomic pattern)
-            iteration = Iteration.from_proposed(proposed)
+            # Save debug info if enabled
+            debug_paths = None
+            if self._debug:
+                debug_paths = self._save_debug_context(f"session_{session_id}_verifier_iter_{i}", context)
 
-            # Execute each tool call
+            proposed = await self._llm.generate(context, ProposedIteration)
+            tool_calls = self._tool_registry.validate_proposed_tools(
+                proposed.tool_calls)
+
             for tool_call in tool_calls:
                 await self._tool_registry.execute_tool_call(tool_call)
-                iteration.add_tool_call(tool_call)
-                if self._logger:
-                    self._logger.log_tool_call("Verifier", tool_call)
 
-            # Add to session
-            session.add_iteration(iteration)
+            iteration = Iteration(
+                observation=proposed.observation,
+                thinking=proposed.thinking,
+                tool_calls=tool_calls,
+                context=context if self._debug else None,
+                screenshot_path=debug_paths.get("image_0") if debug_paths else None
+            )
+            iterations.append(iteration)
 
-            if self._logger:
-                self._logger.log_iteration_complete("Verifier", i + 1, iteration.message, len(tool_calls))
+            for tc in tool_calls:
+                if tc.tool in ["mark_subtask_complete", "mark_subtask_failed"] and tc.success:
+                    subtask_decision = tc
+                if tc.tool == "mark_task_complete" and tc.success:
+                    task_complete = True
 
-            # Check for decisions
-            subtask_decision = self._get_subtask_decision(tool_calls)
-            task_complete_decision = self._get_task_complete_decision(tool_calls)
-
-            if subtask_decision:
-                # Update subtask status based on verification
-                if subtask_decision.tool == "mark_subtask_complete":
-                    session.subtask.mark_complete()
-                elif subtask_decision.tool == "mark_subtask_failed":
-                    session.subtask.mark_failed(subtask_decision.result)
-
-            if task_complete_decision:
-                # Update task completion flag
-                session.task_complete = True
-                session.task.mark_complete()
+            if task_complete or subtask_decision:
                 break
 
-            # If we have subtask decision, we're done (task may or may not be complete)
-            if subtask_decision:
-                break
-
-        # Handle max iterations without decision
-        if not subtask_decision:
-            # If task is complete but no subtask decision, assume subtask succeeded
-            if session.task_complete:
-                session.subtask.mark_complete()
-            else:
-                # Default to failure if verifier can't decide
-                session.subtask.mark_failed("Verifier could not determine subtask status")
-
-        return session
-
-    def _get_subtask_decision(self, tool_calls) -> Optional["ToolCall"]:
-        """Get subtask decision tool call if present and successful.
-
-        Returns:
-            The subtask decision ToolCall (mark_subtask_complete or mark_subtask_failed) if found, None otherwise
-        """
-        for tc in tool_calls:
-            if tc.tool in ["mark_subtask_complete", "mark_subtask_failed"] and tc.success:
-                return tc
-        return None
-
-    def _get_task_complete_decision(self, tool_calls) -> Optional["ToolCall"]:
-        """Get task completion decision tool call if present and successful.
-
-        Returns:
-            The task completion ToolCall (mark_task_complete) if found, None otherwise
-        """
-        for tc in tool_calls:
-            if tc.tool == "mark_task_complete" and tc.success:
-                return tc
-        return None
-
-    async def _build_context(self, session: "VerifierSession") -> Context:
-        """Build LLM context for verifier.
-
-        Includes:
-        - System prompt
-        - Task goal (for task completion check)
-        - Subtask description
-        - Worker iterations (what worker did)
-        - Current page state (to verify results)
-        - Available tools
-        """
-        from ...prompts import get_prompt
-
-        system_prompt = get_prompt("verifier_system")
-
-        # Create context builders
-        worker_ctx = IterationContextBuilder(session.worker_session.iterations)
-        browser_ctx = LLMBrowserContextBuilder(self._llm_browser)
-        tool_ctx = ToolContextBuilder(self._tool_registry)
-
-        blocks = [
-            Block(heading="Task Goal", content=session.task.description),
-            Block(heading="Current Subtask", content=session.subtask.description),
-            Block(heading="Worker Actions", content=worker_ctx.build_iterations_context().content),
-            await browser_ctx.build_page_context(),
-            tool_ctx.build_tools_context(),
-        ]
-
-        return Context(system=system_prompt, user=blocks)
+        return VerifierSession(
+            task_description=task_description,
+            subtask_description=subtask_description,
+            worker_session=worker_session,
+            max_iterations=max_iterations,
+            iterations=iterations,
+            task_complete=task_complete,
+            subtask_decision=subtask_decision
+        )

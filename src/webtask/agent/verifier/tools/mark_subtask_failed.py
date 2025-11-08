@@ -13,18 +13,15 @@ class MarkSubtaskFailedTool(Tool):
     class Params(BaseModel):
         """Parameters for mark_subtask_failed tool."""
 
-        reason: str = Field(
+        failure_reason: str = Field(
             description="Reason why this subtask failed and what went wrong"
         )
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Verification signal.
 
         Args:
             params: Validated parameters
             **kwargs: Unused
-
-        Returns:
-            Failure reason
         """
-        return params.reason
+        pass

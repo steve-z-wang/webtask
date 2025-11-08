@@ -16,16 +16,13 @@ class FillTool(Tool):
         element_id: str = Field(description="ID of the element to fill")
         value: str = Field(description="Value to fill into the element")
 
-    async def execute(self, params: Params, **kwargs) -> str:
+    async def execute(self, params: Params, **kwargs) -> None:
         """Execute fill on element.
 
         Args:
             params: Validated parameters
-            **kwargs: llm_browser injected by ToolRegistry
-
-        Returns:
-            Success message
+            **kwargs: worker_browser injected by ToolRegistry
         """
-        llm_browser = kwargs.get("llm_browser")
-        await llm_browser.fill(params.element_id, params.value)
-        return f"Filled element {params.element_id} with '{params.value}'"
+        worker_browser = kwargs.get("worker_browser")
+        element = await worker_browser.select(params.element_id)
+        await element.fill(params.value)

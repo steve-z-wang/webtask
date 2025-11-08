@@ -1,159 +1,143 @@
 """Worker role - executes one subtask."""
 
-from typing import Dict, Any, Optional
+import os
+from pathlib import Path
+from typing import Dict, Any, TYPE_CHECKING
 from ..tool import ToolRegistry
-from ..tool_call import ProposedIteration, Iteration, ToolCall
-from ..subtask import Subtask
-from ..context import IterationContextBuilder, ToolContextBuilder, LLMBrowserContextBuilder
-from ...llm import LLM, Context, Block
-from ...llm_browser import LLMBrowser
-from ...utils import parse_json
+from ..tool_call import ProposedIteration, Iteration
+from ...llm import Context, Block
+from ...llm.typed_llm import TypedLLM
+from ...prompts.worker_prompt import build_worker_prompt
+from ...utils.wait import wait
+from .worker_browser import WorkerBrowser
+from .worker_session import WorkerSession
+from .tools.navigate import NavigateTool
+from .tools.click import ClickTool
+from .tools.fill import FillTool
+from .tools.type import TypeTool
+from .tools.upload import UploadTool
+from .tools.wait import WaitTool
+from .tools.mark_done_working import MarkDoneWorkingTool
+
+if TYPE_CHECKING:
+    from ..agent_browser import AgentBrowser
 
 
 class Worker:
-    """Worker executes browser actions for one subtask.
+    """Worker role - executes one subtask."""
 
-    Loops until mark_done tool is called, then returns control.
-    """
+    # Small delay after each action to prevent race conditions
+    ACTION_DELAY = 0.1
 
-    def __init__(
-        self,
-        llm: LLM,
-        llm_browser: LLMBrowser,
-        resources: Dict[str, str],
-        logger=None,
-    ):
-        """Initialize Worker.
-
-        Args:
-            llm: LLM instance for generating actions
-            llm_browser: Browser interface for executing actions
-            resources: Task resources (e.g., file paths for upload)
-            logger: Optional ExecutionLogger for tracking execution events
-        """
-        self._llm = llm
-        self._llm_browser = llm_browser
-        self._resources = resources
-        self._logger = logger
-
-        # Create and register worker tools
+    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False):
+        self._llm = typed_llm
+        self.worker_browser = WorkerBrowser(agent_browser)
+        self.resources: Dict[str, Any] = {}
+        self._debug = debug
         self._tool_registry = ToolRegistry()
-        self._register_tools()
-
-    def _register_tools(self) -> None:
-        """Register all worker tools."""
-        from .tools.navigate import NavigateTool
-        from .tools.click import ClickTool
-        from .tools.fill import FillTool
-        from .tools.type import TypeTool
-        from .tools.upload import UploadTool
-        from .tools.wait import WaitTool
-        from .tools.mark_done_working import MarkDoneWorkingTool
-
-        # Browser action tools
         self._tool_registry.register(NavigateTool())
         self._tool_registry.register(ClickTool())
         self._tool_registry.register(FillTool())
         self._tool_registry.register(TypeTool())
         self._tool_registry.register(UploadTool())
         self._tool_registry.register(WaitTool())
-
-        # Completion signal tool
         self._tool_registry.register(MarkDoneWorkingTool())
 
-    async def run(self, session: "WorkerSession") -> "WorkerSession":
-        """Execute browser actions for the subtask.
+    def set_resources(self, resources: Dict[str, str]) -> None:
+        self.resources = resources
 
-        Worker executes actions and signals when done attempting.
-        Verifier will check if work succeeded.
+    def _save_debug_context(self, filename: str, context: Context):
+        """Save context (text + images) for debugging. Returns dict with paths."""
+        debug_dir = Path("debug")
+        debug_dir.mkdir(exist_ok=True)
 
-        Args:
-            session: WorkerSession with subtask and config, will be filled with iterations
+        paths = {}
 
-        Returns:
-            The same session, now filled with iterations
+        # Save text context
+        text_path = debug_dir / f"{filename}.txt"
+        with open(text_path, "w") as f:
+            f.write(context.to_text())
+        paths["text"] = str(text_path)
+
+        # Extract and save images from context
+        images = context.get_images()
+        for i, image in enumerate(images):
+            img_path = debug_dir / f"{filename}_img_{i}.png"
+            image.save(str(img_path))
+            paths[f"image_{i}"] = str(img_path)
+
+        return paths
+
+    def _format_own_iterations(self, iterations: list) -> Block:
+        """Format worker's own iterations for context (shows full observation/thinking).
+
+        Since this is the worker's own history within the same session,
+        it shows full details to help maintain continuity.
         """
-        session.subtask.mark_in_progress()
+        if not iterations:
+            return Block(heading="Current Session Iterations", content="No iterations yet in this session.")
 
-        for i in range(session.max_iterations):
-            if self._logger:
-                self._logger.log_iteration_start("Worker", i + 1)
+        content = ""
+        for i, iteration in enumerate(iterations, 1):
+            content += f"\n**Iteration {i}**\n"
+            content += f"Observation: {iteration.observation}\n"
+            content += f"Thinking: {iteration.thinking}\n"
+            content += f"Actions: {len(iteration.tool_calls)}\n"
+            for tc in iteration.tool_calls:
+                status = "✓" if tc.success else "✗"
+                content += f"  {status} {tc.description}\n"
+                if not tc.success and tc.error:
+                    content += f"     Error: {tc.error}\n"
 
-            # Build context (includes past iterations from this session)
-            context = await self._build_context(session)
+        return Block(heading="Current Session Iterations", content=content.strip())
 
-            # LLM proposes actions
-            response = await self._llm.generate(context, use_json=True)
-            response_dict = parse_json(response)
-            proposed = ProposedIteration.model_validate(response_dict)
+    async def _build_context(self, subtask_description: str, iterations: list) -> Context:
+        page_context = await self.worker_browser.get_context(
+            include_element_ids=True,
+            with_bounding_boxes=True,
+        )
+        return Context() \
+            .with_system(build_worker_prompt()) \
+            .with_block(Block(heading="Current Subtask", content=subtask_description)) \
+            .with_block(self._tool_registry.get_context()) \
+            .with_block(self._format_own_iterations(iterations)) \
+            .with_block(page_context)
 
-            # Validate upfront
+    async def run(self, subtask_description: str, max_iterations: int = 10, session_id: int = 0) -> WorkerSession:
+        iterations = []
+
+        for i in range(max_iterations):
+            context = await self._build_context(subtask_description, iterations)
+
+            # Save debug info if enabled
+            debug_paths = None
+            if self._debug:
+                debug_paths = self._save_debug_context(f"session_{session_id}_worker_iter_{i}", context)
+
+            proposed = await self._llm.generate(context, ProposedIteration)
             tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls
-            )
+                proposed.tool_calls)
 
-            # Create iteration (atomic pattern)
-            iteration = Iteration.from_proposed(proposed)
-
-            # Execute each tool call
             for tool_call in tool_calls:
                 await self._tool_registry.execute_tool_call(
-                    tool_call, llm_browser=self._llm_browser, resources=self._resources
+                    tool_call, worker_browser=self.worker_browser, resources=self.resources
                 )
-                iteration.add_tool_call(tool_call)
-                if self._logger:
-                    self._logger.log_tool_call("Worker", tool_call)
+                await wait(self.ACTION_DELAY)
 
-            # Add to session
-            session.add_iteration(iteration)
+            iteration = Iteration(
+                observation=proposed.observation,
+                thinking=proposed.thinking,
+                tool_calls=tool_calls,
+                context=context if self._debug else None,
+                screenshot_path=debug_paths.get("image_0") if debug_paths else None
+            )
+            iterations.append(iteration)
 
-            if self._logger:
-                self._logger.log_iteration_complete("Worker", i + 1, iteration.message, len(tool_calls))
-
-            # Check if worker signaled done
-            done_call = self._get_done_signal(tool_calls)
-            if done_call:
-                # Worker finished attempting - exit early
+            if any(tc.tool == "mark_done_working" and tc.success for tc in tool_calls):
                 break
 
-        # Worker finished - Verifier will decide if work succeeded
-        return session
-
-    def _get_done_signal(self, tool_calls) -> Optional["ToolCall"]:
-        """Get mark_done_working tool call if present and successful.
-
-        Returns:
-            The mark_done_working ToolCall if found, None otherwise
-        """
-        for tc in tool_calls:
-            if tc.tool == "mark_done_working" and tc.success:
-                return tc
-        return None
-
-    async def _build_context(self, session: "WorkerSession") -> Context:
-        """Build LLM context for worker.
-
-        Includes:
-        - System prompt
-        - Subtask description (self-contained)
-        - Past iterations from current session
-        - Current page state
-        - Available tools
-        """
-        from ...prompts import get_prompt
-
-        system_prompt = get_prompt("worker_system")
-
-        # Create context builders
-        iteration_ctx = IterationContextBuilder(session.iterations)
-        browser_ctx = LLMBrowserContextBuilder(self._llm_browser)
-        tool_ctx = ToolContextBuilder(self._tool_registry)
-
-        blocks = [
-            Block(heading="Current Subtask", content=session.subtask.description),
-            iteration_ctx.build_iterations_context(),
-            await browser_ctx.build_page_context(),
-            tool_ctx.build_tools_context(),
-        ]
-
-        return Context(system=system_prompt, user=blocks)
+        return WorkerSession(
+            subtask_description=subtask_description,
+            max_iterations=max_iterations,
+            iterations=iterations
+        )

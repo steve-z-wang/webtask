@@ -3,20 +3,24 @@
 from typing import Dict, Optional
 from ..browser import Page
 from ..dom.domnode import DomNode, Text
-from ..dom_processing.filters import (
-    filter_non_rendered,
-    filter_non_semantic,
-)
+from ..dom_processing.filters import filter_non_rendered, filter_non_semantic
 
 
 class DomContextBuilder:
     """Static builder for creating LLM context from DOM."""
 
     @staticmethod
-    async def build_context(page: Page) -> tuple[Optional[str], Dict[str, DomNode]]:
+    async def build_context(
+        page: Page, include_element_ids: bool = True
+    ) -> tuple[Optional[str], Dict[str, DomNode]]:
         """Build context string and element map from page.
 
         Applies all filters using knowledge functions (no configuration needed).
+
+        Args:
+            page: Page to build context from
+            include_element_ids: Whether to include element IDs in serialized output
+                                (True for Worker, False for Verifier)
 
         Returns: (context_string, element_map)
                  context_string is None if all elements filtered out
@@ -37,8 +41,11 @@ class DomContextBuilder:
         if root is None:
             return None, {}
 
+        # Always assign element IDs (needed for element_map)
         element_map = DomContextBuilder._assign_element_ids(root)
-        context_str = DomContextBuilder._serialize_context(root)
+
+        # Serialize with or without element IDs
+        context_str = DomContextBuilder._serialize_context(root, include_element_ids=include_element_ids)
 
         return context_str, element_map
 
@@ -72,21 +79,30 @@ class DomContextBuilder:
         return element_map
 
     @staticmethod
-    def _serialize_context(root: DomNode) -> str:
-        """Serialize DomNode tree to markdown format."""
+    def _serialize_context(root: DomNode, include_element_ids: bool = True) -> str:
+        """Serialize DomNode tree to markdown format.
+
+        Args:
+            root: Root node to serialize
+            include_element_ids: Whether to show element IDs (True for Worker, False for Verifier)
+        """
         lines = []
 
         def traverse(n: DomNode, depth: int = 0):
             indent = "  " * depth
 
-            element_id = n.metadata.get("element_id", n.tag)
+            # Use element_id if available and include_element_ids=True, otherwise use tag
+            if include_element_ids:
+                display_name = n.metadata.get("element_id", n.tag)
+            else:
+                display_name = n.tag
 
             attr_parts = []
             if n.attrib:
                 attr_strs = [f'{k}="{v}"' for k, v in n.attrib.items()]
                 attr_parts.append(f'({" ".join(attr_strs)})')
 
-            markdown = f"{element_id}"
+            markdown = f"{display_name}"
             if attr_parts:
                 markdown += f" {' '.join(attr_parts)}"
 

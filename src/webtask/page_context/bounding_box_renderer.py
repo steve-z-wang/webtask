@@ -3,7 +3,6 @@
 from typing import Dict
 from ..browser import Page
 from ..dom.domnode import DomNode
-from ..media import Image
 
 
 class BoundingBoxRenderer:
@@ -132,7 +131,7 @@ class BoundingBoxRenderer:
         line_width: int = 2,
         font_size: int = 12,
         full_page: bool = False,
-    ) -> Image:
+    ) -> bytes:
         """Render screenshot with bounding boxes for each element in element_map.
 
         Args:
@@ -144,7 +143,7 @@ class BoundingBoxRenderer:
             full_page: Capture full scrollable page (default: False, viewport only)
 
         Returns:
-            Image object with bounding boxes
+            Screenshot bytes with bounding boxes
         """
         # Draw boxes in browser
         draw_script = BoundingBoxRenderer._generate_draw_script(
@@ -159,7 +158,7 @@ class BoundingBoxRenderer:
         remove_script = BoundingBoxRenderer._generate_remove_script()
         await page.evaluate(remove_script)
 
-        return Image(screenshot_bytes, format="png")
+        return screenshot_bytes
 
     @staticmethod
     async def save(
@@ -180,7 +179,9 @@ class BoundingBoxRenderer:
             line_width: Border width in pixels (default: 2)
             font_size: Label font size (default: 12)
         """
-        image = await BoundingBoxRenderer.render(
+        from ..media import Image
+
+        screenshot_bytes = await BoundingBoxRenderer.render(
             page=page,
             element_map=element_map,
             color=color,
@@ -188,5 +189,5 @@ class BoundingBoxRenderer:
             font_size=font_size,
         )
 
-        # Save using Image's save method
+        image = Image(screenshot_bytes)
         image.save(output_path)
