@@ -21,7 +21,7 @@ from .llm import (
 
 from .media import Image
 
-__version__ = "0.9.6"
+__version__ = "0.10.0"
 
 __all__ = [
     # Manager
