@@ -51,7 +51,7 @@ class Planner:
 
         content = ""
         for tc in last_iteration.tool_calls:
-            status = "✓" if tc.success else "✗"
+            status = "[SUCCESS]" if tc.success else "[FAILED]"
             content += f"{status} {tc.description}\n"
 
             # Show details from tool parameters

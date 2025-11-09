@@ -84,7 +84,7 @@ class Worker:
             content += f"Thinking: {iteration.thinking}\n"
             content += f"Actions: {len(iteration.tool_calls)}\n"
             for tc in iteration.tool_calls:
-                status = "✓" if tc.success else "✗"
+                status = "[SUCCESS]" if tc.success else "[FAILED]"
                 content += f"  {status} {tc.description}\n"
                 if not tc.success and tc.error:
                     content += f"     Error: {tc.error}\n"

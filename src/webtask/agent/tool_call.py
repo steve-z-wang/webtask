@@ -70,7 +70,7 @@ class ToolCall:
 
     def __str__(self) -> str:
         """String representation for debugging."""
-        status = "✓" if self.success else "✗" if self.success is not None else "⧖"
+        status = "[SUCCESS]" if self.success else "[FAILED]" if self.success is not None else "[PENDING]"
         lines = [f"{status} {self.description}"]
         lines.append(f"   Tool: {self.tool}({', '.join(f'{k}={v}' for k, v in self.parameters.items())})")
         if not self.success and self.error:

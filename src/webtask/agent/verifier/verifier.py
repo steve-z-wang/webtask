@@ -81,7 +81,7 @@ class Verifier:
         for i, iteration in enumerate(worker_iterations, 1):
             content += f"\n**Iteration {i}**\n"
             for tc in iteration.tool_calls:
-                status = "✓" if tc.success else "✗"
+                status = "[SUCCESS]" if tc.success else "[FAILED]"
                 content += f"  {status} {tc.description}\n"
                 if not tc.success and tc.error:
                     content += f"     Error: {tc.error}\n"
