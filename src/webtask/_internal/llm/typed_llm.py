@@ -40,7 +40,7 @@ class TypedLLM:
 
             # Add image if present
             if block.image:
-                content.append(ImageContent(data=block.image.base64))
+                content.append(ImageContent(data=block.image.to_base64()))
 
             # Process nested blocks
             for nested_block in block.blocks:
