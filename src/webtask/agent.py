@@ -58,9 +58,7 @@ class Agent:
 
         # Create roles (reused across tasks)
         self.planner = Planner(typed_llm=self.typed_llm)
-        self.worker = Worker(
-            typed_llm=self.typed_llm, agent_browser=self.agent_browser
-        )
+        self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser)
         self.verifier = Verifier(
             typed_llm=self.typed_llm, agent_browser=self.agent_browser
         )

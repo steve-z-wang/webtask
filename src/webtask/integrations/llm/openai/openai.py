@@ -56,7 +56,9 @@ class OpenAILLM(LLM):
         client = AsyncOpenAI(api_key=api_key)
         return cls(client, model, temperature)
 
-    async def generate(self, system: str, content: List[Content], use_json: bool = False) -> str:
+    async def generate(
+        self, system: str, content: List[Content], use_json: bool = False
+    ) -> str:
         """
         Generate text using OpenAI API.
 
@@ -75,7 +77,9 @@ class OpenAILLM(LLM):
 
         if not has_images:
             # Text-only: join all text parts
-            user_content = "\n\n".join(part.text for part in content if isinstance(part, Text))
+            user_content = "\n\n".join(
+                part.text for part in content if isinstance(part, Text)
+            )
         else:
             # Multimodal: build content array
             user_content = []
@@ -83,10 +87,14 @@ class OpenAILLM(LLM):
                 if isinstance(part, Text):
                     user_content.append({"type": "text", "text": part.text})
                 elif isinstance(part, Image):
-                    user_content.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{part.mime_type.value};base64,{part.data}"}
-                    })
+                    user_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{part.mime_type.value};base64,{part.data}"
+                            },
+                        }
+                    )
 
         self.logger.debug(
             f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}, "

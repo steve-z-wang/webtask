@@ -23,9 +23,7 @@ if TYPE_CHECKING:
 class Verifier:
     """Verifier role - checks if subtask succeeded and if task is complete."""
 
-    def __init__(
-        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"
-    ):
+    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
         self._llm = typed_llm
         self._agent_browser = agent_browser
         self._tool_registry = ToolRegistry()
@@ -126,9 +124,8 @@ class Verifier:
             )
 
             # Save debug info if enabled
-            debug_paths = None
             if Config().is_debug_enabled():
-                debug_paths = self._save_debug_context(
+                self._save_debug_context(
                     f"session_{session_number}_verifier_iter_{iteration_number}",
                     context,
                 )

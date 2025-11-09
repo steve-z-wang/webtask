@@ -13,7 +13,9 @@ class LLM(ABC):
         self.logger = logging.getLogger(__name__)
 
     @abstractmethod
-    async def generate(self, system: str, content: List[Content], use_json: bool = False) -> str:
+    async def generate(
+        self, system: str, content: List[Content], use_json: bool = False
+    ) -> str:
         """Generate text response from system prompt and content.
 
         Args:

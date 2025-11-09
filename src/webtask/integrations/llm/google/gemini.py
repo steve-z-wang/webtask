@@ -1,6 +1,6 @@
 """Google Gemini LLM implementation."""
 
-from typing import Optional, List, Any
+from typing import Optional, List
 import google.generativeai as genai
 from ....llm import LLM, Content, Text, Image
 
@@ -67,7 +67,9 @@ class GeminiLLM(LLM):
 
         return cls(gemini_model, model, temperature)
 
-    async def generate(self, system: str, content: List[Content], use_json: bool = False) -> str:
+    async def generate(
+        self, system: str, content: List[Content], use_json: bool = False
+    ) -> str:
         """
         Generate text using Gemini API.
 
@@ -92,7 +94,9 @@ class GeminiLLM(LLM):
 
         if not has_images:
             # Text-only: combine system + all text parts
-            text_parts = [system] + [part.text for part in content if isinstance(part, Text)]
+            text_parts = [system] + [
+                part.text for part in content if isinstance(part, Text)
+            ]
             gemini_content = "\n\n".join(text_parts)
         else:
             # Multimodal: build content array with PIL Images

@@ -29,9 +29,7 @@ class Worker:
     # Small delay after each action to prevent race conditions
     ACTION_DELAY = 0.1
 
-    def __init__(
-        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"
-    ):
+    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
         self._llm = typed_llm
         self.worker_browser = WorkerBrowser(agent_browser)
         self.resources: Dict[str, Any] = {}
@@ -122,9 +120,8 @@ class Worker:
             context = await self._build_context(subtask_description, iterations)
 
             # Save debug info if enabled
-            debug_paths = None
             if Config().is_debug_enabled():
-                debug_paths = self._save_debug_context(
+                self._save_debug_context(
                     f"session_{session_number}_worker_iter_{iteration_number}", context
                 )
 
