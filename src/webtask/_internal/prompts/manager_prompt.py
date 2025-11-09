@@ -41,7 +41,12 @@ def build_manager_prompt() -> str:
         .add()
         .add("**How many subtasks should you plan at once?**")
         .add(
-            "Plan ONE subtask at a time. Wait for the current subtask to complete before planning the next one."
+            "You can plan MULTIPLE subtasks when the steps are clear and independent. Use add_subtask for each subtask, then call start_subtask to begin execution. This is more efficient than planning one at a time."
+        )
+        .add()
+        .add("**When should you cancel pending subtasks?**")
+        .add(
+            "Use cancel_pending_subtasks when you see REQUESTED_RESCHEDULE feedback that invalidates your current plan. Then create a new plan with add_subtask."
         )
         .add()
         .add("**What makes a good subtask goal?**")
@@ -58,13 +63,13 @@ def build_manager_prompt() -> str:
         .add_bullet(
             "observation: What you see in the subtask queue and verifier feedback"
         )
-        .add_bullet("thinking: Your reasoning about what subtask to create next")
+        .add_bullet("thinking: Your reasoning about what subtasks to create")
         .add_bullet(
             "tool_calls: Actions to take (each has description, tool, parameters)"
         )
         .add()
         .add(
-            'Example: {"observation": "No subtasks yet", "thinking": "Need to add first item", "tool_calls": [{"description": "Started subtask to add screws", "tool": "start_subtask", "parameters": {"goal": "add 2 screws"}}]}'
+            'Example: {"observation": "No subtasks yet", "thinking": "Need to add 3 items to cart", "tool_calls": [{"description": "Add subtask for screws", "tool": "add_subtask", "parameters": {"goal": "Add 2 screws to cart"}}, {"description": "Add subtask for nails", "tool": "add_subtask", "parameters": {"goal": "Add 1 box of nails to cart"}}, {"description": "Start executing subtasks", "tool": "start_subtask", "parameters": {}}]}'
         )
     )
 

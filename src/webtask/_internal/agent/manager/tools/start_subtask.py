@@ -1,7 +1,7 @@
-"""Start subtask tool for Manager."""
+"""Start subtask execution tool for Manager."""
 
 from typing import TYPE_CHECKING
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from ...tool import Tool
 
 if TYPE_CHECKING:
@@ -9,22 +9,19 @@ if TYPE_CHECKING:
 
 
 class StartSubtaskTool(Tool):
-    """Start a new subtask."""
+    """Signal to start executing the pending subtasks."""
 
     name = "start_subtask"
-    description = "Start a new subtask with the given goal"
+    description = "Signal that the pending subtask queue is ready for execution"
 
     class Params(BaseModel):
-        goal: str = Field(description="Subtask goal to achieve")
+        pass
 
     async def execute(self, params: Params, **kwargs) -> None:
-        """Start a new subtask.
+        """Signal to start execution.
 
         Args:
-            params: Validated parameters
-            **kwargs: subtask_queue injected by ToolRegistry
+            params: Validated parameters (empty)
+            **kwargs: Unused
         """
-        subtask_queue = kwargs.get("subtask_queue")
-
-        # Start new subtask (moves current to history if exists)
-        subtask_queue.start_new(params.goal)
+        pass

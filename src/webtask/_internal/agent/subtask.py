@@ -9,11 +9,10 @@ from enum import Enum
 class SubtaskStatus(str, Enum):
     """Status of a subtask."""
 
-    PENDING = "pending"
+    ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
     COMPLETE = "complete"
-    FAILED = "failed"
-    CANCELED = "canceled"
+    REQUESTED_RESCHEDULE = "requested_reschedule"
 
 
 @dataclass
@@ -21,47 +20,47 @@ class Subtask:
     """
     Subtask metadata.
 
-    Created by Scheduler, executed by Worker, verified by Verifier.
+    Created by Manager, executed by Worker, verified by Verifier.
     History is tracked at Task level (linear).
     """
 
     description: str
     """Goal for this subtask."""
 
-    status: SubtaskStatus = SubtaskStatus.PENDING
+    status: SubtaskStatus = SubtaskStatus.ASSIGNED
     """Current status of the subtask."""
 
-    failure_reason: Optional[str] = None
-    """Reason for failure (if status is FAILED)."""
+    feedback: Optional[str] = None
+    """Feedback provided when marked complete or requested_reschedule."""
 
     created_at: datetime = field(default_factory=datetime.now)
     """When this subtask was created."""
 
     completed_at: Optional[datetime] = None
-    """When this subtask was marked complete or failed."""
+    """When this subtask was marked complete or requested_reschedule."""
 
     def mark_in_progress(self) -> None:
         """Mark subtask as in progress."""
         self.status = SubtaskStatus.IN_PROGRESS
 
-    def mark_complete(self) -> None:
-        """Mark subtask as complete."""
-        self.status = SubtaskStatus.COMPLETE
-        self.completed_at = datetime.now()
-
-    def mark_failed(self, reason: str) -> None:
-        """Mark subtask as failed.
+    def mark_complete(self, feedback: str) -> None:
+        """Mark subtask as complete.
 
         Args:
-            reason: Reason why the subtask failed
+            feedback: Feedback about what was accomplished
         """
-        self.status = SubtaskStatus.FAILED
-        self.failure_reason = reason
+        self.status = SubtaskStatus.COMPLETE
+        self.feedback = feedback
         self.completed_at = datetime.now()
 
-    def mark_canceled(self) -> None:
-        """Mark subtask as canceled."""
-        self.status = SubtaskStatus.CANCELED
+    def mark_requested_reschedule(self, feedback: str) -> None:
+        """Mark subtask as requesting reschedule from Manager.
+
+        Args:
+            feedback: Explanation of why reschedule is needed
+        """
+        self.status = SubtaskStatus.REQUESTED_RESCHEDULE
+        self.feedback = feedback
         self.completed_at = datetime.now()
 
     @property
@@ -70,26 +69,30 @@ class Subtask:
         return self.status == SubtaskStatus.COMPLETE
 
     @property
-    def is_pending(self) -> bool:
-        """Check if subtask is pending."""
-        return self.status == SubtaskStatus.PENDING
+    def is_assigned(self) -> bool:
+        """Check if subtask is assigned."""
+        return self.status == SubtaskStatus.ASSIGNED
 
     @property
     def is_in_progress(self) -> bool:
         """Check if subtask is in progress."""
         return self.status == SubtaskStatus.IN_PROGRESS
 
+    @property
+    def is_requested_reschedule(self) -> bool:
+        """Check if subtask has requested reschedule."""
+        return self.status == SubtaskStatus.REQUESTED_RESCHEDULE
+
     def __str__(self) -> str:
         """Format subtask for human-readable output."""
         status_emoji = {
-            SubtaskStatus.PENDING: "⏳",
+            SubtaskStatus.ASSIGNED: "📋",
             SubtaskStatus.IN_PROGRESS: "🔄",
             SubtaskStatus.COMPLETE: "✅",
-            SubtaskStatus.FAILED: "❌",
-            SubtaskStatus.CANCELED: "🚫",
+            SubtaskStatus.REQUESTED_RESCHEDULE: "⚠️",
         }
         emoji = status_emoji.get(self.status, "")
         result = f"{emoji} {self.description} [{self.status.value}]"
-        if self.status == SubtaskStatus.FAILED and self.failure_reason:
-            result += f" - {self.failure_reason}"
+        if self.feedback:
+            result += f" - {self.feedback}"
         return result

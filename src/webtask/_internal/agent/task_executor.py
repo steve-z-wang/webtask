@@ -18,6 +18,7 @@ class TaskExecutor:
         last_verifier_session = None
 
         for cycle in range(max_cycles):
+            # Manager plans subtasks
             manager_session = await self._manager.run(
                 task_description=task.task.description,
                 subtask_queue=task.subtask_queue,
@@ -38,49 +39,60 @@ class TaskExecutor:
                 task.mark_complete()
                 return task
 
-            current_subtask = task.subtask_queue.get_current()
-            if current_subtask is None:
-                break
+            # Process pending subtasks until queue is empty or reschedule requested
+            while task.subtask_queue.has_pending():
+                # Pop next pending subtask
+                current_subtask = task.subtask_queue.pop_next_pending()
+                if current_subtask is None:
+                    break
 
-            # Skip if subtask already completed or failed
-            from .subtask import SubtaskStatus
+                # Mark current subtask as in progress
+                current_subtask.mark_in_progress()
 
-            if current_subtask.status in [SubtaskStatus.COMPLETE, SubtaskStatus.FAILED]:
-                break
-
-            # Mark current subtask as in progress
-            current_subtask.mark_in_progress()
-            worker_session = await self._worker.run(
-                subtask_description=current_subtask.description,
-                max_iterations=10,
-                session_id=session_counter,
-            )
-            task.add_session(worker_session)
-            session_counter += 1
-
-            verifier_session = await self._verifier.run(
-                task_description=task.task.description,
-                subtask_description=current_subtask.description,
-                worker_session=worker_session,
-                max_iterations=3,
-                session_id=session_counter,
-            )
-            task.add_session(verifier_session)
-            session_counter += 1
-
-            # Store for next manager iteration
-            last_verifier_session = verifier_session
-
-            if verifier_session.subtask_decision:
-                if verifier_session.subtask_decision.tool == "mark_subtask_complete":
-                    task.subtask_queue.mark_current_complete()
-                elif verifier_session.subtask_decision.tool == "mark_subtask_failed":
-                    task.subtask_queue.mark_current_failed(
-                        verifier_session.subtask_decision.result
-                    )
-            else:
-                task.subtask_queue.mark_current_failed(
-                    "Verifier could not determine subtask status"
+                # Worker executes subtask
+                worker_session = await self._worker.run(
+                    subtask_description=current_subtask.description,
+                    max_iterations=10,
+                    session_id=session_counter,
                 )
+                task.add_session(worker_session)
+                session_counter += 1
+
+                # Verifier checks subtask
+                verifier_session = await self._verifier.run(
+                    task_description=task.task.description,
+                    subtask_description=current_subtask.description,
+                    worker_session=worker_session,
+                    max_iterations=3,
+                    session_id=session_counter,
+                )
+                task.add_session(verifier_session)
+                session_counter += 1
+
+                # Store for next manager iteration
+                last_verifier_session = verifier_session
+
+                # Handle verifier decision
+                if verifier_session.subtask_decision:
+                    if verifier_session.subtask_decision.tool == "complete_subtask":
+                        feedback = verifier_session.subtask_decision.parameters.get(
+                            "feedback", ""
+                        )
+                        task.subtask_queue.mark_current_complete(feedback)
+                    elif (
+                        verifier_session.subtask_decision.tool == "request_reschedule"
+                    ):
+                        feedback = verifier_session.subtask_decision.parameters.get(
+                            "feedback", ""
+                        )
+                        task.subtask_queue.mark_current_requested_reschedule(feedback)
+                        # Break to return to Manager for replanning
+                        break
+                else:
+                    # Verifier didn't make a decision - mark as requested reschedule
+                    task.subtask_queue.mark_current_requested_reschedule(
+                        "Verifier could not determine subtask status"
+                    )
+                    break
 
         return task

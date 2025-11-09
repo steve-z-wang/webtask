@@ -11,8 +11,8 @@ from ...prompts import build_verifier_prompt
 from ...page_context import PageContextBuilder
 from ..worker.worker_session import WorkerSession
 from .verifier_session import VerifierSession
-from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
-from .tools.mark_subtask_failed import MarkSubtaskFailedTool
+from .tools.complete_subtask import CompleteSubtaskTool
+from .tools.request_reschedule import RequestRescheduleTool
 from ..worker.tools.wait import WaitTool
 
 if TYPE_CHECKING:
@@ -26,8 +26,8 @@ class Verifier:
         self._llm = typed_llm
         self._agent_browser = agent_browser
         self._tool_registry = ToolRegistry()
-        self._tool_registry.register(MarkSubtaskCompleteTool())
-        self._tool_registry.register(MarkSubtaskFailedTool())
+        self._tool_registry.register(CompleteSubtaskTool())
+        self._tool_registry.register(RequestRescheduleTool())
         self._tool_registry.register(WaitTool())
 
     def _save_debug_context(self, filename: str, context):
@@ -145,7 +145,7 @@ class Verifier:
 
             for tc in tool_calls:
                 if (
-                    tc.tool in ["mark_subtask_complete", "mark_subtask_failed"]
+                    tc.tool in ["complete_subtask", "request_reschedule"]
                     and tc.success
                 ):
                     subtask_decision = tc

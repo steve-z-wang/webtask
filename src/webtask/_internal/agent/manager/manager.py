@@ -9,7 +9,12 @@ from webtask._internal.llm import TypedLLM
 from webtask._internal.config import Config
 from ...prompts import build_manager_prompt
 from .manager_session import ManagerSession
-from .tools import StartSubtaskTool, MarkTaskCompleteTool
+from .tools import (
+    AddSubtaskTool,
+    CancelPendingSubtasksTool,
+    StartSubtaskTool,
+    MarkTaskCompleteTool,
+)
 
 
 class Manager:
@@ -18,6 +23,8 @@ class Manager:
     def __init__(self, typed_llm: TypedLLM):
         self._llm = typed_llm
         self._tool_registry = ToolRegistry()
+        self._tool_registry.register(AddSubtaskTool())
+        self._tool_registry.register(CancelPendingSubtasksTool())
         self._tool_registry.register(StartSubtaskTool())
         self._tool_registry.register(MarkTaskCompleteTool())
 
@@ -136,7 +143,12 @@ class Manager:
             )
             iterations.append(iteration)
 
-            if any(tc.tool == "start_subtask" and tc.success for tc in tool_calls):
+            # Break when start_subtask is called (signals ready to execute)
+            # or when mark_task_complete is called
+            if any(
+                tc.tool in ["start_subtask", "mark_task_complete"] and tc.success
+                for tc in tool_calls
+            ):
                 break
 
         return ManagerSession(

@@ -19,8 +19,8 @@ def build_verifier_prompt() -> str:
         .add_heading("How to Verify")
         .add_numbered("Review worker actions")
         .add_numbered("Observe current page state")
-        .add_numbered("Check if subtask succeeded or failed")
-        .add_numbered("Make decision (mark_subtask_complete or mark_subtask_failed)")
+        .add_numbered("Check if subtask succeeded or needs reschedule")
+        .add_numbered("Make decision (complete_subtask or request_reschedule)")
     )
 
     # Q&A section
@@ -34,7 +34,12 @@ def build_verifier_prompt() -> str:
         .add()
         .add("**What should you do if the page appears incomplete or still loading?**")
         .add(
-            "Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't fail a subtask just because the page is still loading - only mark as failed if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur."
+            "Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't request reschedule just because the page is still loading - only request reschedule if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur."
+        )
+        .add()
+        .add("**When should you use complete_subtask vs request_reschedule?**")
+        .add(
+            "Use complete_subtask when the subtask goal was achieved. Use request_reschedule when the subtask failed, wrong approach was taken, or there's a blocker that requires Manager to replan."
         )
     )
 
@@ -52,7 +57,7 @@ def build_verifier_prompt() -> str:
         )
         .add()
         .add(
-            'Example: {"observation": "Cart shows 2 items", "thinking": "Worker successfully added items", "tool_calls": [{"description": "Marked subtask complete", "tool": "mark_subtask_complete", "parameters": {"details": "Added 2 items to cart"}}]}'
+            'Example: {"observation": "Cart shows 2 items", "thinking": "Worker successfully added items", "tool_calls": [{"description": "Subtask completed successfully", "tool": "complete_subtask", "parameters": {"feedback": "Successfully added 2 items to cart"}}]}'
         )
     )
 
