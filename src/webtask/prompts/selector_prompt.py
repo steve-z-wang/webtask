@@ -32,7 +32,7 @@ def build_selector_prompt() -> str:
         .add_bullet("reasoning: Your reasoning for why this element matches")
         .add_bullet("error: Error message if no matching element found (leave empty if match found)")
         .add()
-        .add('Example: {"element_id": "button-2", "reasoning": "This button has text \\'Submit\\' which matches the description", "error": ""}')
+        .add('Example: {"element_id": "button-2", "reasoning": "This button has text Submit which matches the description", "error": ""}')
     )
 
     # Combine all sections
