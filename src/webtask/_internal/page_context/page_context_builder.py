@@ -2,7 +2,7 @@
 
 from typing import Dict, Optional, Tuple
 from webtask._internal.llm import Block
-from webtask.media import Image
+from webtask._internal.media import Image
 from webtask.browser import Page
 from .dom_context_builder import DomContextBuilder
 

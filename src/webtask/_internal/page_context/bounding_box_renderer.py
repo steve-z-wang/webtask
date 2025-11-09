@@ -179,7 +179,7 @@ class BoundingBoxRenderer:
             line_width: Border width in pixels (default: 2)
             font_size: Label font size (default: 12)
         """
-        from webtask.media import Image
+        from webtask._internal.media import Image
 
         screenshot_bytes = await BoundingBoxRenderer.render(
             page=page,

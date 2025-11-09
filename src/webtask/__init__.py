@@ -16,8 +16,6 @@ from .llm import (
     Content,
 )
 
-from .media import Image
-
 __version__ = "0.11.0"
 
 __all__ = [
@@ -34,6 +32,4 @@ __all__ = [
     "LLM",
     "Text",
     "Content",
-    # Media
-    "Image",
 ]
