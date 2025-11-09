@@ -1,9 +1,9 @@
-# Scheduler-Worker-Verifier Architecture Design
+# Planner-Worker-Verifier Architecture Design
 
 ## Overview
 
 The new architecture uses three independent roles that communicate through tool calls:
-- **Scheduler**: Plans work at a high level (no page access)
+- **Planner**: Plans work at a high level (no page access)
 - **Worker**: Executes browser actions (full page access)
 - **Verifier**: Checks completion and decides next steps (full page access)
 
@@ -15,14 +15,14 @@ Each role:
 
 ---
 
-## Scheduler
+## Planner
 
 ### Purpose
 Plans work at a high level without seeing the actual webpage. Can queue multiple work assignments when the task is clear.
 
-### Context (what Scheduler sees)
+### Context (what Planner sees)
 - Task description (original user goal)
-- Execution history (previous scheduler→worker→verifier cycles)
+- Execution history (previous planner→worker→verifier cycles)
 - Available resources (files for upload, etc.)
 - Current work queue status
 - **NO page context** (cannot see webpage)
@@ -42,27 +42,27 @@ Plans work at a high level without seeing the actual webpage. Can queue multiple
 # Task: "Book a flight from NYC to LA"
 
 # Initial planning
-Scheduler: set_subtasks([
+Planner: set_subtasks([
     "Find available flights from NYC to LA",
     "Select the cheapest flight under $400",
     "Complete booking form with passenger details"
 ])
-Scheduler: start_work()  # Transitions to Worker
+Planner: start_work()  # Transitions to Worker
 
 # Later, after verifier requests reschedule
-# Scheduler sees: "Flights found but dates wrong"
+# Planner sees: "Flights found but dates wrong"
 
-Scheduler: set_subtasks([
+Planner: set_subtasks([
     "Fix the departure date to next week",
     "Search again for flights",
     "Select the cheapest flight under $400",
     "Complete booking"
 ])
-Scheduler: start_work()  # Transitions to Worker with updated plan
+Planner: start_work()  # Transitions to Worker with updated plan
 
 # Or just add one more subtask
-Scheduler: add_subtask("Verify confirmation email received")
-Scheduler: start_work()
+Planner: add_subtask("Verify confirmation email received")
+Planner: start_work()
 ```
 
 ### Return Type

@@ -21,7 +21,7 @@ async def main():
     llm = GeminiLLM.create(model="gemini-2.5-flash")
 
     # Create agent with screenshot support (enabled by default)
-    agent = await wt.create_agent(llm=llm, action_delay=1.0)
+    agent = await wt.create_agent(llm=llm)
 
     # Execute a task
     result = await agent.execute("Go to google.com and search for 'cats'")
@@ -47,13 +47,6 @@ wt = Webtask(headless=False)
 
 # Hide browser (good for production)
 wt = Webtask(headless=True)
-```
-
-### Action Delay
-
-```python
-# Add delay between actions (seconds)
-agent = await wt.create_agent(llm=llm, action_delay=1.5)
 ```
 
 ### Screenshot Mode
