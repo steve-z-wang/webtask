@@ -6,6 +6,7 @@ from ..tool_call import ProposedIteration, Iteration
 from ..subtask_queue import SubtaskQueue
 from webtask.llm import Context, Block
 from webtask._internal.llm import TypedLLM
+from webtask._internal.config import Config
 from ...prompts import build_planner_prompt
 from .planner_session import PlannerSession
 from .tools import StartSubtaskTool
@@ -14,16 +15,15 @@ from .tools import StartSubtaskTool
 class Planner:
     """Planner role - strategic planning at goal level."""
 
-    def __init__(self, typed_llm: TypedLLM, debug: bool = False):
+    def __init__(self, typed_llm: TypedLLM):
         self._llm = typed_llm
-        self._debug = debug
         self._tool_registry = ToolRegistry()
         self._tool_registry.register(StartSubtaskTool())
 
     def _save_debug_context(self, filename: str, context: Context):
         """Save context (text only, no images in planner) for debugging."""
-        debug_dir = Path("debug")
-        debug_dir.mkdir(exist_ok=True)
+        debug_dir = Path(Config().get_debug_dir())
+        debug_dir.mkdir(parents=True, exist_ok=True)
 
         paths = {}
 
@@ -112,7 +112,7 @@ class Planner:
             )
 
             # Save debug info if enabled
-            if self._debug:
+            if Config().is_debug_enabled():
                 self._save_debug_context(
                     f"session_{session_number}_planner_iter_{iteration_number}", context
                 )
@@ -132,8 +132,6 @@ class Planner:
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
-                context=context if self._debug else None,
-                screenshot_path=None,  # Planner has no screenshots
             )
             iterations.append(iteration)
 

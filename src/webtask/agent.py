@@ -33,7 +33,6 @@ class Agent:
         action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
-        debug: bool = True,
     ):
         """
         Initialize agent.
@@ -44,11 +43,9 @@ class Agent:
             action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
-            debug: Enable debug mode to save context and screenshots for each iteration (default: False)
         """
         self.session = session
         self.use_screenshot = use_screenshot
-        self.debug = debug
         self.logger = logging.getLogger(__name__)
 
         self.typed_llm = TypedLLM(llm)
@@ -60,12 +57,12 @@ class Agent:
         )
 
         # Create roles (reused across tasks)
-        self.planner = Planner(typed_llm=self.typed_llm, debug=debug)
+        self.planner = Planner(typed_llm=self.typed_llm)
         self.worker = Worker(
-            typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug
+            typed_llm=self.typed_llm, agent_browser=self.agent_browser
         )
         self.verifier = Verifier(
-            typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug
+            typed_llm=self.typed_llm, agent_browser=self.agent_browser
         )
 
     async def execute(

@@ -6,6 +6,7 @@ from ..tool import ToolRegistry
 from ..tool_call import ProposedIteration, Iteration
 from webtask.llm import Context, Block
 from webtask._internal.llm import TypedLLM
+from webtask._internal.config import Config
 from ...prompts.worker_prompt import build_worker_prompt
 from webtask.utils.wait import wait
 from .worker_browser import WorkerBrowser
@@ -29,12 +30,11 @@ class Worker:
     ACTION_DELAY = 0.1
 
     def __init__(
-        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False
+        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"
     ):
         self._llm = typed_llm
         self.worker_browser = WorkerBrowser(agent_browser)
         self.resources: Dict[str, Any] = {}
-        self._debug = debug
         self._tool_registry = ToolRegistry()
         self._tool_registry.register(NavigateTool())
         self._tool_registry.register(ClickTool())
@@ -49,8 +49,8 @@ class Worker:
 
     def _save_debug_context(self, filename: str, context: Context):
         """Save context (text + images) for debugging. Returns dict with paths."""
-        debug_dir = Path("debug")
-        debug_dir.mkdir(exist_ok=True)
+        debug_dir = Path(Config().get_debug_dir())
+        debug_dir.mkdir(parents=True, exist_ok=True)
 
         paths = {}
 
@@ -123,7 +123,7 @@ class Worker:
 
             # Save debug info if enabled
             debug_paths = None
-            if self._debug:
+            if Config().is_debug_enabled():
                 debug_paths = self._save_debug_context(
                     f"session_{session_number}_worker_iter_{iteration_number}", context
                 )
@@ -146,8 +146,6 @@ class Worker:
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
-                context=context if self._debug else None,
-                screenshot_path=debug_paths.get("image_0") if debug_paths else None,
             )
             iterations.append(iteration)
 

@@ -110,8 +110,6 @@ class Iteration:
 
     Tracks what happened in one iteration of a role's loop.
     Tool calls are added progressively as they execute.
-
-    Optional debug fields (context, screenshot) can be populated for debugging.
     """
 
     iteration_number: int  # 1-indexed iteration number
@@ -119,10 +117,6 @@ class Iteration:
     thinking: str
     tool_calls: List[ToolCall] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
-
-    # Optional debug fields (populated when debug mode is enabled)
-    context: Optional[Any] = None  # Full Context sent to LLM
-    screenshot_path: Optional[str] = None  # Path to saved screenshot
 
     @classmethod
     def from_proposed(cls, proposed: ProposedIteration) -> "Iteration":
