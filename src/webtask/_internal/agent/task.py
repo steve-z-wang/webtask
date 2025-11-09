@@ -3,6 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Union, TYPE_CHECKING
+from enum import Enum
 
 if TYPE_CHECKING:
     from .planner.planner_session import PlannerSession
@@ -10,6 +11,14 @@ if TYPE_CHECKING:
     from .verifier.verifier_session import VerifierSession
 
 from .subtask_queue import SubtaskQueue
+
+
+class TaskStatus(str, Enum):
+    """Status of a task execution."""
+
+    IN_PROGRESS = "in_progress"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
 
 
 @dataclass
@@ -24,7 +33,7 @@ class Task:
 class TaskExecution:
     """Record of task execution - output from TaskExecutor.
 
-    Contains the original task, execution history, subtask queue state, and completion status.
+    Contains the original task, execution history, subtask queue state, and status.
     """
 
     task: Task
@@ -32,7 +41,8 @@ class TaskExecution:
         default_factory=list
     )
     subtask_queue: SubtaskQueue = field(default_factory=SubtaskQueue)
-    complete: bool = False
+    status: TaskStatus = TaskStatus.IN_PROGRESS
+    failure_reason: str | None = None
 
     def add_session(
         self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]
@@ -41,8 +51,17 @@ class TaskExecution:
         self.history.append(session)
 
     def mark_complete(self) -> None:
-        """Mark task as complete."""
-        self.complete = True
+        """Mark task as succeeded."""
+        self.status = TaskStatus.SUCCEEDED
+
+    def mark_failed(self, reason: str) -> None:
+        """Mark task as failed.
+
+        Args:
+            reason: Explanation of why the task failed
+        """
+        self.status = TaskStatus.FAILED
+        self.failure_reason = reason
 
     def __str__(self) -> str:
         """Return formatted string representation for debugging."""
@@ -51,7 +70,9 @@ class TaskExecution:
         lines.append("TASK EXECUTION")
         lines.append("=" * 80)
         lines.append(f"Task: {self.task.description}")
-        lines.append(f"Complete: {self.complete}")
+        lines.append(f"Status: {self.status.value}")
+        if self.status == TaskStatus.FAILED and self.failure_reason:
+            lines.append(f"Failure Reason: {self.failure_reason}")
         lines.append("")
 
         # Show subtask queue

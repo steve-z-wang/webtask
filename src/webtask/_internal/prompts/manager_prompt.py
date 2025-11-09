@@ -34,6 +34,11 @@ def build_manager_prompt() -> str:
             "Use mark_task_complete when ALL requirements of the task goal are satisfied. Review the verifier feedback to confirm all subtasks succeeded."
         )
         .add()
+        .add("**When should you mark the task as failed?**")
+        .add(
+            "Use mark_task_failed when the task cannot be completed due to conditions beyond control: website unavailable, required item doesn't exist, missing authentication, permanent errors (404, 403), or impossible prerequisites. Don't fail for temporary issues that can be retried."
+        )
+        .add()
         .add("**What should subtask goals focus on?**")
         .add(
             "Focus on WHAT needs to happen, not HOW. Define clear, verifiable goals that the Worker can understand and the Verifier can check."

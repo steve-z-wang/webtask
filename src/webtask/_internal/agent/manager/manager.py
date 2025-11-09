@@ -14,6 +14,7 @@ from .tools import (
     CancelPendingSubtasksTool,
     StartSubtaskTool,
     MarkTaskCompleteTool,
+    MarkTaskFailedTool,
 )
 
 
@@ -27,6 +28,7 @@ class Manager:
         self._tool_registry.register(CancelPendingSubtasksTool())
         self._tool_registry.register(StartSubtaskTool())
         self._tool_registry.register(MarkTaskCompleteTool())
+        self._tool_registry.register(MarkTaskFailedTool())
 
     def _save_debug_context(self, filename: str, context: Context):
         """Save context (text only, no images in manager) for debugging."""
@@ -144,9 +146,10 @@ class Manager:
             iterations.append(iteration)
 
             # Break when start_subtask is called (signals ready to execute)
-            # or when mark_task_complete is called
+            # or when mark_task_complete/mark_task_failed is called
             if any(
-                tc.tool in ["start_subtask", "mark_task_complete"] and tc.success
+                tc.tool in ["start_subtask", "mark_task_complete", "mark_task_failed"]
+                and tc.success
                 for tc in tool_calls
             ):
                 break
