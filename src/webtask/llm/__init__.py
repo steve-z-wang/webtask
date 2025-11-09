@@ -1,10 +1,12 @@
-"""LLM module - Context management and LLM base classes."""
+"""LLM module - LLM base class and content types."""
 
-from .context import Context, Block
 from .llm import LLM
+from .content import Text, Image, Content, ImageType
 
 __all__ = [
-    "Context",
-    "Block",
     "LLM",
+    "Text",
+    "Image",
+    "Content",
+    "ImageType",
 ]

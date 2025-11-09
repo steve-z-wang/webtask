@@ -2,7 +2,8 @@
 
 import logging
 from abc import ABC, abstractmethod
-from .context import Context
+from typing import List
+from .content import Content
 
 
 class LLM(ABC):
@@ -12,11 +13,14 @@ class LLM(ABC):
         self.logger = logging.getLogger(__name__)
 
     @abstractmethod
-    async def generate(self, context: Context, use_json: bool = False) -> str:
-        """Generate text response from context.
+    async def generate(
+        self, system: str, content: List[Content], use_json: bool = False
+    ) -> str:
+        """Generate text response from system prompt and content.
 
         Args:
-            context: Full Context object with system, blocks (text + images), etc.
+            system: System prompt string
+            content: Ordered list of Text/Image content parts
             use_json: If True, force LLM to return valid JSON (provider-specific)
 
         Returns:

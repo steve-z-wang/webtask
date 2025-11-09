@@ -6,7 +6,7 @@ from pathlib import Path
 from .element import Element
 
 if TYPE_CHECKING:
-    from ..dom.snapshot import DomSnapshot
+    from webtask._internal.dom.snapshot import DomSnapshot
 
 
 class Page(ABC):
@@ -160,7 +160,7 @@ class Page(ABC):
         Returns:
             DomSnapshot with parsed DOM tree
         """
-        from ..dom import DomSnapshot
+        from webtask._internal.dom import DomSnapshot
 
         cdp_snapshot = await self.get_cdp_snapshot()
         return DomSnapshot.from_cdp(cdp_snapshot, url=self.url)
