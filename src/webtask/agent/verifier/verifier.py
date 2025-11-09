@@ -79,8 +79,8 @@ class Verifier:
             return Block(heading="Worker Actions", content="No worker actions yet.")
 
         content = ""
-        for i, iteration in enumerate(worker_iterations, 1):
-            content += f"\n**Iteration {i}**\n"
+        for iteration in worker_iterations:
+            content += f"\n**Iteration {iteration.iteration_number}**\n"
             for tc in iteration.tool_calls:
                 status = "[SUCCESS]" if tc.success else "[FAILED]"
                 content += f"  {status} {tc.description}\n"
@@ -114,11 +114,13 @@ class Verifier:
         max_iterations: int = 3,
         session_id: int = 0,
     ) -> VerifierSession:
+        session_number = session_id  # Already 1-indexed from task_executor
         subtask_decision = None
         task_complete = False
         iterations = []
 
         for i in range(max_iterations):
+            iteration_number = i + 1  # 1-indexed for display/output
             context = await self._build_context(
                 task_description, subtask_description, worker_session.iterations
             )
@@ -127,7 +129,8 @@ class Verifier:
             debug_paths = None
             if self._debug:
                 debug_paths = self._save_debug_context(
-                    f"session_{session_id}_verifier_iter_{i}", context
+                    f"session_{session_number}_verifier_iter_{iteration_number}",
+                    context,
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)
@@ -139,6 +142,7 @@ class Verifier:
                 await self._tool_registry.execute_tool_call(tool_call)
 
             iteration = Iteration(
+                iteration_number=iteration_number,
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
@@ -160,6 +164,7 @@ class Verifier:
                 break
 
         return VerifierSession(
+            session_number=session_number,
             task_description=task_description,
             subtask_description=subtask_description,
             worker_session=worker_session,

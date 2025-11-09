@@ -68,8 +68,8 @@ class TaskExecution:
         if self.history:
             lines.append("EXECUTION HISTORY:")
             lines.append("-" * 80)
-            for i, session in enumerate(self.history, 1):
-                lines.append(f"\nSession {i}:")
+            for session in self.history:
+                lines.append(f"\nSession {session.session_number}:")
                 # Indent each line of the session
                 for line in str(session).split("\n"):
                     lines.append(f"  {line}")

@@ -102,9 +102,11 @@ class Planner:
         session_id: int = 0,
         last_verifier_session=None,
     ) -> PlannerSession:
+        session_number = session_id  # Already 1-indexed from task_executor
         iterations = []
 
         for i in range(max_iterations):
+            iteration_number = i + 1  # 1-indexed for display/output
             context = await self._build_context(
                 task_description, subtask_queue, iterations, last_verifier_session
             )
@@ -112,7 +114,7 @@ class Planner:
             # Save debug info if enabled
             if self._debug:
                 self._save_debug_context(
-                    f"session_{session_id}_planner_iter_{i}", context
+                    f"session_{session_number}_planner_iter_{iteration_number}", context
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)
@@ -126,6 +128,7 @@ class Planner:
                 )
 
             iteration = Iteration(
+                iteration_number=iteration_number,
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
@@ -138,6 +141,7 @@ class Planner:
                 break
 
         return PlannerSession(
+            session_number=session_number,
             task_description=task_description,
             max_iterations=max_iterations,
             iterations=iterations,

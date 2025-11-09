@@ -14,7 +14,7 @@ class TaskExecutor:
         self._verifier = verifier
 
     async def run(self, task: TaskExecution, max_cycles: int = 10) -> TaskExecution:
-        session_counter = 0
+        session_counter = 1
         last_verifier_session = None
 
         for cycle in range(max_cycles):

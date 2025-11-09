@@ -10,6 +10,7 @@ from ..worker.worker_session import WorkerSession
 
 @dataclass
 class VerifierSession:
+    session_number: int  # 1-indexed session number
     task_description: str
     subtask_description: str
     worker_session: WorkerSession
@@ -28,8 +29,8 @@ class VerifierSession:
             lines.append(f"Subtask Decision: {self.subtask_decision.tool}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")
         lines.append("")
-        for i, iteration in enumerate(self.iterations, 1):
-            lines.append(f"--- Iteration {i} ---")
+        for iteration in self.iterations:
+            lines.append(f"--- Iteration {iteration.iteration_number} ---")
             # Indent each line of the iteration
             for line in str(iteration).split("\n"):
                 lines.append(f"  {line}")

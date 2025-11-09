@@ -9,6 +9,7 @@ from ..tool_call import Iteration
 
 @dataclass
 class PlannerSession:
+    session_number: int  # 1-indexed session number
     task_description: str
     max_iterations: int = 10
     iterations: List[Iteration] = field(default_factory=list)
@@ -19,8 +20,8 @@ class PlannerSession:
         lines.append(f"Task: {self.task_description}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")
         lines.append("")
-        for i, iteration in enumerate(self.iterations, 1):
-            lines.append(f"--- Iteration {i} ---")
+        for iteration in self.iterations:
+            lines.append(f"--- Iteration {iteration.iteration_number} ---")
             # Indent each line of the iteration
             for line in str(iteration).split("\n"):
                 lines.append(f"  {line}")

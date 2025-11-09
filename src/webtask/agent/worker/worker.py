@@ -82,8 +82,8 @@ class Worker:
             )
 
         content = ""
-        for i, iteration in enumerate(iterations, 1):
-            content += f"\n**Iteration {i}**\n"
+        for iteration in iterations:
+            content += f"\n**Iteration {iteration.iteration_number}**\n"
             content += f"Observation: {iteration.observation}\n"
             content += f"Thinking: {iteration.thinking}\n"
             content += f"Actions: {len(iteration.tool_calls)}\n"
@@ -114,16 +114,18 @@ class Worker:
     async def run(
         self, subtask_description: str, max_iterations: int = 10, session_id: int = 0
     ) -> WorkerSession:
+        session_number = session_id  # Already 1-indexed from task_executor
         iterations = []
 
         for i in range(max_iterations):
+            iteration_number = i + 1  # 1-indexed for display/output
             context = await self._build_context(subtask_description, iterations)
 
             # Save debug info if enabled
             debug_paths = None
             if self._debug:
                 debug_paths = self._save_debug_context(
-                    f"session_{session_id}_worker_iter_{i}", context
+                    f"session_{session_number}_worker_iter_{iteration_number}", context
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)
@@ -140,6 +142,7 @@ class Worker:
                 await wait(self.ACTION_DELAY)
 
             iteration = Iteration(
+                iteration_number=iteration_number,
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
@@ -152,6 +155,7 @@ class Worker:
                 break
 
         return WorkerSession(
+            session_number=session_number,
             subtask_description=subtask_description,
             max_iterations=max_iterations,
             iterations=iterations,

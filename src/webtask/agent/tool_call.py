@@ -114,6 +114,7 @@ class Iteration:
     Optional debug fields (context, screenshot) can be populated for debugging.
     """
 
+    iteration_number: int  # 1-indexed iteration number
     observation: str
     thinking: str
     tool_calls: List[ToolCall] = field(default_factory=list)
