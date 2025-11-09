@@ -8,7 +8,7 @@ from webtask._internal.llm import Context, Block
 from webtask._internal.llm import TypedLLM
 from webtask._internal.config import Config
 from ...prompts.worker_prompt import build_worker_prompt
-from webtask.utils.wait import wait
+from webtask._internal.utils.wait import wait
 from .worker_browser import WorkerBrowser
 from .worker_session import WorkerSession
 from .tools.navigate import NavigateTool

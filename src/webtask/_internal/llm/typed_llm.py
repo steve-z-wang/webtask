@@ -4,7 +4,7 @@ from typing import Type, TypeVar, List, Tuple
 from pydantic import BaseModel
 from webtask.llm import LLM, Content, Text, Image as ImageContent
 from .context import Context
-from webtask.utils import parse_json
+from webtask._internal.utils import parse_json
 
 T = TypeVar("T", bound=BaseModel)
 
