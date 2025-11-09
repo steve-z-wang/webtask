@@ -21,12 +21,12 @@ class SubtaskManager:
         self,
         subtask: Subtask,
         task_description: str,
-        session_id_start: int,
+        subtask_index: int,
         max_correction_attempts: int = 3,
     ) -> SubtaskExecution:
         """Execute subtask with Worker/Verifier loop and correction retry logic."""
         execution = SubtaskExecution(subtask=subtask)
-        session_counter = session_id_start
+        session_number = 1  # Reset to 1 for each subtask
         correction_count = 0
 
         while True:
@@ -34,22 +34,24 @@ class SubtaskManager:
             worker_session = await self._worker.run(
                 subtask_description=subtask.description,
                 max_iterations=10,
-                session_id=session_counter,
+                session_number=session_number,
+                subtask_index=subtask_index,
                 subtask_execution=execution,
             )
             execution.add_session(worker_session)
-            session_counter += 1
+            session_number += 1
 
             # Verifier checks subtask
             verifier_session = await self._verifier.run(
                 task_description=task_description,
                 subtask_description=subtask.description,
                 max_iterations=3,
-                session_id=session_counter,
+                session_number=session_number,
+                subtask_index=subtask_index,
                 subtask_execution=execution,
             )
             execution.add_session(verifier_session)
-            session_counter += 1
+            session_number += 1
 
             # Handle verifier decision
             if verifier_session.subtask_decision:

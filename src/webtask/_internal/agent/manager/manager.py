@@ -124,7 +124,7 @@ class Manager:
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"session_{session_number}_manager_iter_{iteration_number}", context
+                    f"manager_session_{session_number}_iter_{iteration_number}", context
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)

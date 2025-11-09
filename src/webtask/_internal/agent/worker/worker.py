@@ -153,10 +153,10 @@ class Worker:
         self,
         subtask_description: str,
         max_iterations: int = 10,
-        session_id: int = 0,
+        session_number: int = 1,
+        subtask_index: int = 0,
         subtask_execution=None,
     ) -> WorkerSession:
-        session_number = session_id  # Already 1-indexed from task_executor
         iterations = []
 
         for i in range(max_iterations):
@@ -168,7 +168,8 @@ class Worker:
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"session_{session_number}_worker_iter_{iteration_number}", context
+                    f"subtask_{subtask_index}_session_{session_number}_worker_iter_{iteration_number}",
+                    context,
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)

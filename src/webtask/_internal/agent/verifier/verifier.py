@@ -152,10 +152,10 @@ class Verifier:
         subtask_description: str,
         worker_session: WorkerSession = None,
         max_iterations: int = 3,
-        session_id: int = 0,
+        session_number: int = 1,
+        subtask_index: int = 0,
         subtask_execution=None,
     ) -> VerifierSession:
-        session_number = session_id  # Already 1-indexed from task_executor
         subtask_decision = None
         iterations = []
 
@@ -180,7 +180,7 @@ class Verifier:
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"session_{session_number}_verifier_iter_{iteration_number}",
+                    f"subtask_{subtask_index}_session_{session_number}_verifier_iter_{iteration_number}",
                     context,
                 )
 

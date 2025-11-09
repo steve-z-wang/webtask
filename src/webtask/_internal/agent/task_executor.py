@@ -63,16 +63,16 @@ class TaskExecutor:
                 # Mark current subtask as in progress
                 current_subtask.mark_in_progress()
 
+                # Subtask index is the position in history (0-indexed)
+                subtask_index = len(task.subtask_queue.history)
+
                 # Execute subtask with SubtaskManager (handles Worker/Verifier loop with corrections)
                 subtask_execution = await self._subtask_manager.run(
                     subtask=current_subtask,
                     task_description=task.task.description,
-                    session_id_start=session_counter,
+                    subtask_index=subtask_index,
                 )
                 task.add_session(subtask_execution)
-
-                # Update session counter to account for all Worker/Verifier sessions
-                session_counter += len(subtask_execution.history)
 
                 # Store last verifier session for next manager iteration
                 if subtask_execution.history:
