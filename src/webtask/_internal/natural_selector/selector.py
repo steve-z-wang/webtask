@@ -3,8 +3,7 @@
 import json
 from typing import TYPE_CHECKING, Dict
 from pydantic import ValidationError
-from webtask.llm import Context, Block
-from webtask._internal.llm import TypedLLM
+from ..llm import Context, Block, TypedLLM
 from ..prompts import build_selector_prompt
 from webtask.browser import Element
 from ..page_context import PageContextBuilder

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from ..tool import ToolRegistry
 from ..tool_call import ProposedIteration, Iteration
-from webtask.llm import Context, Block
+from webtask._internal.llm import Context, Block
 from webtask._internal.llm import TypedLLM
 from webtask._internal.config import Config
 from ...prompts import build_verifier_prompt

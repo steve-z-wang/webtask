@@ -1,7 +1,7 @@
 """PageContextBuilder - builds page context blocks with text and image."""
 
 from typing import Dict, Optional, Tuple
-from webtask.llm import Block
+from webtask._internal.llm import Block
 from webtask.media import Image
 from webtask.browser import Page
 from .dom_context_builder import DomContextBuilder

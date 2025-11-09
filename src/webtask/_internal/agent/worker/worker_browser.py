@@ -2,7 +2,7 @@
 
 from typing import Dict
 from webtask._internal.dom.domnode import DomNode
-from webtask.llm import Block
+from webtask._internal.llm import Block
 from ..agent_browser import AgentBrowser
 from ...page_context import PageContextBuilder
 

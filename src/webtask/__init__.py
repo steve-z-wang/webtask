@@ -11,9 +11,9 @@ from .browser import (
 )
 
 from .llm import (
-    Context,
-    Block,
     LLM,
+    Text,
+    Content,
 )
 
 from .media import Image
@@ -31,9 +31,9 @@ __all__ = [
     "Page",
     "Element",
     # LLM
-    "Context",
-    "Block",
     "LLM",
+    "Text",
+    "Content",
     # Media
     "Image",
 ]

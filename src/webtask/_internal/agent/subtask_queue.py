@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from .subtask import Subtask, SubtaskStatus
-from webtask.llm import Block
+from webtask._internal.llm import Block
 
 
 class SubtaskQueue:

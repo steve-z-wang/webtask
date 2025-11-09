@@ -2,7 +2,7 @@
 
 from typing import Optional, List, Any
 import google.generativeai as genai
-from ....llm import LLM, Context
+from ....llm import LLM, Content, Text, Image
 
 
 class GeminiLLM(LLM):
@@ -67,50 +67,15 @@ class GeminiLLM(LLM):
 
         return cls(gemini_model, model, temperature)
 
-    def _build_content(self, context: Context) -> List[Any] | str:
-        """Build content for Gemini API, supporting both text and images.
-
-        Returns:
-            List of content parts if images are present, otherwise plain string
-        """
-        has_images = any(block.image for block in context.blocks)
-
-        # Combine system and user prompts for Gemini
-        # Gemini doesn't have separate system/user roles like OpenAI
-        combined_text = f"{context.system}\n\n{context.user}"
-
-        if not has_images:
-            # Text-only: return simple string
-            return combined_text
-
-        # Multimodal: build content array
-        # Gemini uses PIL Images, so we need to convert from bytes
-        from PIL import Image as PILImage
-        import io
-
-        content = []
-
-        # Add combined text first
-        content.append(combined_text)
-
-        # Add images from blocks
-        for block in context.blocks:
-            if block.image:
-                # Convert image bytes to PIL Image
-                image_bytes = block.image.to_bytes()
-                pil_image = PILImage.open(io.BytesIO(image_bytes))
-                content.append(pil_image)
-
-        return content
-
-    async def generate(self, context: Context, use_json: bool = False) -> str:
+    async def generate(self, system: str, content: List[Content], use_json: bool = False) -> str:
         """
         Generate text using Gemini API.
 
         Supports multimodal content (text + images) and JSON mode.
 
         Args:
-            context: Context object with system, blocks (text + images), etc.
+            system: System prompt
+            content: Ordered list of Text/Image content parts
             use_json: If True, force JSON output
 
         Returns:
@@ -121,8 +86,34 @@ class GeminiLLM(LLM):
             f"json_mode: {use_json}"
         )
 
-        # Build content (may include images)
-        content = self._build_content(context)
+        # Build content for Gemini API
+        # Gemini doesn't have separate system/user roles, so combine them
+        has_images = any(isinstance(part, Image) for part in content)
+
+        if not has_images:
+            # Text-only: combine system + all text parts
+            text_parts = [system] + [part.text for part in content if isinstance(part, Text)]
+            gemini_content = "\n\n".join(text_parts)
+        else:
+            # Multimodal: build content array with PIL Images
+            from PIL import Image as PILImage
+            import io
+            import base64
+
+            gemini_content = []
+
+            # Add system prompt first
+            gemini_content.append(system)
+
+            # Add content parts in order
+            for part in content:
+                if isinstance(part, Text):
+                    gemini_content.append(part.text)
+                elif isinstance(part, Image):
+                    # Convert base64 to PIL Image
+                    image_bytes = base64.b64decode(part.data)
+                    pil_image = PILImage.open(io.BytesIO(image_bytes))
+                    gemini_content.append(pil_image)
 
         # Use JSON mode if requested
         if use_json:
@@ -131,10 +122,10 @@ class GeminiLLM(LLM):
                 response_mime_type="application/json",
             )
             response = await self.model.generate_content_async(
-                content, generation_config=generation_config
+                gemini_content, generation_config=generation_config
             )
         else:
-            response = await self.model.generate_content_async(content)
+            response = await self.model.generate_content_async(gemini_content)
 
         # Log token usage if available
         if hasattr(response, "usage_metadata") and response.usage_metadata:

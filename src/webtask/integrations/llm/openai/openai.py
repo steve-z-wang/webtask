@@ -2,7 +2,7 @@
 
 from typing import Optional, List, Dict, Any
 from openai import AsyncOpenAI
-from ....llm import LLM, Context
+from ....llm import LLM, Content, Text, Image
 
 
 class OpenAILLM(LLM):
@@ -56,49 +56,37 @@ class OpenAILLM(LLM):
         client = AsyncOpenAI(api_key=api_key)
         return cls(client, model, temperature)
 
-    def _build_user_content(self, context: Context) -> List[Dict[str, Any]] | str:
-        """Build user message content, supporting both text and images.
-
-        Returns:
-            List of content blocks if images are present, otherwise plain string
-        """
-        has_images = any(block.image for block in context.blocks)
-
-        if not has_images:
-            # Text-only: return simple string
-            return context.user
-
-        # Multimodal: build content array
-        content = []
-        for block in context.blocks:
-            if block.text:
-                content.append({"type": "text", "text": block.text})
-
-            if block.image:
-                content.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": block.image.to_data_url()},
-                    }
-                )
-
-        return content
-
-    async def generate(self, context: Context, use_json: bool = False) -> str:
+    async def generate(self, system: str, content: List[Content], use_json: bool = False) -> str:
         """
         Generate text using OpenAI API.
 
         Supports multimodal content (text + images) and JSON mode.
 
         Args:
-            context: Context object with system, blocks (text + images), etc.
+            system: System prompt
+            content: Ordered list of Text/Image content parts
             use_json: If True, force JSON output
 
         Returns:
             Generated text response from OpenAI
         """
-        # Build user content (may include images)
-        user_content = self._build_user_content(context)
+        # Build user content from Text/Image parts
+        has_images = any(isinstance(part, Image) for part in content)
+
+        if not has_images:
+            # Text-only: join all text parts
+            user_content = "\n\n".join(part.text for part in content if isinstance(part, Text))
+        else:
+            # Multimodal: build content array
+            user_content = []
+            for part in content:
+                if isinstance(part, Text):
+                    user_content.append({"type": "text", "text": part.text})
+                elif isinstance(part, Image):
+                    user_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{part.mime_type.value};base64,{part.data}"}
+                    })
 
         self.logger.debug(
             f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}, "
@@ -109,7 +97,7 @@ class OpenAILLM(LLM):
         api_kwargs: Dict[str, Any] = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": context.system},
+                {"role": "system", "content": system},
                 {"role": "user", "content": user_content},
             ],
             "temperature": self.temperature,
