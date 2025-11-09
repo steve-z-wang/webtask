@@ -35,7 +35,6 @@ class Webtask:
         self,
         llm: LLM,
         cookies=None,
-        action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
@@ -44,7 +43,6 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             cookies: Optional cookies for the session
-            action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
 
@@ -56,7 +54,6 @@ class Webtask:
         agent = Agent(
             llm,
             session=session,
-            action_delay=action_delay,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
         )
@@ -68,7 +65,6 @@ class Webtask:
         llm: LLM,
         browser: Browser,
         cookies=None,
-        action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
@@ -78,7 +74,6 @@ class Webtask:
             llm: LLM instance for reasoning
             browser: Existing Browser instance
             cookies: Optional cookies for the session
-            action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
 
@@ -89,7 +84,6 @@ class Webtask:
         agent = Agent(
             llm,
             session=session,
-            action_delay=action_delay,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
         )
@@ -100,7 +94,6 @@ class Webtask:
         self,
         llm: LLM,
         session: Session,
-        action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
@@ -109,7 +102,6 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             session: Existing Session instance
-            action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
 
@@ -119,7 +111,6 @@ class Webtask:
         return Agent(
             llm,
             session=session,
-            action_delay=action_delay,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
         )
@@ -128,7 +119,6 @@ class Webtask:
         self,
         llm: LLM,
         page: Page,
-        action_delay: float = 1.0,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ) -> Agent:
@@ -137,7 +127,6 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             page: Existing Page instance
-            action_delay: Delay in seconds after actions (default: 1.0)
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
 
@@ -147,7 +136,6 @@ class Webtask:
         agent = Agent(
             llm,
             session=None,
-            action_delay=action_delay,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
         )

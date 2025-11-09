@@ -116,7 +116,7 @@ class GeminiLLM(LLM):
         Returns:
             Generated text response from Gemini
         """
-        self.logger.info(
+        self.logger.debug(
             f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}, "
             f"json_mode: {use_json}"
         )
@@ -138,7 +138,7 @@ class GeminiLLM(LLM):
 
         # Log token usage if available
         if hasattr(response, "usage_metadata") and response.usage_metadata:
-            self.logger.info(
+            self.logger.debug(
                 f"Gemini API response - "
                 f"prompt_tokens: {response.usage_metadata.prompt_token_count}, "
                 f"completion_tokens: {response.usage_metadata.candidates_token_count}, "

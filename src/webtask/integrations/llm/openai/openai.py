@@ -100,7 +100,7 @@ class OpenAILLM(LLM):
         # Build user content (may include images)
         user_content = self._build_user_content(context)
 
-        self.logger.info(
+        self.logger.debug(
             f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}, "
             f"json_mode: {use_json}"
         )
@@ -123,7 +123,7 @@ class OpenAILLM(LLM):
 
         # Log token usage if available
         if response.usage:
-            self.logger.info(
+            self.logger.debug(
                 f"OpenAI API response - "
                 f"prompt_tokens: {response.usage.prompt_tokens}, "
                 f"completion_tokens: {response.usage.completion_tokens}, "

@@ -1,0 +1,162 @@
+"""Worker role - executes one subtask."""
+
+from pathlib import Path
+from typing import Dict, Any, TYPE_CHECKING
+from ..tool import ToolRegistry
+from ..tool_call import ProposedIteration, Iteration
+from ...llm import Context, Block
+from ...llm.typed_llm import TypedLLM
+from ...prompts.worker_prompt import build_worker_prompt
+from ...utils.wait import wait
+from .worker_browser import WorkerBrowser
+from .worker_session import WorkerSession
+from .tools.navigate import NavigateTool
+from .tools.click import ClickTool
+from .tools.fill import FillTool
+from .tools.type import TypeTool
+from .tools.upload import UploadTool
+from .tools.wait import WaitTool
+from .tools.mark_done_working import MarkDoneWorkingTool
+
+if TYPE_CHECKING:
+    from ..agent_browser import AgentBrowser
+
+
+class Worker:
+    """Worker role - executes one subtask."""
+
+    # Small delay after each action to prevent race conditions
+    ACTION_DELAY = 0.1
+
+    def __init__(
+        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False
+    ):
+        self._llm = typed_llm
+        self.worker_browser = WorkerBrowser(agent_browser)
+        self.resources: Dict[str, Any] = {}
+        self._debug = debug
+        self._tool_registry = ToolRegistry()
+        self._tool_registry.register(NavigateTool())
+        self._tool_registry.register(ClickTool())
+        self._tool_registry.register(FillTool())
+        self._tool_registry.register(TypeTool())
+        self._tool_registry.register(UploadTool())
+        self._tool_registry.register(WaitTool())
+        self._tool_registry.register(MarkDoneWorkingTool())
+
+    def set_resources(self, resources: Dict[str, str]) -> None:
+        self.resources = resources
+
+    def _save_debug_context(self, filename: str, context: Context):
+        """Save context (text + images) for debugging. Returns dict with paths."""
+        debug_dir = Path("debug")
+        debug_dir.mkdir(exist_ok=True)
+
+        paths = {}
+
+        # Save text context
+        text_path = debug_dir / f"{filename}.txt"
+        with open(text_path, "w") as f:
+            f.write(context.to_text())
+        paths["text"] = str(text_path)
+
+        # Extract and save images from context
+        images = context.get_images()
+        for i, image in enumerate(images):
+            img_path = debug_dir / f"{filename}_img_{i}.png"
+            image.save(str(img_path))
+            paths[f"image_{i}"] = str(img_path)
+
+        return paths
+
+    def _format_own_iterations(self, iterations: list) -> Block:
+        """Format worker's own iterations for context (shows full observation/thinking).
+
+        Since this is the worker's own history within the same session,
+        it shows full details to help maintain continuity.
+        """
+        if not iterations:
+            return Block(
+                heading="Current Session Iterations",
+                content="No iterations yet in this session.",
+            )
+
+        content = ""
+        for iteration in iterations:
+            content += f"\n**Iteration {iteration.iteration_number}**\n"
+            content += f"Observation: {iteration.observation}\n"
+            content += f"Thinking: {iteration.thinking}\n"
+            content += f"Actions: {len(iteration.tool_calls)}\n"
+            for tc in iteration.tool_calls:
+                status = "[SUCCESS]" if tc.success else "[FAILED]"
+                content += f"  {status} {tc.description}\n"
+                if not tc.success and tc.error:
+                    content += f"     Error: {tc.error}\n"
+
+        return Block(heading="Current Session Iterations", content=content.strip())
+
+    async def _build_context(
+        self, subtask_description: str, iterations: list
+    ) -> Context:
+        page_context = await self.worker_browser.get_context(
+            include_element_ids=True,
+            with_bounding_boxes=True,
+        )
+        return (
+            Context()
+            .with_system(build_worker_prompt())
+            .with_block(Block(heading="Current Subtask", content=subtask_description))
+            .with_block(self._tool_registry.get_context())
+            .with_block(self._format_own_iterations(iterations))
+            .with_block(page_context)
+        )
+
+    async def run(
+        self, subtask_description: str, max_iterations: int = 10, session_id: int = 0
+    ) -> WorkerSession:
+        session_number = session_id  # Already 1-indexed from task_executor
+        iterations = []
+
+        for i in range(max_iterations):
+            iteration_number = i + 1  # 1-indexed for display/output
+            context = await self._build_context(subtask_description, iterations)
+
+            # Save debug info if enabled
+            debug_paths = None
+            if self._debug:
+                debug_paths = self._save_debug_context(
+                    f"session_{session_number}_worker_iter_{iteration_number}", context
+                )
+
+            proposed = await self._llm.generate(context, ProposedIteration)
+            tool_calls = self._tool_registry.validate_proposed_tools(
+                proposed.tool_calls
+            )
+
+            for tool_call in tool_calls:
+                await self._tool_registry.execute_tool_call(
+                    tool_call,
+                    worker_browser=self.worker_browser,
+                    resources=self.resources,
+                )
+                await wait(self.ACTION_DELAY)
+
+            iteration = Iteration(
+                iteration_number=iteration_number,
+                observation=proposed.observation,
+                thinking=proposed.thinking,
+                tool_calls=tool_calls,
+                context=context if self._debug else None,
+                screenshot_path=debug_paths.get("image_0") if debug_paths else None,
+            )
+            iterations.append(iteration)
+
+            if any(tc.tool == "mark_done_working" and tc.success for tc in tool_calls):
+                break
+
+        return WorkerSession(
+            session_number=session_number,
+            subtask_description=subtask_description,
+            max_iterations=max_iterations,
+            iterations=iterations,
+        )
