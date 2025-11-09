@@ -29,28 +29,28 @@ class TaskExecutor:
             task.add_session(manager_session)
             session_counter += 1
 
-            # Check if manager marked task as complete or failed
-            task_complete = any(
-                tc.tool == "mark_task_complete" and tc.success
+            # Check if manager marked task as completed or aborted
+            task_completed = any(
+                tc.tool == "complete_task" and tc.success
                 for iteration in manager_session.iterations
                 for tc in iteration.tool_calls
             )
-            if task_complete:
-                task.mark_complete()
+            if task_completed:
+                task.mark_completed()
                 return task
 
-            task_failed = any(
-                tc.tool == "mark_task_failed" and tc.success
+            task_aborted = any(
+                tc.tool == "abort_task" and tc.success
                 for iteration in manager_session.iterations
                 for tc in iteration.tool_calls
             )
-            if task_failed:
-                # Extract failure reason from the tool call
+            if task_aborted:
+                # Extract abort reason from the tool call
                 for iteration in manager_session.iterations:
                     for tc in iteration.tool_calls:
-                        if tc.tool == "mark_task_failed" and tc.success:
+                        if tc.tool == "abort_task" and tc.success:
                             reason = tc.parameters.get("reason", "Unknown reason")
-                            task.mark_failed(reason)
+                            task.mark_aborted(reason)
                             return task
 
             # Process pending subtasks until queue is empty or reschedule requested

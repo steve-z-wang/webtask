@@ -17,8 +17,8 @@ class TaskStatus(str, Enum):
     """Status of a task execution."""
 
     IN_PROGRESS = "in_progress"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
+    COMPLETED = "completed"
+    ABORTED = "aborted"
 
 
 @dataclass
@@ -50,17 +50,17 @@ class TaskExecution:
         """Add a session to execution history."""
         self.history.append(session)
 
-    def mark_complete(self) -> None:
-        """Mark task as succeeded."""
-        self.status = TaskStatus.SUCCEEDED
+    def mark_completed(self) -> None:
+        """Mark task as completed."""
+        self.status = TaskStatus.COMPLETED
 
-    def mark_failed(self, reason: str) -> None:
-        """Mark task as failed.
+    def mark_aborted(self, reason: str) -> None:
+        """Mark task as aborted.
 
         Args:
-            reason: Explanation of why the task failed
+            reason: Explanation of why the task was aborted
         """
-        self.status = TaskStatus.FAILED
+        self.status = TaskStatus.ABORTED
         self.failure_reason = reason
 
     def __str__(self) -> str:
@@ -71,8 +71,8 @@ class TaskExecution:
         lines.append("=" * 80)
         lines.append(f"Task: {self.task.description}")
         lines.append(f"Status: {self.status.value}")
-        if self.status == TaskStatus.FAILED and self.failure_reason:
-            lines.append(f"Failure Reason: {self.failure_reason}")
+        if self.status == TaskStatus.ABORTED and self.failure_reason:
+            lines.append(f"Abort Reason: {self.failure_reason}")
         lines.append("")
 
         # Show subtask queue

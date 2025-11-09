@@ -21,7 +21,7 @@ def build_manager_prompt() -> str:
         .add_heading("How to Plan")
         .add_numbered("Review subtask queue and verifier feedback")
         .add_numbered("Check if task goal is fully satisfied")
-        .add_numbered("If task is complete, use mark_task_complete tool")
+        .add_numbered("If task is completed, use complete_task tool")
         .add_numbered("Otherwise, decide next subtask to start")
     )
 
@@ -29,14 +29,14 @@ def build_manager_prompt() -> str:
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
-        .add("**When should you mark the task as complete?**")
+        .add("**When should you complete the task?**")
         .add(
-            "Use mark_task_complete when ALL requirements of the task goal are satisfied. Review the verifier feedback to confirm all subtasks succeeded."
+            "Use complete_task when ALL requirements of the task goal are satisfied. Review the verifier feedback to confirm all subtasks succeeded."
         )
         .add()
-        .add("**When should you mark the task as failed?**")
+        .add("**When should you abort the task?**")
         .add(
-            "Use mark_task_failed when the task cannot be completed due to conditions beyond control: website unavailable, required item doesn't exist, missing authentication, permanent errors (404, 403), or impossible prerequisites. Don't fail for temporary issues that can be retried."
+            "Use abort_task when the task cannot be completed due to conditions beyond control: website unavailable, required item doesn't exist, missing authentication, permanent errors (404, 403), or impossible prerequisites. Don't abort for temporary issues that can be retried."
         )
         .add()
         .add("**What should subtask goals focus on?**")
