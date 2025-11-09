@@ -65,9 +65,11 @@ def build_worker_prompt() -> str:
         .add_heading("Response Format")
         .add("Respond with JSON containing three parts:")
         .add_bullet(
-            "observation: What you see on the page (UI state, messages, errors)"
+            "observation: ONLY what you see (UI state, messages, errors). Do NOT include what you plan to do."
         )
-        .add_bullet("thinking: Your reasoning about what to do next")
+        .add_bullet(
+            "thinking: Your reasoning and planning - what you need to do next and why"
+        )
         .add_bullet(
             "tool_calls: Actions to take (each has description, tool, parameters)"
         )

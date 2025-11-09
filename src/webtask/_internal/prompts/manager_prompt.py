@@ -66,9 +66,11 @@ def build_manager_prompt() -> str:
         .add_heading("Response Format")
         .add("Respond with JSON containing three parts:")
         .add_bullet(
-            "observation: What you see in the subtask queue and verifier feedback"
+            "observation: ONLY what you see (subtask queue state, verifier feedback). Do NOT include your plan."
         )
-        .add_bullet("thinking: Your reasoning about what subtasks to create")
+        .add_bullet(
+            "thinking: Your reasoning and planning - what subtasks to create and why"
+        )
         .add_bullet(
             "tool_calls: Actions to take (each has description, tool, parameters)"
         )

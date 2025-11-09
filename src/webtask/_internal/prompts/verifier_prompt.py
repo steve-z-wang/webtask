@@ -59,9 +59,11 @@ def build_verifier_prompt() -> str:
         .add_heading("Response Format")
         .add("Respond with JSON containing three parts:")
         .add_bullet(
-            "observation: What you see on the page (UI state, messages, errors)"
+            "observation: ONLY what you see (UI state, messages, errors). Do NOT include your decision or reasoning."
         )
-        .add_bullet("thinking: Your reasoning about the subtask completion")
+        .add_bullet(
+            "thinking: Your reasoning and decision - analyze if subtask succeeded or failed"
+        )
         .add_bullet(
             "tool_calls: Actions to take (each has description, tool, parameters)"
         )
