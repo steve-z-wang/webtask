@@ -46,12 +46,13 @@ class SubtaskExecution:
 
         if self.history:
             lines.append("\nSession History:")
-            for i, session in enumerate(self.history):
+            for session in self.history:
                 session_type = (
                     "Worker" if "Worker" in type(session).__name__ else "Verifier"
                 )
-                lines.append(
-                    f"  {i + 1}. {session_type} Session {session.session_number}"
-                )
+                lines.append(f"\n[{session_type} Session {session.session_number}]")
+                # Indent each line of the session details
+                for line in str(session).split("\n"):
+                    lines.append(f"  {line}")
 
         return "\n".join(lines)
