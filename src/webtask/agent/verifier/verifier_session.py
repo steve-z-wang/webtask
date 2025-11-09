@@ -20,7 +20,7 @@ class VerifierSession:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __str__(self) -> str:
-        lines = [f"=== Verifier Session ==="]
+        lines = ["=== Verifier Session ==="]
         lines.append(f"Task: {self.task_description}")
         lines.append(f"Subtask: {self.subtask_description}")
         lines.append(f"Task Complete: {self.task_complete}")

@@ -97,7 +97,6 @@ class AgentBrowser:
             else:
                 self._current_page_id = None
 
-
     async def navigate(self, url: str) -> None:
         """Navigate to URL. Auto-creates a page if none exists yet and session is available."""
         page = self.get_current_page()

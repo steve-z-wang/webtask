@@ -28,11 +28,15 @@ class TaskExecution:
     """
 
     task: Task
-    history: List[Union["PlannerSession", "WorkerSession", "VerifierSession"]] = field(default_factory=list)
+    history: List[Union["PlannerSession", "WorkerSession", "VerifierSession"]] = field(
+        default_factory=list
+    )
     subtask_queue: SubtaskQueue = field(default_factory=SubtaskQueue)
     complete: bool = False
 
-    def add_session(self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]) -> None:
+    def add_session(
+        self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]
+    ) -> None:
         """Add a session to execution history."""
         self.history.append(session)
 

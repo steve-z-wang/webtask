@@ -56,14 +56,17 @@ class Agent:
 
         # Create shared browser (used by Worker for interactions, Verifier for screenshots)
         self.agent_browser = AgentBrowser(
-            session=session,
-            use_screenshot=use_screenshot
+            session=session, use_screenshot=use_screenshot
         )
 
         # Create roles (reused across tasks)
         self.planner = Planner(typed_llm=self.typed_llm, debug=debug)
-        self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug)
-        self.verifier = Verifier(typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug)
+        self.worker = Worker(
+            typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug
+        )
+        self.verifier = Verifier(
+            typed_llm=self.typed_llm, agent_browser=self.agent_browser, debug=debug
+        )
 
     async def execute(
         self,

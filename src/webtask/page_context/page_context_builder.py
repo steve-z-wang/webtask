@@ -14,7 +14,7 @@ class PageContextBuilder:
         page: Page,
         include_element_ids: bool = False,
         with_bounding_boxes: bool = False,
-        full_page_screenshot: bool = False
+        full_page_screenshot: bool = False,
     ) -> Tuple[Block, Optional[Dict]]:
         """Build page context block with text and screenshot.
 
@@ -23,15 +23,13 @@ class PageContextBuilder:
         """
         if page is None:
             block = Block(
-                heading="Current Page",
-                content="ERROR: No page is currently open."
+                heading="Current Page", content="ERROR: No page is currently open."
             )
             return block, None
 
         url = page.url
         context_str, element_map = await DomContextBuilder.build_context(
-            page=page,
-            include_element_ids=include_element_ids
+            page=page, include_element_ids=include_element_ids
         )
 
         lines = ["Page:"]

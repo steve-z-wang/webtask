@@ -35,7 +35,7 @@ class WorkerBrowser:
             self._element_map = {}
             return Block(
                 heading="Current Page",
-                content="ERROR: No page opened yet.\nPlease use the navigate tool to navigate to a URL."
+                content="ERROR: No page opened yet.\nPlease use the navigate tool to navigate to a URL.",
             )
 
         # Wait for page to be idle before capturing context (max 5s)
@@ -45,7 +45,7 @@ class WorkerBrowser:
             page=page,
             include_element_ids=include_element_ids,
             with_bounding_boxes=with_bounding_boxes,
-            full_page_screenshot=full_page
+            full_page_screenshot=full_page,
         )
 
         self._element_map = element_map if element_map else {}

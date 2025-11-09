@@ -14,10 +14,7 @@ class Block:
     """
 
     def __init__(
-        self,
-        heading: str = "",
-        content: str = "",
-        image: Optional["Image"] = None
+        self, heading: str = "", content: str = "", image: Optional["Image"] = None
     ):
         """
         Create a Block with optional heading, content and image.

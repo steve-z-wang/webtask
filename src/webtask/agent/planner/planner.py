@@ -41,7 +41,9 @@ class Planner:
         Only shows the final decision (tool call) with details, not internal reasoning.
         """
         if not verifier_session.iterations:
-            return Block(heading="Last Verifier Decision", content="No verifier decision yet.")
+            return Block(
+                heading="Last Verifier Decision", content="No verifier decision yet."
+            )
 
         # Get the last iteration's tool calls (should be the decision)
         last_iteration = verifier_session.iterations[-1]
@@ -55,21 +57,35 @@ class Planner:
             content += f"{status} {tc.description}\n"
 
             # Show details from tool parameters
-            details = tc.parameters.get("details") or tc.parameters.get("failure_reason")
+            details = tc.parameters.get("details") or tc.parameters.get(
+                "failure_reason"
+            )
             if details:
-                label = "Failure reason" if tc.parameters.get("failure_reason") else "Details"
+                label = (
+                    "Failure reason"
+                    if tc.parameters.get("failure_reason")
+                    else "Details"
+                )
                 content += f"   {label}: {details}\n"
             if not tc.success and tc.error:
                 content += f"   Error: {tc.error}\n"
 
         return Block(heading="Last Verifier Decision", content=content.strip())
 
-    async def _build_context(self, task_description: str, subtask_queue: SubtaskQueue, iterations: list, last_verifier_session=None) -> Context:
-        context = Context() \
-            .with_system(build_planner_prompt()) \
-            .with_block(Block(heading="Task Goal", content=task_description)) \
-            .with_block(self._tool_registry.get_context()) \
+    async def _build_context(
+        self,
+        task_description: str,
+        subtask_queue: SubtaskQueue,
+        iterations: list,
+        last_verifier_session=None,
+    ) -> Context:
+        context = (
+            Context()
+            .with_system(build_planner_prompt())
+            .with_block(Block(heading="Task Goal", content=task_description))
+            .with_block(self._tool_registry.get_context())
             .with_block(subtask_queue.get_context())
+        )
 
         # Add last verifier decision if available
         if last_verifier_session:
@@ -78,29 +94,43 @@ class Planner:
 
         return context
 
-    async def run(self, task_description: str, subtask_queue: SubtaskQueue, max_iterations: int = 10, session_id: int = 0, last_verifier_session=None) -> PlannerSession:
+    async def run(
+        self,
+        task_description: str,
+        subtask_queue: SubtaskQueue,
+        max_iterations: int = 10,
+        session_id: int = 0,
+        last_verifier_session=None,
+    ) -> PlannerSession:
         iterations = []
 
         for i in range(max_iterations):
-            context = await self._build_context(task_description, subtask_queue, iterations, last_verifier_session)
+            context = await self._build_context(
+                task_description, subtask_queue, iterations, last_verifier_session
+            )
 
             # Save debug info if enabled
-            debug_paths = None
             if self._debug:
-                debug_paths = self._save_debug_context(f"session_{session_id}_planner_iter_{i}", context)
+                self._save_debug_context(
+                    f"session_{session_id}_planner_iter_{i}", context
+                )
 
             proposed = await self._llm.generate(context, ProposedIteration)
-            tool_calls = self._tool_registry.validate_proposed_tools(proposed.tool_calls)
+            tool_calls = self._tool_registry.validate_proposed_tools(
+                proposed.tool_calls
+            )
 
             for tool_call in tool_calls:
-                await self._tool_registry.execute_tool_call(tool_call, subtask_queue=subtask_queue)
+                await self._tool_registry.execute_tool_call(
+                    tool_call, subtask_queue=subtask_queue
+                )
 
             iteration = Iteration(
                 observation=proposed.observation,
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
                 context=context if self._debug else None,
-                screenshot_path=None  # Planner has no screenshots
+                screenshot_path=None,  # Planner has no screenshots
             )
             iterations.append(iteration)
 
@@ -110,5 +140,5 @@ class Planner:
         return PlannerSession(
             task_description=task_description,
             max_iterations=max_iterations,
-            iterations=iterations
+            iterations=iterations,
         )

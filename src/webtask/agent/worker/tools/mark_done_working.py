@@ -13,7 +13,9 @@ class MarkDoneWorkingTool(Tool):
     class Params(BaseModel):
         """Parameters for mark_done_working tool."""
 
-        details: str = Field(description="Summary of what you attempted and what state the page is in")
+        details: str = Field(
+            description="Summary of what you attempted and what state the page is in"
+        )
 
     async def execute(self, params: Params, **kwargs) -> None:
         """Signal that work is done.

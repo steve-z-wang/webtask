@@ -28,9 +28,7 @@ class SubtaskQueue:
             self.history.append(self.current_subtask)
 
         # Create and set new current subtask
-        self.current_subtask = Subtask(
-            description=goal, status=SubtaskStatus.PENDING
-        )
+        self.current_subtask = Subtask(description=goal, status=SubtaskStatus.PENDING)
         return self.current_subtask
 
     def get_current(self) -> Optional[Subtask]:
@@ -74,15 +72,15 @@ class SubtaskQueue:
     def get_context(self) -> Block:
         """Get formatted context for LLM."""
         if not self.current_subtask and not self.history:
-            return Block(
-                heading="Subtask Queue", content="No subtasks created yet."
-            )
+            return Block(heading="Subtask Queue", content="No subtasks created yet.")
 
         content = ""
 
         # Show history
         for i, subtask in enumerate(self.history):
-            content += f"  {i}. [{subtask.status.value.upper()}] {subtask.description}\n"
+            content += (
+                f"  {i}. [{subtask.status.value.upper()}] {subtask.description}\n"
+            )
             if subtask.failure_reason:
                 content += f"     Failure: {subtask.failure_reason}\n"
 

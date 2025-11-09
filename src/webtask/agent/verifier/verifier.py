@@ -1,10 +1,9 @@
 """Verifier role - checks if subtask succeeded and if task is complete."""
 
-import os
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from ..tool import ToolRegistry
-from ..tool_call import ProposedIteration, Iteration, ToolCall
+from ..tool_call import ProposedIteration, Iteration
 from ...llm import Context, Block
 from ...llm.typed_llm import TypedLLM
 from ...prompts import build_verifier_prompt
@@ -23,7 +22,9 @@ if TYPE_CHECKING:
 class Verifier:
     """Verifier role - checks if subtask succeeded and if task is complete."""
 
-    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False):
+    def __init__(
+        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False
+    ):
         self._llm = typed_llm
         self._agent_browser = agent_browser
         self._debug = debug
@@ -65,7 +66,7 @@ class Verifier:
             page=page,
             include_element_ids=False,
             with_bounding_boxes=False,
-            full_page_screenshot=False
+            full_page_screenshot=False,
         )
         return block
 
@@ -95,13 +96,15 @@ class Verifier:
         worker_iterations: list,
     ) -> Context:
         page_context = await self._build_page_context()
-        return Context() \
-            .with_system(build_verifier_prompt()) \
-            .with_block(Block(heading="Task Goal", content=task_description)) \
-            .with_block(Block(heading="Current Subtask", content=subtask_description)) \
-            .with_block(self._format_worker_actions(worker_iterations)) \
-            .with_block(self._tool_registry.get_context()) \
+        return (
+            Context()
+            .with_system(build_verifier_prompt())
+            .with_block(Block(heading="Task Goal", content=task_description))
+            .with_block(Block(heading="Current Subtask", content=subtask_description))
+            .with_block(self._format_worker_actions(worker_iterations))
+            .with_block(self._tool_registry.get_context())
             .with_block(page_context)
+        )
 
     async def run(
         self,
@@ -109,7 +112,7 @@ class Verifier:
         subtask_description: str,
         worker_session: WorkerSession,
         max_iterations: int = 3,
-        session_id: int = 0
+        session_id: int = 0,
     ) -> VerifierSession:
         subtask_decision = None
         task_complete = False
@@ -117,19 +120,20 @@ class Verifier:
 
         for i in range(max_iterations):
             context = await self._build_context(
-                task_description,
-                subtask_description,
-                worker_session.iterations
+                task_description, subtask_description, worker_session.iterations
             )
 
             # Save debug info if enabled
             debug_paths = None
             if self._debug:
-                debug_paths = self._save_debug_context(f"session_{session_id}_verifier_iter_{i}", context)
+                debug_paths = self._save_debug_context(
+                    f"session_{session_id}_verifier_iter_{i}", context
+                )
 
             proposed = await self._llm.generate(context, ProposedIteration)
             tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls)
+                proposed.tool_calls
+            )
 
             for tool_call in tool_calls:
                 await self._tool_registry.execute_tool_call(tool_call)
@@ -139,12 +143,15 @@ class Verifier:
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
                 context=context if self._debug else None,
-                screenshot_path=debug_paths.get("image_0") if debug_paths else None
+                screenshot_path=debug_paths.get("image_0") if debug_paths else None,
             )
             iterations.append(iteration)
 
             for tc in tool_calls:
-                if tc.tool in ["mark_subtask_complete", "mark_subtask_failed"] and tc.success:
+                if (
+                    tc.tool in ["mark_subtask_complete", "mark_subtask_failed"]
+                    and tc.success
+                ):
                     subtask_decision = tc
                 if tc.tool == "mark_task_complete" and tc.success:
                     task_complete = True
@@ -159,5 +166,5 @@ class Verifier:
             max_iterations=max_iterations,
             iterations=iterations,
             task_complete=task_complete,
-            subtask_decision=subtask_decision
+            subtask_decision=subtask_decision,
         )

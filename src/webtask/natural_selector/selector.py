@@ -32,15 +32,19 @@ class NaturalSelector:
             page=page,
             include_element_ids=True,
             with_bounding_boxes=False,
-            full_page_screenshot=True
+            full_page_screenshot=True,
         )
         self._element_map = element_map if element_map else {}
 
         system = build_selector_prompt()
 
-        context = Context(system=system) \
-            .with_block(page_context) \
-            .with_block(f'\nWhich element_id matches this description: "{description}"?')
+        context = (
+            Context(system=system)
+            .with_block(page_context)
+            .with_block(
+                f'\nWhich element_id matches this description: "{description}"?'
+            )
+        )
 
         # Generate and validate response with automatic retry
         max_retries = 3

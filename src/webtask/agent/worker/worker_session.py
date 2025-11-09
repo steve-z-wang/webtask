@@ -15,7 +15,7 @@ class WorkerSession:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __str__(self) -> str:
-        lines = [f"=== Worker Session ==="]
+        lines = ["=== Worker Session ==="]
         lines.append(f"Subtask: {self.subtask_description}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")
         lines.append("")

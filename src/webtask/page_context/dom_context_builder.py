@@ -45,7 +45,9 @@ class DomContextBuilder:
         element_map = DomContextBuilder._assign_element_ids(root)
 
         # Serialize with or without element IDs
-        context_str = DomContextBuilder._serialize_context(root, include_element_ids=include_element_ids)
+        context_str = DomContextBuilder._serialize_context(
+            root, include_element_ids=include_element_ids
+        )
 
         return context_str, element_map
 

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from ..llm import Block
+    pass
 
 
 class ProposedToolCall(BaseModel):
@@ -16,7 +16,9 @@ class ProposedToolCall(BaseModel):
     This is what the LLM returns - pure JSON-serializable data for validation.
     """
 
-    description: str = Field(description="Past-tense description of what this action does (e.g., 'Clicked the cart icon', 'Filled quantity field with 2')")
+    description: str = Field(
+        description="Past-tense description of what this action does (e.g., 'Clicked the cart icon', 'Filled quantity field with 2')"
+    )
     tool: str = Field(description="Tool name to execute")
     parameters: Dict[str, Any] = Field(
         default_factory=dict, description="Tool-specific parameters"
@@ -70,9 +72,15 @@ class ToolCall:
 
     def __str__(self) -> str:
         """String representation for debugging."""
-        status = "[SUCCESS]" if self.success else "[FAILED]" if self.success is not None else "[PENDING]"
+        status = (
+            "[SUCCESS]"
+            if self.success
+            else "[FAILED]" if self.success is not None else "[PENDING]"
+        )
         lines = [f"{status} {self.description}"]
-        lines.append(f"   Tool: {self.tool}({', '.join(f'{k}={v}' for k, v in self.parameters.items())})")
+        lines.append(
+            f"   Tool: {self.tool}({', '.join(f'{k}={v}' for k, v in self.parameters.items())})"
+        )
         if not self.success and self.error:
             lines.append(f"   Error: {self.error}")
         return "\n".join(lines)
@@ -86,7 +94,9 @@ class ProposedIteration(BaseModel):
     This is what the LLM returns in one iteration of a role's run() loop.
     """
 
-    observation: str = Field(description="Observation of current page state (success/error messages, loading states, what just changed)")
+    observation: str = Field(
+        description="Observation of current page state (success/error messages, loading states, what just changed)"
+    )
     thinking: str = Field(description="Analysis and reasoning about what to do next")
     tool_calls: List[ProposedToolCall] = Field(
         default_factory=list, description="Tool calls to execute"
@@ -116,10 +126,7 @@ class Iteration:
     @classmethod
     def from_proposed(cls, proposed: ProposedIteration) -> "Iteration":
         """Create Iteration from proposed iteration (before execution)."""
-        return cls(
-            observation=proposed.observation,
-            thinking=proposed.thinking
-        )
+        return cls(observation=proposed.observation, thinking=proposed.thinking)
 
     def add_tool_call(self, tool_call: ToolCall) -> None:
         """Add an executed tool call to this iteration."""
@@ -136,4 +143,3 @@ class Iteration:
             for line in str(tc).split("\n"):
                 lines.append(f"  {line}")
         return "\n".join(lines)
-

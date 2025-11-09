@@ -56,8 +56,8 @@ class ToolRegistry:
 
     def register(self, tool: Tool) -> None:
         """Register a tool in the registry."""
-        if not hasattr(tool, 'name'):
-            raise ValueError(f"Tool must have 'name' attribute")
+        if not hasattr(tool, "name"):
+            raise ValueError("Tool must have 'name' attribute")
         if tool.name in self._tools:
             raise ValueError(f"Tool '{tool.name}' is already registered")
         self._tools[tool.name] = tool
@@ -101,7 +101,6 @@ class ToolRegistry:
             tool_call: The tool call to execute
             **kwargs: Additional dependencies to pass to tool.execute()
         """
-        from .tool_call import ToolCall
 
         if tool_call.executed:
             return
@@ -138,17 +137,21 @@ class ToolRegistry:
             for prop in properties.values():
                 prop.pop("title", None)
 
-            tool_schemas.append({
-                "tool": tool.name,
-                "description": tool.description,
-                "parameters": properties,
-                "required": required,
-            })
+            tool_schemas.append(
+                {
+                    "tool": tool.name,
+                    "description": tool.description,
+                    "parameters": properties,
+                    "required": required,
+                }
+            )
 
         # Build complete schema
         complete_schema = {
             "tool_call_structure": tool_call_schema,
-            "available_tools": tool_schemas
+            "available_tools": tool_schemas,
         }
 
-        return Block(heading="Available Tools", content=json.dumps(complete_schema, indent=2))
+        return Block(
+            heading="Available Tools", content=json.dumps(complete_schema, indent=2)
+        )

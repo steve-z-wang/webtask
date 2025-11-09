@@ -6,7 +6,7 @@ from .llm import LLM
 from .context import Context
 from ..utils import parse_json
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar("T", bound=BaseModel)
 
 
 class TypedLLM:

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from ..tool import Tool
 
 if TYPE_CHECKING:
-    from ..task import TaskExecution
+    pass
 
 
 class StartSubtaskTool(Tool):

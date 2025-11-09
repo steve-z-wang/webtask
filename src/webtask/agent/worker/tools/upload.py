@@ -14,8 +14,12 @@ class UploadTool(Tool):
     class Params(BaseModel):
         """Parameters for upload tool."""
 
-        element_id: str = Field(description="Element ID of the file input (e.g., 'input-5')")
-        resource_names: List[str] = Field(description="List of resource names to upload (e.g., ['photo1', 'photo2'])")
+        element_id: str = Field(
+            description="Element ID of the file input (e.g., 'input-5')"
+        )
+        resource_names: List[str] = Field(
+            description="List of resource names to upload (e.g., ['photo1', 'photo2'])"
+        )
 
     async def execute(self, params: Params, **kwargs) -> None:
         """Execute file upload.

@@ -15,7 +15,7 @@ class PlannerSession:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __str__(self) -> str:
-        lines = [f"=== Planner Session ==="]
+        lines = ["=== Planner Session ==="]
         lines.append(f"Task: {self.task_description}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")
         lines.append("")

@@ -18,12 +18,12 @@ def parse_json(text: str) -> Dict[str, Any]:
         text = "\n".join(lines).strip()
 
     # Handle missing opening brace (LLM sometimes starts with "message": instead of {"message":)
-    if text.startswith('"') and not text.startswith('{'):
-        text = '{' + text
+    if text.startswith('"') and not text.startswith("{"):
+        text = "{" + text
 
     # Handle missing closing brace
-    if text.endswith('}') is False and text.count('{') > text.count('}'):
-        text = text + '}'
+    if text.endswith("}") is False and text.count("{") > text.count("}"):
+        text = text + "}"
 
     try:
         return json.loads(text)

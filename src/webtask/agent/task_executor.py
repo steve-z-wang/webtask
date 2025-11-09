@@ -23,7 +23,7 @@ class TaskExecutor:
                 subtask_queue=task.subtask_queue,
                 max_iterations=3,
                 session_id=session_counter,
-                last_verifier_session=last_verifier_session
+                last_verifier_session=last_verifier_session,
             )
             task.add_session(planner_session)
             session_counter += 1
@@ -34,6 +34,7 @@ class TaskExecutor:
 
             # Skip if subtask already completed or failed
             from .subtask import SubtaskStatus
+
             if current_subtask.status in [SubtaskStatus.COMPLETE, SubtaskStatus.FAILED]:
                 break
 
@@ -42,7 +43,7 @@ class TaskExecutor:
             worker_session = await self._worker.run(
                 subtask_description=current_subtask.description,
                 max_iterations=10,
-                session_id=session_counter
+                session_id=session_counter,
             )
             task.add_session(worker_session)
             session_counter += 1
@@ -52,7 +53,7 @@ class TaskExecutor:
                 subtask_description=current_subtask.description,
                 worker_session=worker_session,
                 max_iterations=3,
-                session_id=session_counter
+                session_id=session_counter,
             )
             task.add_session(verifier_session)
             session_counter += 1
@@ -64,12 +65,16 @@ class TaskExecutor:
                 if verifier_session.subtask_decision.tool == "mark_subtask_complete":
                     task.subtask_queue.mark_current_complete()
                 elif verifier_session.subtask_decision.tool == "mark_subtask_failed":
-                    task.subtask_queue.mark_current_failed(verifier_session.subtask_decision.result)
+                    task.subtask_queue.mark_current_failed(
+                        verifier_session.subtask_decision.result
+                    )
             else:
                 if verifier_session.task_complete:
                     task.subtask_queue.mark_current_complete()
                 else:
-                    task.subtask_queue.mark_current_failed("Verifier could not determine subtask status")
+                    task.subtask_queue.mark_current_failed(
+                        "Verifier could not determine subtask status"
+                    )
 
             if verifier_session.task_complete:
                 task.mark_complete()

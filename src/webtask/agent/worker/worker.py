@@ -1,6 +1,5 @@
 """Worker role - executes one subtask."""
 
-import os
 from pathlib import Path
 from typing import Dict, Any, TYPE_CHECKING
 from ..tool import ToolRegistry
@@ -29,7 +28,9 @@ class Worker:
     # Small delay after each action to prevent race conditions
     ACTION_DELAY = 0.1
 
-    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False):
+    def __init__(
+        self, typed_llm: TypedLLM, agent_browser: "AgentBrowser", debug: bool = False
+    ):
         self._llm = typed_llm
         self.worker_browser = WorkerBrowser(agent_browser)
         self.resources: Dict[str, Any] = {}
@@ -75,7 +76,10 @@ class Worker:
         it shows full details to help maintain continuity.
         """
         if not iterations:
-            return Block(heading="Current Session Iterations", content="No iterations yet in this session.")
+            return Block(
+                heading="Current Session Iterations",
+                content="No iterations yet in this session.",
+            )
 
         content = ""
         for i, iteration in enumerate(iterations, 1):
@@ -91,19 +95,25 @@ class Worker:
 
         return Block(heading="Current Session Iterations", content=content.strip())
 
-    async def _build_context(self, subtask_description: str, iterations: list) -> Context:
+    async def _build_context(
+        self, subtask_description: str, iterations: list
+    ) -> Context:
         page_context = await self.worker_browser.get_context(
             include_element_ids=True,
             with_bounding_boxes=True,
         )
-        return Context() \
-            .with_system(build_worker_prompt()) \
-            .with_block(Block(heading="Current Subtask", content=subtask_description)) \
-            .with_block(self._tool_registry.get_context()) \
-            .with_block(self._format_own_iterations(iterations)) \
+        return (
+            Context()
+            .with_system(build_worker_prompt())
+            .with_block(Block(heading="Current Subtask", content=subtask_description))
+            .with_block(self._tool_registry.get_context())
+            .with_block(self._format_own_iterations(iterations))
             .with_block(page_context)
+        )
 
-    async def run(self, subtask_description: str, max_iterations: int = 10, session_id: int = 0) -> WorkerSession:
+    async def run(
+        self, subtask_description: str, max_iterations: int = 10, session_id: int = 0
+    ) -> WorkerSession:
         iterations = []
 
         for i in range(max_iterations):
@@ -112,15 +122,20 @@ class Worker:
             # Save debug info if enabled
             debug_paths = None
             if self._debug:
-                debug_paths = self._save_debug_context(f"session_{session_id}_worker_iter_{i}", context)
+                debug_paths = self._save_debug_context(
+                    f"session_{session_id}_worker_iter_{i}", context
+                )
 
             proposed = await self._llm.generate(context, ProposedIteration)
             tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls)
+                proposed.tool_calls
+            )
 
             for tool_call in tool_calls:
                 await self._tool_registry.execute_tool_call(
-                    tool_call, worker_browser=self.worker_browser, resources=self.resources
+                    tool_call,
+                    worker_browser=self.worker_browser,
+                    resources=self.resources,
                 )
                 await wait(self.ACTION_DELAY)
 
@@ -129,7 +144,7 @@ class Worker:
                 thinking=proposed.thinking,
                 tool_calls=tool_calls,
                 context=context if self._debug else None,
-                screenshot_path=debug_paths.get("image_0") if debug_paths else None
+                screenshot_path=debug_paths.get("image_0") if debug_paths else None,
             )
             iterations.append(iteration)
 
@@ -139,5 +154,5 @@ class Worker:
         return WorkerSession(
             subtask_description=subtask_description,
             max_iterations=max_iterations,
-            iterations=iterations
+            iterations=iterations,
         )
