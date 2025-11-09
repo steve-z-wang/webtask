@@ -1,10 +1,10 @@
 """Tests for attribute filter."""
 
 import pytest
-from webtask.dom_processing.filters.filter_non_semantic import (
+from webtask._internal.dom_processing.filters.filter_non_semantic import (
     _remove_non_semantic_attributes,
 )
-from webtask.dom.domnode import DomNode, Text
+from webtask._internal.dom.domnode import DomNode, Text
 
 
 @pytest.mark.unit
@@ -184,7 +184,7 @@ class TestRemoveNonSemanticAttributes:
 
     def test_preserves_node_properties_except_attrib(self):
         """Test preserves all node properties except attributes."""
-        from webtask.dom.domnode import BoundingBox
+        from webtask._internal.dom.domnode import BoundingBox
 
         node = DomNode(
             tag="div",

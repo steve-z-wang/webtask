@@ -2,7 +2,7 @@
 
 import pytest
 from typing import Dict, Any
-from webtask.dom.domnode import DomNode, Text, BoundingBox
+from webtask._internal.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.fixture
