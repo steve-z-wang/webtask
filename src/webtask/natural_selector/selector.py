@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Dict
 from pydantic import ValidationError
 from ..llm import Context, Block
 from ..llm.typed_llm import TypedLLM
-from ..prompts import get_prompt
+from ..prompts import build_selector_prompt
 from ..browser import Element
 from ..page_context import PageContextBuilder
 from .schema import SelectorResponse
@@ -36,7 +36,7 @@ class NaturalSelector:
         )
         self._element_map = element_map if element_map else {}
 
-        system = get_prompt("selector_system")
+        system = build_selector_prompt()
 
         context = Context(system=system) \
             .with_block(page_context) \
