@@ -3,14 +3,11 @@
 from .webtask import Webtask
 from .agent import Agent
 
-from .dom import (
-    DomNode,
-    DomNodeData,
-    Text,
-    BoundingBox,
-    parse_html,
-    parse_cdp,
-    DomSnapshot,
+from .browser import (
+    Browser,
+    Session,
+    Page,
+    Element,
 )
 
 from .llm import (
@@ -21,23 +18,18 @@ from .llm import (
 
 from .media import Image
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 __all__ = [
     # Manager
     "Webtask",
     # Agent
     "Agent",
-    # DOM types
-    "DomNode",
-    "DomNodeData",
-    "Text",
-    "BoundingBox",
-    # Parsers
-    "parse_html",
-    "parse_cdp",
-    # Snapshot
-    "DomSnapshot",
+    # Browser interfaces (for custom implementations)
+    "Browser",
+    "Session",
+    "Page",
+    "Element",
     # LLM
     "Context",
     "Block",

@@ -1,8 +1,8 @@
 """WorkerBrowser - adds element mapping layer on top of AgentBrowser."""
 
 from typing import Dict
-from ...dom.domnode import DomNode
-from ...llm import Block
+from webtask._internal.dom.domnode import DomNode
+from webtask.llm import Block
 from ..agent_browser import AgentBrowser
 from ...page_context import PageContextBuilder
 

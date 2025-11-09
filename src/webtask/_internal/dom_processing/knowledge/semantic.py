@@ -1,6 +1,6 @@
 """Knowledge: Determine if elements have semantic value."""
 
-from ...dom.domnode import DomNode
+from webtask._internal.dom.domnode import DomNode
 from .interactive import is_interactive
 
 # Semantic attributes that provide meaningful information

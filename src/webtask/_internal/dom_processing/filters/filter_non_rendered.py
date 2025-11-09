@@ -1,7 +1,7 @@
 """Filter non-rendered elements."""
 
 from typing import Optional
-from ...dom.domnode import DomNode, Text
+from webtask._internal.dom.domnode import DomNode, Text
 from ..knowledge import is_not_rendered, should_keep_when_not_rendered
 
 

@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Dict, Any, TYPE_CHECKING
 from ..tool import ToolRegistry
 from ..tool_call import ProposedIteration, Iteration
-from ...llm import Context, Block
-from ...llm.typed_llm import TypedLLM
+from webtask.llm import Context, Block
+from webtask._internal.llm import TypedLLM
 from ...prompts.worker_prompt import build_worker_prompt
-from ...utils.wait import wait
+from webtask.utils.wait import wait
 from .worker_browser import WorkerBrowser
 from .worker_session import WorkerSession
 from .tools.navigate import NavigateTool

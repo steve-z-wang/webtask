@@ -1,7 +1,7 @@
 """BoundingBoxRenderer - visualizes element_map with bounding boxes."""
 
 from typing import Dict
-from ..browser import Page
+from webtask.browser import Page
 from ..dom.domnode import DomNode
 
 
@@ -179,7 +179,7 @@ class BoundingBoxRenderer:
             line_width: Border width in pixels (default: 2)
             font_size: Label font size (default: 12)
         """
-        from ..media import Image
+        from webtask.media import Image
 
         screenshot_bytes = await BoundingBoxRenderer.render(
             page=page,

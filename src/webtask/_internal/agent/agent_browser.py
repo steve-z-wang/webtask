@@ -1,7 +1,7 @@
 """AgentBrowser - pure browser operations without element mapping."""
 
 from typing import Dict, List, Optional
-from ..browser import Page, Session
+from webtask.browser import Page, Session
 
 
 class AgentBrowser:

@@ -2,9 +2,8 @@
 
 from typing import Type, TypeVar
 from pydantic import BaseModel
-from .llm import LLM
-from .context import Context
-from ..utils import parse_json
+from webtask.llm import LLM, Context
+from webtask.utils import parse_json
 
 T = TypeVar("T", bound=BaseModel)
 

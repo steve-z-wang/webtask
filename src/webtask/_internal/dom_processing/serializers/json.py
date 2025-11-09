@@ -1,7 +1,7 @@
 """Serialize DomNode tree to JSON with complete data."""
 
 from typing import Any, Dict, Union
-from ...dom.domnode import DomNode, Text
+from webtask._internal.dom.domnode import DomNode, Text
 
 
 def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:

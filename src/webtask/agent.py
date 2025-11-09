@@ -3,16 +3,16 @@
 import asyncio
 import logging
 from typing import Dict, List, Optional
-from ..llm import LLM
-from ..llm.typed_llm import TypedLLM
-from ..browser import Page, Session
-from .agent_browser import AgentBrowser
-from ..natural_selector import NaturalSelector
-from .task import Task, TaskExecution
-from .task_executor import TaskExecutor
-from .planner.planner import Planner
-from .worker.worker import Worker
-from .verifier.verifier import Verifier
+from .llm import LLM
+from ._internal.llm import TypedLLM
+from .browser import Page, Session
+from ._internal.agent.agent_browser import AgentBrowser
+from ._internal.natural_selector import NaturalSelector
+from ._internal.agent.task import Task, TaskExecution
+from ._internal.agent.task_executor import TaskExecutor
+from ._internal.agent.planner.planner import Planner
+from ._internal.agent.worker.worker import Worker
+from ._internal.agent.verifier.verifier import Verifier
 
 
 class Agent:

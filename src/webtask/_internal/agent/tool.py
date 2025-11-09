@@ -3,7 +3,7 @@
 import json
 from typing import Dict, Any, List, TYPE_CHECKING
 from pydantic import BaseModel
-from ..llm import Block
+from webtask.llm import Block
 
 if TYPE_CHECKING:
     from .tool_call import ProposedToolCall, ToolCall

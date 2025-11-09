@@ -4,7 +4,7 @@ Pure function that answers: "Is this element interactive?"
 Based on HTML and ARIA web standards.
 """
 
-from ...dom.domnode import DomNode
+from webtask._internal.dom.domnode import DomNode
 
 # Standard interactive HTML tags (from HTML spec)
 INTERACTIVE_TAGS = {"a", "button", "input", "select", "textarea", "label"}

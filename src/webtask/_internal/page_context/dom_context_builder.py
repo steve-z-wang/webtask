@@ -1,7 +1,7 @@
 """DomContextBuilder - builds LLM context from DOM."""
 
 from typing import Dict, Optional
-from ..browser import Page
+from webtask.browser import Page
 from ..dom.domnode import DomNode, Text
 from ..dom_processing.filters import filter_non_rendered, filter_non_semantic
 
