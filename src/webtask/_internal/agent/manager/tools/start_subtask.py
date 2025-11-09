@@ -1,8 +1,8 @@
-"""Scheduler tools for subtask queue management."""
+"""Start subtask tool for Manager."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
-from ..tool import Tool
+from ...tool import Tool
 
 if TYPE_CHECKING:
     pass

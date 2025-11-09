@@ -1,15 +1,15 @@
-"""TaskExecutor orchestrates planner, worker, and verifier to complete a task."""
+"""TaskExecutor orchestrates manager, worker, and verifier to complete a task."""
 
 from .task import TaskExecution
-from .planner.planner import Planner
+from .manager.manager import Manager
 from .worker.worker import Worker
 from .verifier.verifier import Verifier
 
 
 class TaskExecutor:
 
-    def __init__(self, planner: Planner, worker: Worker, verifier: Verifier):
-        self._planner = planner
+    def __init__(self, manager: Manager, worker: Worker, verifier: Verifier):
+        self._manager = manager
         self._worker = worker
         self._verifier = verifier
 
@@ -18,15 +18,25 @@ class TaskExecutor:
         last_verifier_session = None
 
         for cycle in range(max_cycles):
-            planner_session = await self._planner.run(
+            manager_session = await self._manager.run(
                 task_description=task.task.description,
                 subtask_queue=task.subtask_queue,
                 max_iterations=3,
                 session_id=session_counter,
                 last_verifier_session=last_verifier_session,
             )
-            task.add_session(planner_session)
+            task.add_session(manager_session)
             session_counter += 1
+
+            # Check if manager marked task as complete
+            task_complete = any(
+                tc.tool == "mark_task_complete" and tc.success
+                for iteration in manager_session.iterations
+                for tc in iteration.tool_calls
+            )
+            if task_complete:
+                task.mark_complete()
+                return task
 
             current_subtask = task.subtask_queue.get_current()
             if current_subtask is None:
@@ -58,7 +68,7 @@ class TaskExecutor:
             task.add_session(verifier_session)
             session_counter += 1
 
-            # Store for next planner iteration
+            # Store for next manager iteration
             last_verifier_session = verifier_session
 
             if verifier_session.subtask_decision:
@@ -69,15 +79,8 @@ class TaskExecutor:
                         verifier_session.subtask_decision.result
                     )
             else:
-                if verifier_session.task_complete:
-                    task.subtask_queue.mark_current_complete()
-                else:
-                    task.subtask_queue.mark_current_failed(
-                        "Verifier could not determine subtask status"
-                    )
-
-            if verifier_session.task_complete:
-                task.mark_complete()
-                return task
+                task.subtask_queue.mark_current_failed(
+                    "Verifier could not determine subtask status"
+                )
 
         return task

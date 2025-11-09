@@ -13,7 +13,6 @@ from ..worker.worker_session import WorkerSession
 from .verifier_session import VerifierSession
 from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
 from .tools.mark_subtask_failed import MarkSubtaskFailedTool
-from .tools.mark_task_complete import MarkTaskCompleteTool
 from ..worker.tools.wait import WaitTool
 
 if TYPE_CHECKING:
@@ -29,7 +28,6 @@ class Verifier:
         self._tool_registry = ToolRegistry()
         self._tool_registry.register(MarkSubtaskCompleteTool())
         self._tool_registry.register(MarkSubtaskFailedTool())
-        self._tool_registry.register(MarkTaskCompleteTool())
         self._tool_registry.register(WaitTool())
 
     def _save_debug_context(self, filename: str, context):
@@ -114,7 +112,6 @@ class Verifier:
     ) -> VerifierSession:
         session_number = session_id  # Already 1-indexed from task_executor
         subtask_decision = None
-        task_complete = False
         iterations = []
 
         for i in range(max_iterations):
@@ -152,10 +149,8 @@ class Verifier:
                     and tc.success
                 ):
                     subtask_decision = tc
-                if tc.tool == "mark_task_complete" and tc.success:
-                    task_complete = True
 
-            if task_complete or subtask_decision:
+            if subtask_decision:
                 break
 
         return VerifierSession(
@@ -165,6 +160,5 @@ class Verifier:
             worker_session=worker_session,
             max_iterations=max_iterations,
             iterations=iterations,
-            task_complete=task_complete,
             subtask_decision=subtask_decision,
         )

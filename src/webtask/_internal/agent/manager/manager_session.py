@@ -1,4 +1,4 @@
-"""PlannerSession - tracks one planner.run() execution."""
+"""ManagerSession - tracks one manager.run() execution."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -8,7 +8,7 @@ from ..tool_call import Iteration
 
 
 @dataclass
-class PlannerSession:
+class ManagerSession:
     session_number: int  # 1-indexed session number
     task_description: str
     max_iterations: int = 10
@@ -16,7 +16,7 @@ class PlannerSession:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __str__(self) -> str:
-        lines = ["=== Planner Session ==="]
+        lines = ["=== Manager Session ==="]
         lines.append(f"Task: {self.task_description}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")
         lines.append("")

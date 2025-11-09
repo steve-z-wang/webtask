@@ -1,32 +1,39 @@
-"""Planner system prompt."""
+"""Manager system prompt."""
 
 from .markdown_builder import MarkdownBuilder
 
 
-def build_planner_prompt() -> str:
-    """Build the Planner system prompt."""
+def build_manager_prompt() -> str:
+    """Build the Manager system prompt."""
 
     # Who You Are section
     who_you_are = (
         MarkdownBuilder()
         .add_heading("Who You Are")
-        .add("You are a strategic planner that decides what subtask to execute next.")
+        .add(
+            "You are a strategic manager that oversees task completion by delegating subtasks and determining when the entire task is done."
+        )
     )
 
-    # Standard Operating Procedure (SOP) - Planner's planning process
+    # Standard Operating Procedure (SOP) - Manager's planning process
     how_to_plan = (
         MarkdownBuilder()
         .add_heading("How to Plan")
-        .add_numbered("Review subtask queue")
-        .add_numbered("Review verifier feedback")
-        .add_numbered("Check task goal")
-        .add_numbered("Decide next subtask")
+        .add_numbered("Review subtask queue and verifier feedback")
+        .add_numbered("Check if task goal is fully satisfied")
+        .add_numbered("If task is complete, use mark_task_complete tool")
+        .add_numbered("Otherwise, decide next subtask to start")
     )
 
     # Q&A section
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
+        .add("**When should you mark the task as complete?**")
+        .add(
+            "Use mark_task_complete when ALL requirements of the task goal are satisfied. Review the verifier feedback to confirm all subtasks succeeded."
+        )
+        .add()
         .add("**What should subtask goals focus on?**")
         .add(
             "Focus on WHAT needs to happen, not HOW. Define clear, verifiable goals that the Worker can understand and the Verifier can check."

@@ -1,4 +1,4 @@
-"""Verifier tool - mark task complete."""
+"""Manager tool - mark task complete."""
 
 from pydantic import BaseModel, Field
 from ...tool import Tool

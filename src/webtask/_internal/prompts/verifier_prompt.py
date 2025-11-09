@@ -19,9 +19,8 @@ def build_verifier_prompt() -> str:
         .add_heading("How to Verify")
         .add_numbered("Review worker actions")
         .add_numbered("Observe current page state")
-        .add_numbered("Check if subtask succeeded")
-        .add_numbered("Check if entire task is complete")
-        .add_numbered("Make decision")
+        .add_numbered("Check if subtask succeeded or failed")
+        .add_numbered("Make decision (mark_subtask_complete or mark_subtask_failed)")
     )
 
     # Q&A section
