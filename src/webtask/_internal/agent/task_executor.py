@@ -4,14 +4,14 @@ from .task import TaskExecution
 from .manager.manager import Manager
 from .worker.worker import Worker
 from .verifier.verifier import Verifier
+from .subtask_manager import SubtaskManager
 
 
 class TaskExecutor:
 
     def __init__(self, manager: Manager, worker: Worker, verifier: Verifier):
         self._manager = manager
-        self._worker = worker
-        self._verifier = verifier
+        self._subtask_manager = SubtaskManager(worker, verifier)
 
     async def run(self, task: TaskExecution, max_cycles: int = 10) -> TaskExecution:
         session_counter = 1
@@ -63,50 +63,29 @@ class TaskExecutor:
                 # Mark current subtask as in progress
                 current_subtask.mark_in_progress()
 
-                # Worker executes subtask
-                worker_session = await self._worker.run(
-                    subtask_description=current_subtask.description,
-                    max_iterations=10,
-                    session_id=session_counter,
-                )
-                task.add_session(worker_session)
-                session_counter += 1
-
-                # Verifier checks subtask
-                verifier_session = await self._verifier.run(
+                # Execute subtask with SubtaskManager (handles Worker/Verifier loop with corrections)
+                subtask_execution = await self._subtask_manager.run(
+                    subtask=current_subtask,
                     task_description=task.task.description,
-                    subtask_description=current_subtask.description,
-                    worker_session=worker_session,
-                    max_iterations=3,
-                    session_id=session_counter,
+                    session_id_start=session_counter,
                 )
-                task.add_session(verifier_session)
-                session_counter += 1
+                task.add_session(subtask_execution)
 
-                # Store for next manager iteration
-                last_verifier_session = verifier_session
+                # Update session counter to account for all Worker/Verifier sessions
+                session_counter += len(subtask_execution.history)
 
-                # Handle verifier decision
-                if verifier_session.subtask_decision:
-                    if verifier_session.subtask_decision.tool == "complete_subtask":
-                        feedback = verifier_session.subtask_decision.parameters.get(
-                            "feedback", ""
-                        )
-                        task.subtask_queue.mark_current_complete(feedback)
-                    elif (
-                        verifier_session.subtask_decision.tool == "request_reschedule"
-                    ):
-                        feedback = verifier_session.subtask_decision.parameters.get(
-                            "feedback", ""
-                        )
-                        task.subtask_queue.mark_current_requested_reschedule(feedback)
-                        # Break to return to Manager for replanning
-                        break
-                else:
-                    # Verifier didn't make a decision - mark as requested reschedule
-                    task.subtask_queue.mark_current_requested_reschedule(
-                        "Verifier could not determine subtask status"
-                    )
+                # Store last verifier session for next manager iteration
+                if subtask_execution.history:
+                    from .verifier.verifier_session import VerifierSession
+
+                    last_session = subtask_execution.history[-1]
+                    if isinstance(last_session, VerifierSession):
+                        last_verifier_session = last_session
+
+                # Break to return to Manager if reschedule requested
+                from .subtask import SubtaskStatus
+
+                if current_subtask.status == SubtaskStatus.REQUESTED_RESCHEDULE:
                     break
 
         return task

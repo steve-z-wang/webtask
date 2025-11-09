@@ -17,10 +17,12 @@ def build_verifier_prompt() -> str:
     how_to_verify = (
         MarkdownBuilder()
         .add_heading("How to Verify")
-        .add_numbered("Review worker actions")
+        .add_numbered("Review worker actions and correction history")
         .add_numbered("Observe current page state")
-        .add_numbered("Check if subtask succeeded or needs reschedule")
-        .add_numbered("Make decision (complete_subtask or request_reschedule)")
+        .add_numbered("Check if subtask succeeded or needs correction/reschedule")
+        .add_numbered(
+            "Make decision (complete_subtask, request_correction, or request_reschedule)"
+        )
     )
 
     # Q&A section
@@ -37,9 +39,17 @@ def build_verifier_prompt() -> str:
             "Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't request reschedule just because the page is still loading - only request reschedule if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur."
         )
         .add()
-        .add("**When should you use complete_subtask vs request_reschedule?**")
+        .add("**When should you use complete_subtask?**")
+        .add("Use complete_subtask when the subtask goal was fully achieved.")
+        .add()
+        .add("**When should you use request_correction?**")
         .add(
-            "Use complete_subtask when the subtask goal was achieved. Use request_reschedule when the subtask failed, wrong approach was taken, or there's a blocker that requires Manager to replan."
+            "Use request_correction for small, fixable issues (wrong element clicked, typo, minor mistake). Worker will see your feedback and try again. Max 3 correction attempts allowed."
+        )
+        .add()
+        .add("**When should you use request_reschedule?**")
+        .add(
+            "Use request_reschedule when: (1) fundamental approach is wrong, (2) exceeded 3 correction attempts, or (3) there's a blocker requiring Manager to replan."
         )
     )
 

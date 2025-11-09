@@ -19,7 +19,8 @@ def build_worker_prompt() -> str:
     how_to_work = (
         MarkdownBuilder()
         .add_heading("How to Work")
-        .add_numbered("Check your action history")
+        .add_numbered("Check previous attempts and verifier feedback")
+        .add_numbered("Check your current session action history")
         .add_numbered("Observe current page")
         .add_numbered("Reason about next step")
         .add_numbered("Propose action")
@@ -29,6 +30,11 @@ def build_worker_prompt() -> str:
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
+        .add("**What are 'Previous Attempts'?**")
+        .add(
+            "If you see a 'Previous Attempts' section, it shows your earlier work on this subtask and Verifier's correction feedback. Read the feedback carefully and fix the issues identified."
+        )
+        .add()
         .add("**When are actions executed?**")
         .add("Actions are executed immediately one after another.")
         .add()

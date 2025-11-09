@@ -6,9 +6,8 @@ from typing import Dict, List, Union, TYPE_CHECKING
 from enum import Enum
 
 if TYPE_CHECKING:
-    from .planner.planner_session import PlannerSession
-    from .worker.worker_session import WorkerSession
-    from .verifier.verifier_session import VerifierSession
+    from .manager.manager_session import ManagerSession
+    from .subtask_execution import SubtaskExecution
 
 from .subtask_queue import SubtaskQueue
 
@@ -37,16 +36,14 @@ class TaskExecution:
     """
 
     task: Task
-    history: List[Union["PlannerSession", "WorkerSession", "VerifierSession"]] = field(
+    history: List[Union["ManagerSession", "SubtaskExecution"]] = field(
         default_factory=list
     )
     subtask_queue: SubtaskQueue = field(default_factory=SubtaskQueue)
     status: TaskStatus = TaskStatus.IN_PROGRESS
     failure_reason: str | None = None
 
-    def add_session(
-        self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]
-    ) -> None:
+    def add_session(self, session: Union["ManagerSession", "SubtaskExecution"]) -> None:
         """Add a session to execution history."""
         self.history.append(session)
 
@@ -89,11 +86,18 @@ class TaskExecution:
         if self.history:
             lines.append("EXECUTION HISTORY:")
             lines.append("-" * 80)
-            for session in self.history:
-                lines.append(f"\nSession {session.session_number}:")
-                # Indent each line of the session
-                for line in str(session).split("\n"):
-                    lines.append(f"  {line}")
+            from .manager.manager_session import ManagerSession
+            from .subtask_execution import SubtaskExecution
+
+            for item in self.history:
+                if isinstance(item, ManagerSession):
+                    lines.append(f"\n[Manager Session {item.session_number}]")
+                    for line in str(item).split("\n"):
+                        lines.append(f"  {line}")
+                elif isinstance(item, SubtaskExecution):
+                    lines.append("\n[Subtask Execution]")
+                    for line in str(item).split("\n"):
+                        lines.append(f"  {line}")
                 lines.append("")
 
         lines.append("=" * 80)

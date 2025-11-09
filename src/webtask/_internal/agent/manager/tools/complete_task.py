@@ -8,9 +8,7 @@ class CompleteTaskTool(Tool):
     """Signal that the entire task has been completed."""
 
     name = "complete_task"
-    description = (
-        "Signal that the entire task has been completed and all requirements have been met"
-    )
+    description = "Signal that the entire task has been completed and all requirements have been met"
 
     class Params(BaseModel):
         """Parameters for complete_task tool."""

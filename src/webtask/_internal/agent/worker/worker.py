@@ -93,31 +93,77 @@ class Worker:
 
         return Block(heading="Current Session Iterations", content=content.strip())
 
+    def _format_subtask_history(self, subtask_execution) -> Block:
+        """Format complete Worker/Verifier history for context."""
+        if not subtask_execution or not subtask_execution.history:
+            return Block(
+                heading="Previous Attempts",
+                content="No previous attempts for this subtask.",
+            )
+
+        from .worker_session import WorkerSession
+        from ..verifier.verifier_session import VerifierSession
+
+        content = ""
+        for session in subtask_execution.history:
+            if isinstance(session, WorkerSession):
+                content += f"\n**Worker Session {session.session_number}**\n"
+                for iteration in session.iterations:
+                    for tc in iteration.tool_calls:
+                        status = "[SUCCESS]" if tc.success else "[FAILED]"
+                        content += f"  {status} {tc.description}\n"
+                        if not tc.success and tc.error:
+                            content += f"     Error: {tc.error}\n"
+            elif isinstance(session, VerifierSession):
+                content += f"\n**Verifier Session {session.session_number}**\n"
+                if session.subtask_decision:
+                    content += f"  Decision: {session.subtask_decision.tool}\n"
+                    feedback = session.subtask_decision.parameters.get("feedback", "")
+                    if feedback:
+                        content += f"  Feedback: {feedback}\n"
+
+        return Block(heading="Previous Attempts", content=content.strip())
+
     async def _build_context(
-        self, subtask_description: str, iterations: list
+        self, subtask_description: str, iterations: list, subtask_execution=None
     ) -> Context:
         page_context = await self.worker_browser.get_context(
             include_element_ids=True,
             with_bounding_boxes=True,
         )
-        return (
+        context = (
             Context()
             .with_system(build_worker_prompt())
             .with_block(Block(heading="Current Subtask", content=subtask_description))
             .with_block(self._tool_registry.get_context())
-            .with_block(self._format_own_iterations(iterations))
-            .with_block(page_context)
         )
 
+        # Add previous attempts if available
+        if subtask_execution:
+            context = context.with_block(
+                self._format_subtask_history(subtask_execution)
+            )
+
+        context = context.with_block(self._format_own_iterations(iterations))
+        context = context.with_block(page_context)
+
+        return context
+
     async def run(
-        self, subtask_description: str, max_iterations: int = 10, session_id: int = 0
+        self,
+        subtask_description: str,
+        max_iterations: int = 10,
+        session_id: int = 0,
+        subtask_execution=None,
     ) -> WorkerSession:
         session_number = session_id  # Already 1-indexed from task_executor
         iterations = []
 
         for i in range(max_iterations):
             iteration_number = i + 1  # 1-indexed for display/output
-            context = await self._build_context(subtask_description, iterations)
+            context = await self._build_context(
+                subtask_description, iterations, subtask_execution
+            )
 
             # Save debug info if enabled
             if Config().is_debug_enabled():

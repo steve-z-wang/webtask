@@ -107,7 +107,11 @@ class SubtaskQueue:
 
     def __len__(self) -> int:
         """Get total number of subtasks (history + current + pending)."""
-        return len(self.history) + (1 if self.current_subtask else 0) + len(self.pending_subtasks)
+        return (
+            len(self.history)
+            + (1 if self.current_subtask else 0)
+            + len(self.pending_subtasks)
+        )
 
     def __str__(self) -> str:
         if not self.current_subtask and not self.history and not self.pending_subtasks:
