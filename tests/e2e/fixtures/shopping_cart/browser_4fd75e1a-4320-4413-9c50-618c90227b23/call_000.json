@@ -1,0 +1,11 @@
+{
+  "method": "create_session",
+  "args": {
+    "cookies": null
+  },
+  "result": {
+    "session_instance_id": "d30bf300-e6bc-46c8-9f22-f4eb2e1aa179"
+  },
+  "class": "browser",
+  "instance_id": "4fd75e1a-4320-4413-9c50-618c90227b23"
+}
