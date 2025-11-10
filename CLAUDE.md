@@ -29,17 +29,34 @@ pip install -e ".[dev]"
 
 ### Testing
 ```bash
-# Run all tests (when implemented)
-pytest
-
-# Run with async support
-pytest -v --asyncio-mode=auto
-
-# Run specific test file
-pytest tests/test_dom.py
+# Run all tests
+pdm run test
 
 # Run with coverage
-pytest --cov=webtask --cov-report=html
+pdm run test-cov
+
+# Run unit tests only
+pdm run test-unit
+
+# Run integration tests only
+pdm run test-integration
+
+# Run e2e tests in live mode (requires browser and LLM API)
+pdm run test-e2e
+
+# Run e2e tests in record mode (records browser/LLM interactions)
+pdm run test-e2e-record
+
+# Run e2e tests in replay mode (fast, deterministic, offline)
+pdm run test-e2e-replay
+
+# Run specific test file
+pytest tests/test_dom.py -v
+
+# Run tests with specific marker
+pytest -m unit -v
+pytest -m integration -v
+pytest -m e2e -v
 ```
 
 ### Code Quality

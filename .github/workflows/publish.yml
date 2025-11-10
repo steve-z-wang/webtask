@@ -10,11 +10,15 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  test-unit:
+    needs: lint
+    uses: ./.github/workflows/test-unit.yml
 
   publish:
-    needs: test  # Only publish if tests pass
+    needs: test-unit  # Only publish if lint and unit tests pass
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for trusted publishing

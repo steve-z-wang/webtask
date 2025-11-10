@@ -1,10 +1,10 @@
-name: Test & Lint
+name: E2E Tests
 
 on:
-  workflow_call:  # Can be called by other workflows (pr.yml, publish.yml)
+  workflow_call:  # Can be called by other workflows
 
 jobs:
-  test:
+  test-e2e:
     runs-on: ubuntu-latest
 
     strategy:
@@ -24,14 +24,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run ruff (linter)
+      - name: Install Playwright browsers
         run: |
-          ruff check src/ tests/
+          playwright install chromium
 
-      - name: Run black (formatter check)
+      - name: Run e2e tests (replay mode)
         run: |
-          black --check src/ tests/
-
-      - name: Run tests
-        run: |
-          pytest tests/ -v --tb=short
+          pytest tests/e2e/ -v --tb=short -m e2e
+        env:
+          WEBTASK_TEST_MODE: replay
