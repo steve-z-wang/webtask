@@ -16,7 +16,9 @@ async def add_to_cart():
         "Go to example-shop.com, find a blue shirt, add it to cart"
     )
 
-    if result.completed:
+    from webtask import TaskStatus
+
+    if result.status == TaskStatus.COMPLETED:
         print("Item added to cart!")
         await agent.screenshot("cart.png")
 
@@ -91,12 +93,14 @@ async def with_error_handling():
     try:
         result = await agent.execute(
             "Go to example.com and click the non-existent button",
-            max_steps=5
+            max_cycles=5
         )
 
-        if not result.completed:
+        from webtask import TaskStatus
+
+        if result.status != TaskStatus.COMPLETED:
             print("Task did not complete successfully")
-            print(f"Completed {len(result.steps)} steps")
+            print(f"Sessions executed: {len(result.history)}")
 
             # Save screenshot for debugging
             await agent.screenshot("error.png")

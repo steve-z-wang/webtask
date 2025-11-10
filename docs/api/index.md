@@ -5,22 +5,18 @@ Complete API documentation for webtask.
 
 
 ### [Agent](agent.md)
-Main interface for web automation with three interaction modes.
+Main interface for web automation with two interaction modes.
 
-**High-level methods:**
-- `execute()` - Autonomous task execution
+**Autonomous mode:**
+- `execute()` - Give it a task, agent figures out the steps
 
-**Step-by-step methods:**
-- `set_task()` - Set task for manual execution
-- `run_step()` - Execute one step
-
-**Low-level methods:**
+**Direct control mode:**
 - `navigate()` - Navigate to URL
 - `select()` - Select element by natural language
 - `wait()` / `wait_for_idle()` - Wait for conditions
 - `screenshot()` - Capture screenshot
 
-**Multi-page methods:**
+**Multi-page management:**
 - `open_page()` / `close_page()` - Manage pages
 - `get_pages()` / `get_current_page()` - Access pages
 
@@ -46,25 +42,14 @@ Browser element. Returned by `agent.select()` or `page.select_one()`.
 ### [Data Classes](data-classes.md)
 Data structures returned by webtask methods.
 
-**TaskResult:**
+**TaskExecution:**
 - Returned from `agent.execute()`
-- Contains completion status and steps
+- Contains task status, history, and subtask queue
+- Fields: `status`, `history`, `subtask_queue`, `failure_reason`
 
-**Step:**
-- Single step in task execution
-- Contains proposal and execution results
-
-**Proposal:**
-- Agent's proposed actions
-- Contains actions list and completion status
-
-**ExecutionResult:**
-- Result of executing an action
-- Contains success status and message
-
-**Action:**
-- Single action to execute
-- Contains tool name and parameters
+**TaskStatus:**
+- Enum for task status
+- Values: `IN_PROGRESS`, `COMPLETED`, `ABORTED`
 
 
 ## Next Steps

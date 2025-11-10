@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # Blog
 
 Stay tuned for updates, tutorials, and announcements about webtask!

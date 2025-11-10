@@ -16,6 +16,8 @@ from .llm import (
     Content,
 )
 
+from ._internal.agent.task import TaskExecution, TaskStatus
+
 __version__ = "0.11.0"
 
 __all__ = [
@@ -23,6 +25,8 @@ __all__ = [
     "Webtask",
     # Agent
     "Agent",
+    "TaskExecution",
+    "TaskStatus",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Session",

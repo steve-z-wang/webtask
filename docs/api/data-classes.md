@@ -3,94 +3,111 @@
 
 Data structures returned by webtask methods.
 
+## TaskExecution
 
-## Step
-
-Single step in task execution.
-
-### Attributes
-
-- **`proposal`** (Proposal): Proposed actions from the agent
-- **`execution_results`** (List[ExecutionResult]): Results of executed actions
-
-### Example
+Returned by `agent.execute()`. Contains the complete execution state of a task.
 
 ```python
-step = await agent.run_step()
-
-print(f"Proposed {len(step.proposal.actions)} actions")
-print(f"Message: {step.proposal.message}")
-print(f"Complete: {step.proposal.complete}")
-
-for result in step.execution_results:
-    status = "✓" if result.success else "✗"
-    print(f"{status} {result.action.tool}: {result.message}")
+@dataclass
+class TaskExecution:
+    task: Task
+    history: List[Union[ManagerSession, SubtaskExecution]]
+    subtask_queue: SubtaskQueue
+    status: TaskStatus
+    failure_reason: str | None
 ```
 
+**Fields:**
+- `task`: The original task definition with description and resources
+- `history`: List of all manager sessions and subtask executions
+- `subtask_queue`: Queue of subtasks (pending, in-progress, completed)
+- `status`: Current task status (IN_PROGRESS, COMPLETED, or ABORTED)
+- `failure_reason`: Explanation if task was aborted (None otherwise)
 
-## ExecutionResult
+**Methods:**
+- `__str__()`: Returns formatted summary of execution
 
-Result of executing an action.
+**Example:**
+```python
+from webtask import TaskStatus
 
-### Attributes
+result = await agent.execute("search for cats")
 
-- **`action`** (Action): The action that was executed
-- **`success`** (bool): Whether action succeeded
-- **`message`** (str): Result message
+# Check status
+if result.status == TaskStatus.COMPLETED:
+    print("Task completed successfully!")
+elif result.status == TaskStatus.ABORTED:
+    print(f"Task aborted: {result.failure_reason}")
 
-### Example
+# Inspect history
+print(f"Total sessions executed: {len(result.history)}")
+
+# Get formatted summary
+print(str(result))  # Prints detailed execution summary
+```
+
+## TaskStatus
+
+Enum representing the status of a task execution.
 
 ```python
-step = await agent.run_step()
-
-for result in step.execution_results:
-    print(f"Action: {result.action.tool}")
-    print(f"Success: {result.success}")
-    print(f"Message: {result.message}")
-
-    if not result.success:
-        print("Action failed! Investigating...")
+class TaskStatus(str, Enum):
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ABORTED = "aborted"
 ```
 
+**Values:**
+- `IN_PROGRESS`: Task is still being executed
+- `COMPLETED`: Task finished successfully
+- `ABORTED`: Task was aborted due to unrecoverable error or impossible conditions
+
+**Example:**
+```python
+from webtask import TaskStatus
+
+result = await agent.execute("navigate to example.com")
+
+# Compare with enum values
+if result.status == TaskStatus.COMPLETED:
+    print("Success!")
+elif result.status == TaskStatus.ABORTED:
+    print(f"Failed: {result.failure_reason}")
+elif result.status == TaskStatus.IN_PROGRESS:
+    print("Still running (shouldn't happen)")
+```
 
 ## Complete Example
 
 ```python
-import asyncio
-from webtask import Webtask
+from webtask import Webtask, TaskStatus
 from webtask.integrations.llm import GeminiLLM
 
 async def main():
-    wt = Webtask(headless=False)
+    wt = Webtask()
     llm = GeminiLLM.create(model="gemini-2.5-flash")
     agent = await wt.create_agent(llm=llm)
 
-    # Execute and get TaskResult
-    result = await agent.execute("search google for cats", max_steps=10)
+    # Execute task
+    result = await agent.execute(
+        "Go to google.com and search for cats",
+        max_cycles=10
+    )
 
     # Check result
-    print(f"\n=== Task Result ===")
-    print(f"Completed: {result.completed}")
-    print(f"Total steps: {len(result.steps)}")
-    print(f"Message: {result.message}")
+    print(f"Status: {result.status}")
+    print(f"Sessions executed: {len(result.history)}")
 
-    # Inspect each step
-    for i, step in enumerate(result.steps, 1):
-        print(f"\n=== Step {i} ===")
-        print(f"Agent reasoning: {step.proposal.message}")
-        print(f"Actions proposed: {len(step.proposal.actions)}")
+    if result.status == TaskStatus.COMPLETED:
+        print("✓ Task completed successfully")
+        await agent.screenshot("success.png")
 
-        # Show each action
-        for action in step.proposal.actions:
-            print(f"  - Tool: {action.tool}")
+    elif result.status == TaskStatus.ABORTED:
+        print(f"✗ Task aborted: {result.failure_reason}")
+        await agent.screenshot("failure.png")
 
-        # Show execution results
-        for exec_result in step.execution_results:
-            status = "✓" if exec_result.success else "✗"
-            print(f"  {status} {exec_result.action.tool}: {exec_result.message}")
+    # Print detailed summary
+    print("\n" + str(result))
 
     await wt.close()
-
-asyncio.run(main())
 ```
-

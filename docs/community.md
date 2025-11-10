@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # Community
 
 Join the webtask community and connect with other developers building web automation!

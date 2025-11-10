@@ -46,8 +46,8 @@ No CSS selectors. No XPath. Just describe what you want.
 ## Features
 
 - **Multimodal by default** - Sees screenshots with bounding boxes + DOM text
-- **Multiple LLMs** - OpenAI GPT-4 Vision, Google Gemini 2.5
-- **Built on Playwright** - Reliable browser automation
+- **Extensible** - Pluggable LLM and browser interfaces
+- **Batteries included** - OpenAI, Gemini LLMs and Playwright browser provided
 - **Isolated sessions** - Separate cookies and storage per agent
 
 ---

@@ -26,8 +26,10 @@ async def main():
     # Execute a task
     result = await agent.execute("Go to google.com and search for 'cats'")
 
-    print(f"Task completed: {result.completed}")
-    print(f"Steps taken: {len(result.steps)}")
+    from webtask import TaskStatus
+
+    print(f"Task status: {result.status}")
+    print(f"Manager/Subtask sessions: {len(result.history)}")
 
     # Clean up
     await wt.close()

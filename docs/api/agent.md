@@ -3,78 +3,62 @@
 
 Main interface for web automation tasks.
 
-Provides three modes of interaction:
-- **High-level autonomous**: `execute(task)` - Agent figures out the steps
-- **Step-by-step**: `set_task()` + `run_step()` - Manual control over execution loop
-- **Low-level imperative**: `navigate()`, `select()`, etc. - Direct control with natural language
+Provides two modes of interaction:
+- **Autonomous mode**: `execute(task)` - Agent figures out the steps
+- **Direct control mode**: `navigate()`, `select()`, etc. - You control the flow with natural language
 
-
-## High-Level Methods
+## Autonomous Mode
 
 ### `execute()`
 
 ```python
 async def execute(
-    task: str,
-    max_steps: int = 10,
-    resources: Optional[Dict[str, str]] = None,
-    screenshot_on_failure: bool = False,
-    failure_screenshot_path: Optional[str] = None
-) -> TaskResult
+    task_description: str,
+    max_cycles: int = 10,
+    resources: Optional[Dict[str, str]] = None
+) -> TaskExecution
 ```
 
-Execute a task autonomously.
+Execute a task autonomously using manager-worker architecture.
 
 **Parameters:**
-- `task` (str): Task description in natural language
-- `max_steps` (int): Maximum number of steps before giving up. Default: `10`
+- `task_description` (str): Task description in natural language
+- `max_cycles` (int): Maximum manager-worker cycles. Default: `10`
 - `resources` (Optional[Dict[str, str]]): Optional dict of file resources (name → path)
-- `screenshot_on_failure` (bool): Capture screenshot when task fails. Default: `False`
-- `failure_screenshot_path` (Optional[str]): Path to save failure screenshot (auto-generated if not specified)
 
-**Returns:** TaskResult with completion status, steps, and final message
+**Returns:** TaskExecution with status, history, and subtask queue
 
 **Example:**
 ```python
-result = await agent.execute("search google for cats", max_steps=15)
-print(f"Completed: {result.completed}")
-print(f"Steps: {len(result.steps)}")
+from webtask import TaskStatus
+
+result = await agent.execute("search google for cats", max_cycles=15)
+print(f"Status: {result.status}")
+print(f"Sessions: {len(result.history)}")
+
+if result.status == TaskStatus.COMPLETED:
+    print("Task completed successfully!")
+elif result.status == TaskStatus.ABORTED:
+    print(f"Task aborted: {result.failure_reason}")
 ```
 
-**With failure screenshot:**
+## Direct Control Mode
+
+### `navigate()`
+
 ```python
-result = await agent.execute(
-    "find product XYZ",
-    screenshot_on_failure=True,
-    failure_screenshot_path="failed.png"
-)
+async def navigate(url: str) -> None
 ```
 
+Navigate to a URL.
 
-### `run_step()`
-
-```python
-async def run_step() -> Step
-```
-
-Execute one step of the current task.
-
-**Returns:** Step with proposal and execution results
-
-**Raises:** RuntimeError if no task is set (call `set_task()` first)
+**Parameters:**
+- `url` (str): URL to navigate to
 
 **Example:**
 ```python
-agent.set_task("search for cats")
-
-for i in range(10):
-    step = await agent.run_step()
-    print(f"Step {i+1}: {len(step.proposal.actions)} actions")
-
-    if step.proposal.complete:
-        break
+await agent.navigate("https://example.com")
 ```
-
 
 ### `select()`
 
@@ -85,9 +69,9 @@ async def select(description: str) -> Element
 Select element by natural language description.
 
 **Parameters:**
-- `description` (str): Natural language description of element
+- `description` (str): Natural language description of the element
 
-**Returns:** Browser Element with `.click()`, `.fill()`, `.type()` methods
+**Returns:** Element with click(), fill(), type() methods
 
 **Raises:**
 - RuntimeError: If no page is opened
@@ -95,24 +79,39 @@ Select element by natural language description.
 
 **Example:**
 ```python
-search_box = await agent.select("search input field")
+search_box = await agent.select("search box")
 await search_box.fill("cats")
 
 button = await agent.select("search button")
 await button.click()
 ```
 
+### `wait()`
+
+```python
+async def wait(seconds: float) -> None
+```
+
+Wait for a specific amount of time.
+
+**Parameters:**
+- `seconds` (float): Number of seconds to wait
+
+**Example:**
+```python
+await agent.wait(2.0)  # Wait 2 seconds
+```
 
 ### `wait_for_idle()`
 
 ```python
-async def wait_for_idle(timeout: int = 30000)
+async def wait_for_idle(timeout: int = 30000) -> None
 ```
 
 Wait for page to be idle (network and DOM stable).
 
 **Parameters:**
-- `timeout` (int): Maximum time to wait in milliseconds. Default: `30000` (30 seconds)
+- `timeout` (int): Maximum time to wait in milliseconds. Default: `30000`
 
 **Raises:**
 - RuntimeError: If no page is opened
@@ -120,12 +119,43 @@ Wait for page to be idle (network and DOM stable).
 
 **Example:**
 ```python
-await agent.wait_for_idle()  # Wait up to 30 seconds
-await agent.wait_for_idle(timeout=10000)  # Wait up to 10 seconds
+await agent.navigate("https://example.com")
+await agent.wait_for_idle()  # Wait for page to fully load
 ```
 
+### `screenshot()`
 
-## Multi-Page Methods
+```python
+async def screenshot(
+    path: Optional[str] = None,
+    full_page: bool = False
+) -> bytes
+```
+
+Take a screenshot of the current page.
+
+**Parameters:**
+- `path` (Optional[str]): Optional file path to save screenshot
+- `full_page` (bool): Whether to screenshot the full scrollable page. Default: `False`
+
+**Returns:** Screenshot as bytes (PNG format)
+
+**Raises:**
+- RuntimeError: If no page is opened
+
+**Example:**
+```python
+# Save to file
+await agent.screenshot("page.png")
+
+# Full page screenshot
+await agent.screenshot("full.png", full_page=True)
+
+# Get bytes
+screenshot_bytes = await agent.screenshot()
+```
+
+## Multi-Page Management
 
 ### `open_page()`
 
@@ -140,17 +170,46 @@ Open a new page and switch to it.
 
 **Returns:** The new Page instance
 
-**Raises:** RuntimeError if no session is available
+**Raises:**
+- RuntimeError: If no session is available
 
 **Example:**
 ```python
-# Open new blank page
-new_page = await agent.open_page()
-
-# Open new page and navigate
-new_page = await agent.open_page("https://github.com")
+page2 = await agent.open_page("https://example.com")
 ```
 
+### `close_page()`
+
+```python
+async def close_page(page: Optional[Page] = None) -> None
+```
+
+Close a page (closes current page if page=None).
+
+**Parameters:**
+- `page` (Optional[Page]): Page to close (defaults to current page)
+
+**Example:**
+```python
+await agent.close_page()  # Close current page
+await agent.close_page(page2)  # Close specific page
+```
+
+### `get_pages()`
+
+```python
+def get_pages() -> List[Page]
+```
+
+Get all open pages.
+
+**Returns:** List of Page instances
+
+**Example:**
+```python
+pages = agent.get_pages()
+print(f"Total pages: {len(pages)}")
+```
 
 ### `get_current_page()`
 
@@ -160,29 +219,48 @@ def get_current_page() -> Optional[Page]
 
 Get the current active page.
 
-**Returns:** Current Page instance or None
+**Returns:** Current Page or None
 
 **Example:**
 ```python
 current = agent.get_current_page()
-print(f"Current URL: {current.url}")
+if current:
+    print(f"Current URL: {current.url}")
 ```
 
+### `set_page()`
+
+```python
+def set_page(page: Page) -> None
+```
+
+Set/switch to a specific page.
+
+**Parameters:**
+- `page` (Page): Page instance to set as current
+
+**Example:**
+```python
+page1 = agent.get_pages()[0]
+agent.set_page(page1)  # Switch to page 1
+```
+
+## Properties
 
 ### `page_count`
 
 ```python
-@property
-def page_count() -> int
+page_count: int
 ```
 
 Number of open pages.
 
 **Example:**
 ```python
-print(f"Pages open: {agent.page_count}")
+print(f"Open pages: {agent.page_count}")
 ```
 
+## Advanced
 
 ### `set_session()`
 
@@ -190,25 +268,33 @@ print(f"Pages open: {agent.page_count}")
 def set_session(session: Session) -> None
 ```
 
-Set or update the session.
-
-Enables multi-page operations after initialization.
+Set/inject a browser session.
 
 **Parameters:**
-- `session` (Session): Session instance for creating pages
+- `session` (Session): Session instance to use
 
 **Example:**
 ```python
-session = await browser.create_session()
-agent.set_session(session)
+agent.set_session(my_session)
 ```
 
+### `close()`
+
+```python
+async def close() -> None
+```
+
+Close and cleanup all resources.
+
+**Example:**
+```python
+await agent.close()
+```
 
 ## Complete Example
 
 ```python
-import asyncio
-from webtask import Webtask
+from webtask import Webtask, TaskStatus
 from webtask.integrations.llm import GeminiLLM
 
 async def main():
@@ -216,24 +302,18 @@ async def main():
     llm = GeminiLLM.create(model="gemini-2.5-flash")
     agent = await wt.create_agent(llm=llm)
 
-    # High-level autonomous
-    result = await agent.execute("search google for cats")
+    # Autonomous mode
+    result = await agent.execute("search for cats and click first result")
+    if result.status == TaskStatus.COMPLETED:
+        print("Task completed!")
 
-    # Step-by-step
-    agent.set_task("add item to cart")
-    for i in range(10):
-        step = await agent.run_step()
-        if step.proposal.complete:
-            break
-
-    # Low-level imperative
-    await agent.navigate("https://google.com")
-    search_box = await agent.select("search box")
-    await search_box.fill("web automation")
+    # Direct control mode
+    await agent.navigate("https://example.com")
+    search = await agent.select("search box")
+    await search.fill("dogs")
+    await (await agent.select("search button")).click()
     await agent.wait_for_idle()
     await agent.screenshot("result.png")
 
     await wt.close()
-
-asyncio.run(main())
 ```
