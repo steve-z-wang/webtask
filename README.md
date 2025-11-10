@@ -1,7 +1,7 @@
 # webtask
 
 [![PyPI version](https://img.shields.io/pypi/v/pywebtask.svg)](https://pypi.org/project/pywebtask/)
-[![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/test.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/test.yml)
+[![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 LLM-powered web automation library with autonomous agents and natural language selectors.
