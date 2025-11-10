@@ -16,7 +16,6 @@ class VerifierSession:
     worker_session: WorkerSession
     max_iterations: int = 3
     iterations: List[Iteration] = field(default_factory=list)
-    task_complete: bool = False
     subtask_decision: Optional[ToolCall] = None
     timestamp: datetime = field(default_factory=datetime.now)
 
@@ -24,7 +23,6 @@ class VerifierSession:
         lines = ["=== Verifier Session ==="]
         lines.append(f"Task: {self.task_description}")
         lines.append(f"Subtask: {self.subtask_description}")
-        lines.append(f"Task Complete: {self.task_complete}")
         if self.subtask_decision:
             lines.append(f"Subtask Decision: {self.subtask_decision.tool}")
         lines.append(f"Iterations: {len(self.iterations)}/{self.max_iterations}")

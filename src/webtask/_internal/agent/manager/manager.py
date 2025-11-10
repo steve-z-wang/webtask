@@ -1,4 +1,4 @@
-"""Planner - plans next subtask based on execution history."""
+"""Manager - manages task and delegates subtasks."""
 
 from pathlib import Path
 from ..tool import ToolRegistry
@@ -7,21 +7,31 @@ from ..subtask_queue import SubtaskQueue
 from webtask._internal.llm import Context, Block
 from webtask._internal.llm import TypedLLM
 from webtask._internal.config import Config
-from ...prompts import build_planner_prompt
-from .planner_session import PlannerSession
-from .tools import StartSubtaskTool
+from ...prompts import build_manager_prompt
+from .manager_session import ManagerSession
+from .tools import (
+    AddSubtaskTool,
+    CancelPendingSubtasksTool,
+    StartSubtaskTool,
+    CompleteTaskTool,
+    AbortTaskTool,
+)
 
 
-class Planner:
-    """Planner role - strategic planning at goal level."""
+class Manager:
+    """Manager role - task-level oversight and subtask delegation."""
 
     def __init__(self, typed_llm: TypedLLM):
         self._llm = typed_llm
         self._tool_registry = ToolRegistry()
+        self._tool_registry.register(AddSubtaskTool())
+        self._tool_registry.register(CancelPendingSubtasksTool())
         self._tool_registry.register(StartSubtaskTool())
+        self._tool_registry.register(CompleteTaskTool())
+        self._tool_registry.register(AbortTaskTool())
 
     def _save_debug_context(self, filename: str, context: Context):
-        """Save context (text only, no images in planner) for debugging."""
+        """Save context (text only, no images in manager) for debugging."""
         debug_dir = Path(Config().get_debug_dir())
         debug_dir.mkdir(parents=True, exist_ok=True)
 
@@ -36,7 +46,7 @@ class Planner:
         return paths
 
     def _format_verifier_decision(self, verifier_session) -> Block:
-        """Format verifier decision for planner context.
+        """Format verifier decision for manager context.
 
         Only shows the final decision (tool call) with details, not internal reasoning.
         """
@@ -81,7 +91,7 @@ class Planner:
     ) -> Context:
         context = (
             Context()
-            .with_system(build_planner_prompt())
+            .with_system(build_manager_prompt())
             .with_block(Block(heading="Task Goal", content=task_description))
             .with_block(self._tool_registry.get_context())
             .with_block(subtask_queue.get_context())
@@ -101,7 +111,7 @@ class Planner:
         max_iterations: int = 10,
         session_id: int = 0,
         last_verifier_session=None,
-    ) -> PlannerSession:
+    ) -> ManagerSession:
         session_number = session_id  # Already 1-indexed from task_executor
         iterations = []
 
@@ -114,7 +124,7 @@ class Planner:
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"session_{session_number}_planner_iter_{iteration_number}", context
+                    f"manager_session_{session_number}_iter_{iteration_number}", context
                 )
 
             proposed = await self._llm.generate(context, ProposedIteration)
@@ -135,10 +145,16 @@ class Planner:
             )
             iterations.append(iteration)
 
-            if any(tc.tool == "start_subtask" and tc.success for tc in tool_calls):
+            # Break when start_subtask is called (signals ready to execute)
+            # or when complete_task/abort_task is called
+            if any(
+                tc.tool in ["start_subtask", "complete_task", "abort_task"]
+                and tc.success
+                for tc in tool_calls
+            ):
                 break
 
-        return PlannerSession(
+        return ManagerSession(
             session_number=session_number,
             task_description=task_description,
             max_iterations=max_iterations,

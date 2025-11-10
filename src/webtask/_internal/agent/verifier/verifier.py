@@ -11,9 +11,9 @@ from ...prompts import build_verifier_prompt
 from ...page_context import PageContextBuilder
 from ..worker.worker_session import WorkerSession
 from .verifier_session import VerifierSession
-from .tools.mark_subtask_complete import MarkSubtaskCompleteTool
-from .tools.mark_subtask_failed import MarkSubtaskFailedTool
-from .tools.mark_task_complete import MarkTaskCompleteTool
+from .tools.complete_subtask import CompleteSubtaskTool
+from .tools.request_reschedule import RequestRescheduleTool
+from .tools.request_correction import RequestCorrectionTool
 from ..worker.tools.wait import WaitTool
 
 if TYPE_CHECKING:
@@ -27,9 +27,9 @@ class Verifier:
         self._llm = typed_llm
         self._agent_browser = agent_browser
         self._tool_registry = ToolRegistry()
-        self._tool_registry.register(MarkSubtaskCompleteTool())
-        self._tool_registry.register(MarkSubtaskFailedTool())
-        self._tool_registry.register(MarkTaskCompleteTool())
+        self._tool_registry.register(CompleteSubtaskTool())
+        self._tool_registry.register(RequestRescheduleTool())
+        self._tool_registry.register(RequestCorrectionTool())
         self._tool_registry.register(WaitTool())
 
     def _save_debug_context(self, filename: str, context):
@@ -87,46 +87,100 @@ class Verifier:
 
         return Block(heading="Worker Actions", content=content.strip())
 
+    def _format_correction_history(self, subtask_execution) -> Block:
+        """Format correction history showing Worker/Verifier attempts."""
+        if not subtask_execution or not subtask_execution.history:
+            return Block(
+                heading="Correction History",
+                content="No previous attempts for this subtask.",
+            )
+
+        correction_count = subtask_execution.get_correction_count()
+        content = f"Correction attempts so far: {correction_count}/3\n"
+
+        for session in subtask_execution.history:
+            if isinstance(session, WorkerSession):
+                content += f"\n**Worker Session {session.session_number}**\n"
+                for iteration in session.iterations:
+                    for tc in iteration.tool_calls:
+                        status = "[SUCCESS]" if tc.success else "[FAILED]"
+                        content += f"  {status} {tc.description}\n"
+                        if not tc.success and tc.error:
+                            content += f"     Error: {tc.error}\n"
+            else:
+                # VerifierSession
+                content += f"\n**Verifier Session {session.session_number}**\n"
+                if session.subtask_decision:
+                    content += f"  Decision: {session.subtask_decision.tool}\n"
+                    feedback = session.subtask_decision.parameters.get("feedback", "")
+                    if feedback:
+                        content += f"  Feedback: {feedback}\n"
+
+        return Block(heading="Correction History", content=content.strip())
+
     async def _build_context(
         self,
         task_description: str,
         subtask_description: str,
-        worker_iterations: list,
+        worker_iterations: list = None,
+        subtask_execution=None,
     ) -> Context:
         page_context = await self._build_page_context()
-        return (
+        context = (
             Context()
             .with_system(build_verifier_prompt())
             .with_block(Block(heading="Task Goal", content=task_description))
             .with_block(Block(heading="Current Subtask", content=subtask_description))
-            .with_block(self._format_worker_actions(worker_iterations))
-            .with_block(self._tool_registry.get_context())
-            .with_block(page_context)
         )
+
+        # Use subtask_execution if available, otherwise fall back to worker_iterations
+        if subtask_execution:
+            context = context.with_block(
+                self._format_correction_history(subtask_execution)
+            )
+        elif worker_iterations:
+            context = context.with_block(self._format_worker_actions(worker_iterations))
+
+        context = context.with_block(self._tool_registry.get_context())
+        context = context.with_block(page_context)
+
+        return context
 
     async def run(
         self,
         task_description: str,
         subtask_description: str,
-        worker_session: WorkerSession,
+        worker_session: WorkerSession = None,
         max_iterations: int = 3,
-        session_id: int = 0,
+        session_number: int = 1,
+        subtask_index: int = 0,
+        subtask_execution=None,
     ) -> VerifierSession:
-        session_number = session_id  # Already 1-indexed from task_executor
         subtask_decision = None
-        task_complete = False
         iterations = []
 
         for i in range(max_iterations):
             iteration_number = i + 1  # 1-indexed for display/output
-            context = await self._build_context(
-                task_description, subtask_description, worker_session.iterations
-            )
+            # Use subtask_execution if available, otherwise fall back to worker_session
+            if subtask_execution:
+                context = await self._build_context(
+                    task_description,
+                    subtask_description,
+                    subtask_execution=subtask_execution,
+                )
+            else:
+                context = await self._build_context(
+                    task_description,
+                    subtask_description,
+                    worker_iterations=(
+                        worker_session.iterations if worker_session else []
+                    ),
+                )
 
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"session_{session_number}_verifier_iter_{iteration_number}",
+                    f"subtask_{subtask_index}_session_{session_number}_verifier_iter_{iteration_number}",
                     context,
                 )
 
@@ -148,14 +202,13 @@ class Verifier:
 
             for tc in tool_calls:
                 if (
-                    tc.tool in ["mark_subtask_complete", "mark_subtask_failed"]
+                    tc.tool
+                    in ["complete_subtask", "request_reschedule", "request_correction"]
                     and tc.success
                 ):
                     subtask_decision = tc
-                if tc.tool == "mark_task_complete" and tc.success:
-                    task_complete = True
 
-            if task_complete or subtask_decision:
+            if subtask_decision:
                 break
 
         return VerifierSession(
@@ -165,6 +218,5 @@ class Verifier:
             worker_session=worker_session,
             max_iterations=max_iterations,
             iterations=iterations,
-            task_complete=task_complete,
             subtask_decision=subtask_decision,
         )

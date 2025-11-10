@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Any, List, Union, Optional
 from pathlib import Path
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
-from ....utils import normalize_url
+from ...._internal.utils.url import normalize_url
 from ...._internal.dom import XPath
 
 if TYPE_CHECKING:

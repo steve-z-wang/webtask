@@ -3,13 +3,21 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Union, TYPE_CHECKING
+from enum import Enum
 
 if TYPE_CHECKING:
-    from .planner.planner_session import PlannerSession
-    from .worker.worker_session import WorkerSession
-    from .verifier.verifier_session import VerifierSession
+    from .manager.manager_session import ManagerSession
+    from .subtask_execution import SubtaskExecution
 
 from .subtask_queue import SubtaskQueue
+
+
+class TaskStatus(str, Enum):
+    """Status of a task execution."""
+
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ABORTED = "aborted"
 
 
 @dataclass
@@ -24,25 +32,33 @@ class Task:
 class TaskExecution:
     """Record of task execution - output from TaskExecutor.
 
-    Contains the original task, execution history, subtask queue state, and completion status.
+    Contains the original task, execution history, subtask queue state, and status.
     """
 
     task: Task
-    history: List[Union["PlannerSession", "WorkerSession", "VerifierSession"]] = field(
+    history: List[Union["ManagerSession", "SubtaskExecution"]] = field(
         default_factory=list
     )
     subtask_queue: SubtaskQueue = field(default_factory=SubtaskQueue)
-    complete: bool = False
+    status: TaskStatus = TaskStatus.IN_PROGRESS
+    failure_reason: str | None = None
 
-    def add_session(
-        self, session: Union["PlannerSession", "WorkerSession", "VerifierSession"]
-    ) -> None:
+    def add_session(self, session: Union["ManagerSession", "SubtaskExecution"]) -> None:
         """Add a session to execution history."""
         self.history.append(session)
 
-    def mark_complete(self) -> None:
-        """Mark task as complete."""
-        self.complete = True
+    def mark_completed(self) -> None:
+        """Mark task as completed."""
+        self.status = TaskStatus.COMPLETED
+
+    def mark_aborted(self, reason: str) -> None:
+        """Mark task as aborted.
+
+        Args:
+            reason: Explanation of why the task was aborted
+        """
+        self.status = TaskStatus.ABORTED
+        self.failure_reason = reason
 
     def __str__(self) -> str:
         """Return formatted string representation for debugging."""
@@ -51,7 +67,9 @@ class TaskExecution:
         lines.append("TASK EXECUTION")
         lines.append("=" * 80)
         lines.append(f"Task: {self.task.description}")
-        lines.append(f"Complete: {self.complete}")
+        lines.append(f"Status: {self.status.value}")
+        if self.status == TaskStatus.ABORTED and self.failure_reason:
+            lines.append(f"Abort Reason: {self.failure_reason}")
         lines.append("")
 
         # Show subtask queue
@@ -68,11 +86,18 @@ class TaskExecution:
         if self.history:
             lines.append("EXECUTION HISTORY:")
             lines.append("-" * 80)
-            for session in self.history:
-                lines.append(f"\nSession {session.session_number}:")
-                # Indent each line of the session
-                for line in str(session).split("\n"):
-                    lines.append(f"  {line}")
+            from .manager.manager_session import ManagerSession
+            from .subtask_execution import SubtaskExecution
+
+            for item in self.history:
+                if isinstance(item, ManagerSession):
+                    lines.append(f"\n[Manager Session {item.session_number}]")
+                    for line in str(item).split("\n"):
+                        lines.append(f"  {line}")
+                elif isinstance(item, SubtaskExecution):
+                    lines.append("\n[Subtask Execution]")
+                    for line in str(item).split("\n"):
+                        lines.append(f"  {line}")
                 lines.append("")
 
         lines.append("=" * 80)

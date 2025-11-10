@@ -10,7 +10,7 @@ from ._internal.agent.agent_browser import AgentBrowser
 from ._internal.natural_selector import NaturalSelector
 from ._internal.agent.task import Task, TaskExecution
 from ._internal.agent.task_executor import TaskExecutor
-from ._internal.agent.planner.planner import Planner
+from ._internal.agent.manager.manager import Manager
 from ._internal.agent.worker.worker import Worker
 from ._internal.agent.verifier.verifier import Verifier
 
@@ -22,7 +22,7 @@ class Agent:
     Requires a Session for browser management and page operations.
 
     Two modes of operation:
-    - High-level autonomous: execute(task) - Agent autonomously plans and executes with scheduler-worker architecture
+    - High-level autonomous: execute(task) - Agent autonomously plans and executes with manager-worker architecture
     - Low-level imperative: navigate(), select(), wait() - Direct control for manual workflows
     """
 
@@ -57,7 +57,7 @@ class Agent:
         )
 
         # Create roles (reused across tasks)
-        self.planner = Planner(typed_llm=self.typed_llm)
+        self.manager = Manager(typed_llm=self.typed_llm)
         self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser)
         self.verifier = Verifier(
             typed_llm=self.typed_llm, agent_browser=self.agent_browser
@@ -70,11 +70,11 @@ class Agent:
         resources: Optional[Dict[str, str]] = None,
     ) -> TaskExecution:
         """
-        Execute a task autonomously using scheduler-worker architecture.
+        Execute a task autonomously using manager-worker architecture.
 
         Args:
             task_description: Task description in natural language
-            max_cycles: Maximum scheduler-worker cycles (default: 10)
+            max_cycles: Maximum manager-worker cycles (default: 10)
             resources: Optional dict of file resources (name -> path)
 
         Returns:
@@ -100,12 +100,12 @@ class Agent:
 
         # Create task executor
         task_executor = TaskExecutor(
-            planner=self.planner,
+            manager=self.manager,
             worker=self.worker,
             verifier=self.verifier,
         )
 
-        # Run adaptive Planner→Worker→Verifier loop
+        # Run adaptive Manager→Worker→Verifier loop
         return await task_executor.run(task_execution, max_cycles=max_cycles)
 
     async def open_page(self, url: Optional[str] = None) -> Page:

@@ -1,24 +1,24 @@
-"""Scheduler tools for subtask queue management."""
+"""Add subtask tool for Manager."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
-from ..tool import Tool
+from ...tool import Tool
 
 if TYPE_CHECKING:
     pass
 
 
-class StartSubtaskTool(Tool):
-    """Start a new subtask."""
+class AddSubtaskTool(Tool):
+    """Add a new subtask to the pending queue."""
 
-    name = "start_subtask"
-    description = "Start a new subtask with the given goal"
+    name = "add_subtask"
+    description = "Add a new subtask to the pending queue with the given goal"
 
     class Params(BaseModel):
         goal: str = Field(description="Subtask goal to achieve")
 
     async def execute(self, params: Params, **kwargs) -> None:
-        """Start a new subtask.
+        """Add a new subtask to the pending queue.
 
         Args:
             params: Validated parameters
@@ -26,5 +26,5 @@ class StartSubtaskTool(Tool):
         """
         subtask_queue = kwargs.get("subtask_queue")
 
-        # Start new subtask (moves current to history if exists)
-        subtask_queue.start_new(params.goal)
+        # Add subtask to pending queue
+        subtask_queue.add_subtask(params.goal)

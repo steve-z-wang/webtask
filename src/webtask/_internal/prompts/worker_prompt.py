@@ -19,7 +19,8 @@ def build_worker_prompt() -> str:
     how_to_work = (
         MarkdownBuilder()
         .add_heading("How to Work")
-        .add_numbered("Check your action history")
+        .add_numbered("Check previous attempts and verifier feedback")
+        .add_numbered("Check your current session action history")
         .add_numbered("Observe current page")
         .add_numbered("Reason about next step")
         .add_numbered("Propose action")
@@ -29,6 +30,11 @@ def build_worker_prompt() -> str:
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
+        .add("**What are 'Previous Attempts'?**")
+        .add(
+            "If you see a 'Previous Attempts' section, it shows your earlier work on this subtask and Verifier's correction feedback. Read the feedback carefully and fix the issues identified."
+        )
+        .add()
         .add("**When are actions executed?**")
         .add("Actions are executed immediately one after another.")
         .add()
@@ -59,9 +65,11 @@ def build_worker_prompt() -> str:
         .add_heading("Response Format")
         .add("Respond with JSON containing three parts:")
         .add_bullet(
-            "observation: What you see on the page (UI state, messages, errors)"
+            "observation: ONLY what you see (UI state, messages, errors). Do NOT include what you plan to do."
         )
-        .add_bullet("thinking: Your reasoning about what to do next")
+        .add_bullet(
+            "thinking: Your reasoning and planning - what you need to do next and why"
+        )
         .add_bullet(
             "tool_calls: Actions to take (each has description, tool, parameters)"
         )
