@@ -2,11 +2,8 @@ name: Publish to PyPI
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'src/webtask/**'  # Only library code changes
-      - 'pyproject.toml'  # Version or dependency changes
+    tags:
+      - 'v*'  # Trigger on version tags like v0.12.3, v1.0.0, etc.
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
