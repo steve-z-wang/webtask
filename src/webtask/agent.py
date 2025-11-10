@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Dict, List, Optional
 from .llm import LLM
 from ._internal.llm import TypedLLM
@@ -13,6 +14,7 @@ from ._internal.agent.task_executor import TaskExecutor
 from ._internal.agent.manager.manager import Manager
 from ._internal.agent.worker.worker import Worker
 from ._internal.agent.verifier.verifier import Verifier
+from ._internal.config import Config
 
 
 class Agent:
@@ -106,7 +108,18 @@ class Agent:
         )
 
         # Run adaptive Manager→Worker→Verifier loop
-        return await task_executor.run(task_execution, max_cycles=max_cycles)
+        result = await task_executor.run(task_execution, max_cycles=max_cycles)
+
+        # Save debug summary if enabled
+        if Config().is_debug_enabled():
+            debug_dir = Path(Config().get_debug_dir())
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            summary_path = debug_dir / "summary.txt"
+            with open(summary_path, "w") as f:
+                f.write(str(result))
+            logging.info(f"Debug summary saved to: {summary_path}")
+
+        return result
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """

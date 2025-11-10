@@ -80,6 +80,29 @@ python -m build
 python -m twine upload dist/*
 ```
 
+### Debugging
+```bash
+# Enable debug mode (saves screenshots, context, and execution summary)
+export WEBTASK_DEBUG=1
+
+# Optional: Set custom debug directory (default: "debug")
+export WEBTASK_DEBUG_DIR="debug/my_test"
+
+# Run your script/test with debug enabled
+python my_script.py
+
+# Debug output includes:
+# - debug/summary.txt - Complete task execution summary with all sessions and subtasks
+# - debug/*_context.txt - LLM context (text) for each iteration
+# - debug/*_img_*.png - Screenshots with bounding boxes for each iteration
+```
+
+The `summary.txt` file contains the complete `TaskExecution` output including:
+- Task description and status (completed/aborted/in_progress)
+- Subtask queue state
+- Full execution history with all manager sessions and subtask executions
+- Tool calls and their results
+
 ## Architecture
 
 ### Core Design Principles
