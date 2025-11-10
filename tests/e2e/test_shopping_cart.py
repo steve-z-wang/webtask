@@ -31,6 +31,7 @@ from webtask._internal.config import Config
 load_dotenv()
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_shopping_cart_automation():
     """Test automated shopping cart interaction with recording/replay.
