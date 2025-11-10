@@ -36,8 +36,12 @@ echo "🎨 Running black (formatter check)..."
 black --check src/ tests/
 
 echo ""
-echo "🧪 Running tests..."
-pytest tests/ -v --tb=short
+echo "🧪 Running unit tests..."
+pytest tests/unit/ -v --tb=short -m unit
+
+echo ""
+echo "🧪 Running e2e tests (replay mode)..."
+WEBTASK_TEST_MODE=replay pytest tests/e2e/ -v --tb=short -m e2e
 
 echo ""
 echo "✅ All PR checks passed!"
