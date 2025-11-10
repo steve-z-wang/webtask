@@ -105,13 +105,10 @@ class ToolRegistry:
         if tool_call.executed:
             return
 
-        try:
-            tool = self.get(tool_call.tool)
-            validated_params = tool.Params(**tool_call.parameters)
-            result = await tool.execute(validated_params, **kwargs)
-            tool_call.mark_success(result=result)
-        except Exception as e:
-            tool_call.mark_failure(str(e))
+        tool = self.get(tool_call.tool)
+        validated_params = tool.Params(**tool_call.parameters)
+        result = await tool.execute(validated_params, **kwargs)
+        tool_call.mark_success(result=result)
 
     def get_context(self) -> Block:
         """Get formatted context for LLM."""
