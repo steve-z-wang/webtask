@@ -4,6 +4,10 @@ from typing import List, Optional, Union
 from playwright.async_api import Locator
 from ....browser import Element
 
+# Element action timeout in milliseconds
+# Since agent sees screenshot before acting, element is already visible - fail fast if blocked
+ELEMENT_ACTION_TIMEOUT_MS = 100  # 0.1 seconds
+
 
 class PlaywrightElement(Element):
     """
@@ -106,7 +110,7 @@ class PlaywrightElement(Element):
 
     async def click(self):
         """Click the element."""
-        await self._locator.click(timeout=30000)
+        await self._locator.click(timeout=ELEMENT_ACTION_TIMEOUT_MS)
 
     async def fill(self, text: str):
         """
@@ -115,7 +119,7 @@ class PlaywrightElement(Element):
         Args:
             text: Text to fill
         """
-        await self._locator.fill(text, timeout=30000)
+        await self._locator.fill(text, timeout=ELEMENT_ACTION_TIMEOUT_MS)
 
     async def type(self, text: str, delay: float = None):
         """
@@ -125,7 +129,7 @@ class PlaywrightElement(Element):
             text: Text to type
             delay: Delay between keystrokes in milliseconds (None = instant)
         """
-        await self._locator.type(text, delay=delay, timeout=30000)
+        await self._locator.type(text, delay=delay, timeout=ELEMENT_ACTION_TIMEOUT_MS)
 
     async def upload_file(self, file_path: Union[str, List[str]]):
         """
@@ -134,4 +138,4 @@ class PlaywrightElement(Element):
         Args:
             file_path: Single file path or list of file paths
         """
-        await self._locator.set_input_files(file_path, timeout=30000)
+        await self._locator.set_input_files(file_path, timeout=ELEMENT_ACTION_TIMEOUT_MS)

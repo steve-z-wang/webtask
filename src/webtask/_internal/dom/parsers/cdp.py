@@ -199,30 +199,13 @@ def _build_tree(
     return root_node
 
 
-def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
-    """
-    Parse CDP snapshot into DomNode tree.
-
-    Args:
-        snapshot_data: CDP snapshot data with documents, strings, and layout info
-
-    Returns:
-        Root DomNode of the parsed tree
-    """
-    documents_data = snapshot_data.get("documents", [])
-    strings = snapshot_data.get("strings", [])
-
-    # Handle empty snapshot
-    if not documents_data:
-        return DomNode(tag="html", metadata={"cdp_index": 0})
-
-    # Get document data
-    document_data = documents_data[0]
+def _parse_document(
+    document_data: Dict[str, Any],
+    get_string: Callable[[Any], str]
+) -> Optional[DomNode]:
+    """Parse a single document (main frame or iframe) into a DomNode tree."""
     nodes_data = document_data.get("nodes", {})
     layout_data = document_data.get("layout", {})
-
-    # Create string resolver
-    get_string = _get_string_resolver(strings)
 
     # Parse layout information
     layout_map = _parse_layout_data(layout_data, get_string)
@@ -235,6 +218,57 @@ def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
 
     # Build tree structure
     root_node = _build_tree(nodes_data, element_nodes)
+
+    return root_node
+
+
+def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
+    """
+    Parse CDP snapshot into DomNode tree, including all iframes.
+
+    Args:
+        snapshot_data: CDP snapshot data with documents, strings, and layout info
+
+    Returns:
+        Root DomNode of the parsed tree with iframe contents included
+    """
+    documents_data = snapshot_data.get("documents", [])
+    strings = snapshot_data.get("strings", [])
+
+    # Handle empty snapshot
+    if not documents_data:
+        return DomNode(tag="html", metadata={"cdp_index": 0})
+
+    # Create string resolver (shared across all documents)
+    get_string = _get_string_resolver(strings)
+
+    # Parse main document (documents[0])
+    main_document = documents_data[0]
+    root_node = _parse_document(main_document, get_string)
+
+    # Parse additional documents (iframes)
+    if len(documents_data) > 1:
+        iframe_trees = []
+        for doc_idx in range(1, len(documents_data)):
+            iframe_doc = documents_data[doc_idx]
+            iframe_root = _parse_document(iframe_doc, get_string)
+            if iframe_root:
+                iframe_trees.append(iframe_root)
+
+        # Find iframe elements in main tree and attach iframe content
+        # We'll attach each iframe tree as a child of the first available iframe element
+        iframe_elements = []
+        if root_node:
+            for node in root_node.traverse():
+                if isinstance(node, DomNode) and node.tag == "iframe":
+                    iframe_elements.append(node)
+
+        # Attach iframe trees to iframe elements
+        for idx, iframe_tree in enumerate(iframe_trees):
+            if idx < len(iframe_elements):
+                # Attach to corresponding iframe element
+                iframe_elements[idx].add_child(iframe_tree)
+            # If more iframe trees than iframe elements, skip them
 
     # Final fallback
     if root_node is None:

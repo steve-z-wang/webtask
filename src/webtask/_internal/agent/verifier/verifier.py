@@ -57,9 +57,6 @@ class Verifier:
     async def _build_page_context(self) -> Block:
         page = self._agent_browser.get_current_page()
 
-        # Wait for page to be idle after worker actions (max 5s)
-        await page.wait_for_idle(timeout=5000)
-
         block, _ = await PageContextBuilder.build(
             page=page,
             include_element_ids=False,

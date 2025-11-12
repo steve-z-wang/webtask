@@ -1,9 +1,11 @@
 """DomContextBuilder - builds LLM context from DOM."""
 
 from typing import Dict, Optional
+from pathlib import Path
 from webtask.browser import Page
 from ..dom.domnode import DomNode, Text
 from ..dom_processing.filters import filter_non_rendered, filter_non_semantic
+from ..config import Config
 
 
 class DomContextBuilder:
@@ -11,7 +13,7 @@ class DomContextBuilder:
 
     @staticmethod
     async def build_context(
-        page: Page, include_element_ids: bool = True
+        page: Page, include_element_ids: bool = True, debug_filename: Optional[str] = None
     ) -> tuple[Optional[str], Dict[str, DomNode]]:
         """Build context string and element map from page.
 
@@ -21,6 +23,7 @@ class DomContextBuilder:
             page: Page to build context from
             include_element_ids: Whether to include element IDs in serialized output
                                 (True for Worker, False for Verifier)
+            debug_filename: If provided and debug enabled, saves raw HTML with this filename
 
         Returns: (context_string, element_map)
                  context_string is None if all elements filtered out
@@ -28,6 +31,15 @@ class DomContextBuilder:
         """
         snapshot = await page.get_snapshot()
         root = snapshot.root
+
+        # Save raw unfiltered HTML if debug enabled
+        if Config().is_debug_enabled() and debug_filename:
+            raw_html = DomContextBuilder._serialize_context(root, include_element_ids=False)
+            debug_dir = Path(Config().get_debug_dir())
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            raw_html_path = debug_dir / f"{debug_filename}_raw_dom.txt"
+            with open(raw_html_path, "w") as f:
+                f.write(raw_html)
 
         # Add reference to original nodes before filtering
         root = DomContextBuilder._add_node_reference(root)

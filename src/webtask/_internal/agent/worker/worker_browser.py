@@ -29,6 +29,7 @@ class WorkerBrowser:
         include_element_ids: bool = True,
         with_bounding_boxes: bool = True,
         full_page: bool = False,
+        debug_filename: str = None,
     ) -> Block:
         page = self._agent_browser.get_current_page()
         if page is None:
@@ -38,14 +39,12 @@ class WorkerBrowser:
                 content="ERROR: No page opened yet.\nPlease use the navigate tool to navigate to a URL.",
             )
 
-        # Wait for page to be idle before capturing context (max 5s)
-        await page.wait_for_idle(timeout=5000)
-
         block, element_map = await PageContextBuilder.build(
             page=page,
             include_element_ids=include_element_ids,
             with_bounding_boxes=with_bounding_boxes,
             full_page_screenshot=full_page,
+            debug_filename=debug_filename,
         )
 
         self._element_map = element_map if element_map else {}

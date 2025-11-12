@@ -15,8 +15,12 @@ class PageContextBuilder:
         include_element_ids: bool = False,
         with_bounding_boxes: bool = False,
         full_page_screenshot: bool = False,
+        debug_filename: str = None,
     ) -> Tuple[Block, Optional[Dict]]:
         """Build page context block with text and screenshot.
+
+        Args:
+            debug_filename: If provided, passes to DomContextBuilder for raw HTML saving
 
         Returns:
             Tuple of (Block with text+image, optional element_map if include_element_ids=True)
@@ -29,7 +33,7 @@ class PageContextBuilder:
 
         url = page.url
         context_str, element_map = await DomContextBuilder.build_context(
-            page=page, include_element_ids=include_element_ids
+            page=page, include_element_ids=include_element_ids, debug_filename=debug_filename
         )
 
         lines = ["Page:"]

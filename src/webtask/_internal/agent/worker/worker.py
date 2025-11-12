@@ -125,11 +125,12 @@ class Worker:
         return Block(heading="Previous Attempts", content=content.strip())
 
     async def _build_context(
-        self, subtask_description: str, iterations: list, subtask_execution=None
+        self, subtask_description: str, iterations: list, subtask_execution=None, debug_filename: str = None
     ) -> Context:
         page_context = await self.worker_browser.get_context(
             include_element_ids=True,
-            with_bounding_boxes=True,
+            with_bounding_boxes=False,
+            debug_filename=debug_filename,
         )
         context = (
             Context()
@@ -161,14 +162,20 @@ class Worker:
 
         for i in range(max_iterations):
             iteration_number = i + 1  # 1-indexed for display/output
+
+            # Build debug filename if debug enabled
+            debug_filename = None
+            if Config().is_debug_enabled():
+                debug_filename = f"subtask_{subtask_index}_session_{session_number}_worker_iter_{iteration_number}"
+
             context = await self._build_context(
-                subtask_description, iterations, subtask_execution
+                subtask_description, iterations, subtask_execution, debug_filename=debug_filename
             )
 
             # Save debug info if enabled
             if Config().is_debug_enabled():
                 self._save_debug_context(
-                    f"subtask_{subtask_index}_session_{session_number}_worker_iter_{iteration_number}",
+                    debug_filename,
                     context,
                 )
 
