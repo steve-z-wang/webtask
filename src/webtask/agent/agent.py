@@ -67,6 +67,7 @@ class Agent:
         task_description: str,
         max_correction_attempts: int = 3,
         resources: Optional[Dict[str, str]] = None,
+        max_cycles: Optional[int] = None,  # Backward compatibility
     ) -> TaskExecution:
         """
         Execute a task autonomously using Worker/Verifier loop.
@@ -75,6 +76,7 @@ class Agent:
             task_description: Task description in natural language
             max_correction_attempts: Maximum correction retry attempts (default: 3)
             resources: Optional dict of file resources (name -> path)
+            max_cycles: (Deprecated) Alias for max_correction_attempts for backward compatibility
 
         Returns:
             TaskExecution object with execution history and final result
@@ -84,6 +86,10 @@ class Agent:
         """
         if not self.agent_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
+
+        # Handle backward compatibility with max_cycles
+        if max_cycles is not None:
+            max_correction_attempts = max_cycles
 
         # Create task executor
         task_executor = TaskExecutor(
