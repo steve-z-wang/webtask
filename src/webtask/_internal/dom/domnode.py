@@ -1,4 +1,3 @@
-"""Core DOM node types with browser rendering data."""
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Dict, Optional, Union, Any
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 @dataclass
 class BoundingBox:
-    """Element bounding box from browser rendering."""
 
     x: float
     y: float
@@ -19,7 +17,6 @@ class BoundingBox:
 
 @dataclass
 class DomNodeData:
-    """Data container for DOM node properties."""
 
     tag: str
     attrib: Dict[str, str] = field(default_factory=dict)
@@ -39,7 +36,6 @@ class DomNodeData:
 
 @dataclass
 class DomNode:
-    """DOM element node with browser rendering data."""
 
     data: DomNodeData
     children: List[Union["DomNode", "Text"]] = field(default_factory=list)
@@ -96,11 +92,9 @@ class DomNode:
         child.parent = self
 
     def copy(self) -> "DomNode":
-        """Create shallow copy without children."""
         return DomNode(data=self.data)
 
     def deepcopy(self) -> "DomNode":
-        """Create deep copy without children."""
         return DomNode(data=self.data.copy())
 
     def has_zero_size(self) -> bool:
@@ -109,7 +103,6 @@ class DomNode:
         return self.bounds.width == 0 or self.bounds.height == 0
 
     def traverse(self):
-        """Traverse tree depth-first."""
         yield self
         for child in self.children:
             if isinstance(child, DomNode):
@@ -118,12 +111,10 @@ class DomNode:
                 yield child
 
     def get_text(self, separator: str = "") -> str:
-        """Get all text content."""
         parts = [node.content for node in self.traverse() if isinstance(node, Text)]
         return separator.join(parts)
 
     def get_x_path(self) -> "XPath":
-        """Get XPath to this element."""
         from .selector import XPath
 
         if self.parent is None:
@@ -147,7 +138,6 @@ class DomNode:
 
 @dataclass
 class Text:
-    """DOM text node."""
 
     content: str
     parent: Optional[DomNode] = field(default=None, repr=False)

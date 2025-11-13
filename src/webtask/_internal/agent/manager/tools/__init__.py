@@ -1,4 +1,3 @@
-"""Manager tools - task-level decision tools."""
 
 from .add_subtask import AddSubtaskTool
 from .cancel_pending_subtasks import CancelPendingSubtasksTool

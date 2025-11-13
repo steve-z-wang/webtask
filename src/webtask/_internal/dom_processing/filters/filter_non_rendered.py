@@ -1,4 +1,3 @@
-"""Filter non-rendered elements."""
 
 from typing import Optional
 from webtask._internal.dom.domnode import DomNode, Text
@@ -6,12 +5,10 @@ from ..knowledge import is_not_rendered, should_keep_when_not_rendered
 
 
 def filter_non_rendered(node: DomNode) -> Optional[DomNode]:
-    """Remove elements that are not rendered."""
     return _remove_non_rendered_elements(node)
 
 
 def _remove_non_rendered_elements(node: DomNode) -> Optional[DomNode]:
-    """Remove elements without layout data from CDP."""
     if is_not_rendered(node) and not should_keep_when_not_rendered(node):
         return None
 

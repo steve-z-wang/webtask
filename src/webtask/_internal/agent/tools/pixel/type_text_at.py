@@ -1,4 +1,3 @@
-"""Type text at pixel coordinates tool."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class TypeTextAtTool(Tool):
-    """Click at coordinates then type text."""
 
     name = "type_text_at"
     description = "Click at x, y coordinates then type text. Automatically clears existing content and presses Enter after typing. Coordinates are normalized 0-1000."
@@ -27,15 +25,6 @@ class TypeTextAtTool(Tool):
         )
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute type text at coordinates.
-
-        Args:
-            params: Validated parameters
-            page: Page to type on
-
-        Returns:
-            Success message
-        """
         # Get screen size
         viewport = await page.get_viewport_size()
         screen_width = viewport["width"]

@@ -1,10 +1,8 @@
-"""Verifier system prompt."""
 
 from .markdown_builder import MarkdownBuilder
 
 
 def build_verifier_prompt() -> str:
-    """Build the Verifier system prompt."""
 
     # Who You Are section
     who_you_are = (

@@ -1,4 +1,3 @@
-"""PageContextBuilder - builds page context blocks with text and image."""
 
 from typing import Dict, Optional, Tuple
 from webtask._internal.llm import Block
@@ -17,14 +16,6 @@ class PageContextBuilder:
         full_page_screenshot: bool = False,
         debug_filename: str = None,
     ) -> Tuple[Block, Optional[Dict]]:
-        """Build page context block with text and screenshot.
-
-        Args:
-            debug_filename: If provided, passes to DomContextBuilder for raw HTML saving
-
-        Returns:
-            Tuple of (Block with text+image, optional element_map if include_element_ids=True)
-        """
         if page is None:
             block = Block(
                 heading="Current Page", content="ERROR: No page is currently open."

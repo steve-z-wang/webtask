@@ -1,4 +1,3 @@
-"""Key combination tool."""
 
 from typing import TYPE_CHECKING, List
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class KeyCombinationTool(Tool):
-    """Press keyboard keys and combinations."""
 
     name = "key_combination"
     description = 'Press keyboard keys and combinations, such as "Control+C", "Enter", "Escape", etc.'
@@ -20,15 +18,6 @@ class KeyCombinationTool(Tool):
         )
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute key combination.
-
-        Args:
-            params: Validated parameters with key combination
-            page: Page to send keys to
-
-        Returns:
-            Success message
-        """
         # Split keys by +
         keys = [k.strip() for k in params.keys.split("+")]
 

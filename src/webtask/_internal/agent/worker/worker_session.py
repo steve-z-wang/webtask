@@ -1,4 +1,3 @@
-"""WorkerSession - result of one worker.run() execution with message history."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -9,7 +8,6 @@ from ....llm.message import Message, SystemMessage, UserMessage, AssistantMessag
 
 @dataclass
 class WorkerSession:
-    """Result of worker execution with full message-based conversation history."""
 
     subtask_description: str
     status: str  # "completed", "failed", "max_iterations"

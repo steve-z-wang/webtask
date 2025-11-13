@@ -1,4 +1,3 @@
-"""TaskExecutor orchestrates manager, worker, and verifier to complete a task."""
 
 from .task import TaskExecution
 from .manager.manager import Manager

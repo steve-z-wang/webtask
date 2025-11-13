@@ -1,4 +1,3 @@
-"""Manager - manages task and delegates subtasks."""
 
 from pathlib import Path
 from ..tool import ToolRegistry
@@ -19,7 +18,6 @@ from .tools import (
 
 
 class Manager:
-    """Manager role - task-level oversight and subtask delegation."""
 
     def __init__(self, typed_llm: TypedLLM):
         self._llm = typed_llm
@@ -31,7 +29,6 @@ class Manager:
         self._tool_registry.register(AbortTaskTool())
 
     def _save_debug_context(self, filename: str, context: Context):
-        """Save context (text only, no images in manager) for debugging."""
         debug_dir = Path(Config().get_debug_dir())
         debug_dir.mkdir(parents=True, exist_ok=True)
 
@@ -46,10 +43,6 @@ class Manager:
         return paths
 
     def _format_verifier_decision(self, verifier_session) -> Block:
-        """Format verifier decision for manager context.
-
-        Only shows the final decision (tool call) with details, not internal reasoning.
-        """
         if not verifier_session.iterations:
             return Block(
                 heading="Last Verifier Decision", content="No verifier decision yet."

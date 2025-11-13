@@ -1,11 +1,9 @@
-"""JSON parsing utilities."""
 
 import json
 from typing import Dict, Any
 
 
 def parse_json(text: str) -> Dict[str, Any]:
-    """Parse JSON text, handling markdown code fences and common malformations."""
     text = text.strip()
 
     # Remove markdown code fences

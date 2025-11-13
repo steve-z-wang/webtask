@@ -1,4 +1,3 @@
-"""Page context building utilities."""
 
 from .page_context_builder import PageContextBuilder
 from .dom_context_builder import DomContextBuilder

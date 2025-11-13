@@ -1,4 +1,3 @@
-"""Navigate to URL tool."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class NavigateTool(Tool):
-    """Navigate to a URL."""
 
     name = "navigate"
     description = "Navigate directly to a specified URL."
@@ -18,14 +16,5 @@ class NavigateTool(Tool):
         url: str = Field(description="URL to navigate to (must include protocol, e.g., https://)")
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute navigation.
-
-        Args:
-            params: Validated parameters with URL
-            page: Page to navigate
-
-        Returns:
-            Success message with URL
-        """
         await page.goto(params.url)
         return f"Navigated to {params.url}"

@@ -1,4 +1,3 @@
-"""Natural language element selector."""
 
 import json
 from typing import TYPE_CHECKING, Dict
@@ -14,7 +13,6 @@ if TYPE_CHECKING:
 
 
 class NaturalSelector:
-    """Selects elements using natural language descriptions."""
 
     def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
         self._llm = typed_llm
@@ -22,7 +20,6 @@ class NaturalSelector:
         self._element_map: Dict = {}
 
     async def select(self, description: str) -> Element:
-        """Select element by natural language description."""
         page = self._agent_browser.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")

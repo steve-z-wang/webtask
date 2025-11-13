@@ -1,4 +1,3 @@
-"""SubtaskExecution - execution history for one subtask."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -13,7 +12,6 @@ from .subtask import Subtask
 
 @dataclass
 class SubtaskExecution:
-    """Execution history for one subtask (Worker/Verifier cycle)."""
 
     subtask: Subtask
     history: List[Union["WorkerSession", "VerifierSession"]] = field(
@@ -21,11 +19,9 @@ class SubtaskExecution:
     )
 
     def add_session(self, session: Union["WorkerSession", "VerifierSession"]) -> None:
-        """Add a Worker or Verifier session to history."""
         self.history.append(session)
 
     def get_correction_count(self) -> int:
-        """Count how many times Verifier requested correction."""
         from .verifier.verifier_session import VerifierSession
 
         count = 0

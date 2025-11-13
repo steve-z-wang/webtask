@@ -1,4 +1,3 @@
-"""Hover at pixel coordinates tool."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class HoverAtTool(Tool):
-    """Hover at specific x, y pixel coordinates."""
 
     name = "hover_at"
     description = "Hover at specific x, y coordinates. Useful for exploring sub-menus that appear on hover. Coordinates are normalized 0-1000."
@@ -19,15 +17,6 @@ class HoverAtTool(Tool):
         y: int = Field(description="Y coordinate (0-1000, normalized to screen height)")
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute hover at coordinates.
-
-        Args:
-            params: Validated parameters with x, y coordinates
-            page: Page to hover on
-
-        Returns:
-            Success message with coordinates
-        """
         # Get screen size
         viewport = await page.get_viewport_size()
         screen_width = viewport["width"]

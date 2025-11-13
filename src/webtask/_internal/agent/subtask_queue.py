@@ -1,4 +1,3 @@
-"""Subtask queue for managing current subtask and history."""
 
 from typing import List, Optional
 from .subtask import Subtask, SubtaskStatus
@@ -6,7 +5,6 @@ from webtask._internal.llm import Block
 
 
 class SubtaskQueue:
-    """Manages current subtask, pending queue, and history of completed subtasks."""
 
     def __init__(self):
         self.current_subtask: Optional[Subtask] = None
@@ -14,16 +12,6 @@ class SubtaskQueue:
         self.history: List[Subtask] = []
 
     def start_new(self, goal: str) -> Subtask:
-        """Start a new subtask.
-
-        If there's a current subtask, it gets moved to history first.
-
-        Args:
-            goal: Description of the subtask goal
-
-        Returns:
-            The newly created subtask
-        """
         # Move current to history if it exists
         if self.current_subtask is not None:
             self.history.append(self.current_subtask)
@@ -33,29 +21,17 @@ class SubtaskQueue:
         return self.current_subtask
 
     def get_current(self) -> Optional[Subtask]:
-        """Get current subtask being worked on."""
         return self.current_subtask
 
     def mark_current_complete(self, feedback: str) -> None:
-        """Mark current subtask as complete.
-
-        Args:
-            feedback: Feedback about what was accomplished
-        """
         if self.current_subtask:
             self.current_subtask.mark_complete(feedback)
 
     def mark_current_requested_reschedule(self, feedback: str) -> None:
-        """Mark current subtask as requesting reschedule.
-
-        Args:
-            feedback: Explanation of why reschedule is needed
-        """
         if self.current_subtask:
             self.current_subtask.mark_requested_reschedule(feedback)
 
     def get_all_subtasks(self) -> List[Subtask]:
-        """Get all subtasks (history + current + pending)."""
         all_subtasks = list(self.history)
         if self.current_subtask:
             all_subtasks.append(self.current_subtask)
@@ -63,33 +39,14 @@ class SubtaskQueue:
         return all_subtasks
 
     def add_subtask(self, goal: str) -> Subtask:
-        """Add a new subtask to the pending queue.
-
-        Args:
-            goal: Description of the subtask goal
-
-        Returns:
-            The newly created subtask
-        """
         subtask = Subtask(description=goal, status=SubtaskStatus.ASSIGNED)
         self.pending_subtasks.append(subtask)
         return subtask
 
     def cancel_pending_subtasks(self) -> None:
-        """Cancel all pending subtasks (removes them without adding to history).
-
-        Since these subtasks were never attempted, they don't need to be in history.
-        """
         self.pending_subtasks = []
 
     def pop_next_pending(self) -> Optional[Subtask]:
-        """Get next pending subtask and make it current.
-
-        Moves current subtask to history if it exists.
-
-        Returns:
-            The next pending subtask, or None if queue is empty
-        """
         if not self.pending_subtasks:
             return None
 
@@ -102,11 +59,9 @@ class SubtaskQueue:
         return self.current_subtask
 
     def has_pending(self) -> bool:
-        """Check if there are pending subtasks in the queue."""
         return len(self.pending_subtasks) > 0
 
     def __len__(self) -> int:
-        """Get total number of subtasks (history + current + pending)."""
         return (
             len(self.history)
             + (1 if self.current_subtask else 0)
@@ -134,7 +89,6 @@ class SubtaskQueue:
         return "\n".join(lines)
 
     def get_context(self) -> Block:
-        """Get formatted context for LLM."""
         if not self.current_subtask and not self.history and not self.pending_subtasks:
             return Block(heading="Subtask Queue", content="No subtasks created yet.")
 

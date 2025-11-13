@@ -1,10 +1,8 @@
-"""Manager system prompt."""
 
 from .markdown_builder import MarkdownBuilder
 
 
 def build_manager_prompt() -> str:
-    """Build the Manager system prompt."""
 
     # Who You Are section
     who_you_are = (

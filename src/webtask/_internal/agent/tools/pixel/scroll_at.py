@@ -1,4 +1,3 @@
-"""Scroll at pixel coordinates tool."""
 
 from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class ScrollAtTool(Tool):
-    """Scroll at specific coordinates."""
 
     name = "scroll_at"
     description = "Scroll up, down, left, or right at specific x, y coordinates by magnitude. Useful for scrolling within specific elements. Coordinates are normalized 0-1000."
@@ -25,15 +23,6 @@ class ScrollAtTool(Tool):
         )
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute scroll at coordinates.
-
-        Args:
-            params: Validated parameters
-            page: Page to scroll
-
-        Returns:
-            Success message
-        """
         # Get screen size
         viewport = await page.get_viewport_size()
         screen_width = viewport["width"]

@@ -1,4 +1,3 @@
-"""Pixel-based computer use tools."""
 
 from .click_at import ClickAtTool
 from .hover_at import HoverAtTool

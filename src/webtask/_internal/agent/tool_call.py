@@ -1,4 +1,3 @@
-"""Tool call and iteration tracking for agent execution."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -10,11 +9,6 @@ if TYPE_CHECKING:
 
 
 class ProposedToolCall(BaseModel):
-    """
-    Tool call request from LLM (proposal phase).
-
-    This is what the LLM returns - pure JSON-serializable data for validation.
-    """
 
     description: str = Field(
         description="Past-tense description of what this action does (e.g., 'Clicked the cart icon', 'Filled quantity field with 2')"
@@ -27,11 +21,6 @@ class ProposedToolCall(BaseModel):
 
 @dataclass
 class ToolCall:
-    """
-    Tool call with execution tracking (runtime).
-
-    Mutable dataclass for tracking execution state without Pydantic overhead.
-    """
 
     # Request (from LLM)
     description: str
@@ -46,7 +35,6 @@ class ToolCall:
 
     @classmethod
     def from_proposed(cls, proposed: ProposedToolCall) -> "ToolCall":
-        """Create ToolCall from proposed tool call."""
         return cls(
             description=proposed.description,
             tool=proposed.tool,
@@ -54,24 +42,20 @@ class ToolCall:
         )
 
     def mark_success(self, result: Any = None) -> None:
-        """Mark tool call as successful."""
         self.success = True
         self.result = result
         self.timestamp = datetime.now()
 
     def mark_failure(self, error: str) -> None:
-        """Mark tool call as failed."""
         self.success = False
         self.error = error
         self.timestamp = datetime.now()
 
     @property
     def executed(self) -> bool:
-        """Check if tool call has been executed."""
         return self.success is not None
 
     def __str__(self) -> str:
-        """String representation for debugging."""
         status = (
             "[SUCCESS]"
             if self.success
@@ -87,12 +71,6 @@ class ToolCall:
 
 
 class ProposedIteration(BaseModel):
-    """
-    Proposed iteration from LLM (one loop iteration).
-
-    Contains the LLM's observation, thinking, and tool calls to execute.
-    This is what the LLM returns in one iteration of a role's run() loop.
-    """
 
     observation: str = Field(
         description="Observation of current page state (success/error messages, loading states, what just changed)"
@@ -105,12 +83,6 @@ class ProposedIteration(BaseModel):
 
 @dataclass
 class Iteration:
-    """
-    Executed iteration with results (runtime).
-
-    Tracks what happened in one iteration of a role's loop.
-    Tool calls are added progressively as they execute.
-    """
 
     iteration_number: int  # 1-indexed iteration number
     observation: str
@@ -120,15 +92,12 @@ class Iteration:
 
     @classmethod
     def from_proposed(cls, proposed: ProposedIteration) -> "Iteration":
-        """Create Iteration from proposed iteration (before execution)."""
         return cls(observation=proposed.observation, thinking=proposed.thinking)
 
     def add_tool_call(self, tool_call: ToolCall) -> None:
-        """Add an executed tool call to this iteration."""
         self.tool_calls.append(tool_call)
 
     def __str__(self) -> str:
-        """String representation for debugging."""
         lines = []
         lines.append(f"Observation: {self.observation}")
         lines.append(f"Thinking: {self.thinking}")

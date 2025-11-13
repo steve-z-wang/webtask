@@ -1,4 +1,3 @@
-"""Utility functions."""
 
 from .json_parser import parse_json
 from .url import normalize_url

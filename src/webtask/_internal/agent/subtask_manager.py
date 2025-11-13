@@ -1,4 +1,3 @@
-"""SubtaskManager - orchestrates Worker/Verifier loop for a single subtask."""
 
 from typing import TYPE_CHECKING
 
@@ -11,7 +10,6 @@ from .subtask_execution import SubtaskExecution
 
 
 class SubtaskManager:
-    """Manages Worker/Verifier loop for subtask execution with correction retries."""
 
     def __init__(self, worker: "Worker", verifier: "Verifier"):
         self._worker = worker
@@ -24,7 +22,6 @@ class SubtaskManager:
         subtask_index: int,
         max_correction_attempts: int = 3,
     ) -> SubtaskExecution:
-        """Execute subtask with Worker/Verifier loop and correction retry logic."""
         execution = SubtaskExecution(subtask=subtask)
         session_number = 1  # Reset to 1 for each subtask
         correction_count = 0

@@ -1,4 +1,3 @@
-"""HTML parser."""
 
 from typing import Optional
 
@@ -9,7 +8,6 @@ from ..domnode import DomNode, Text, BoundingBox
 
 
 def parse_html(html_string: str) -> DomNode:
-    """Parse HTML into DomNode tree."""
     if not html_string or not html_string.strip():
         return DomNode(tag="html")
 

@@ -1,4 +1,3 @@
-"""CDP snapshot parser."""
 
 from typing import Any, Dict, List, Optional, Callable, Tuple
 
@@ -6,7 +5,6 @@ from ..domnode import DomNode, Text, BoundingBox
 
 
 def _get_string_resolver(strings: List[str]) -> Callable[[Any], str]:
-    """Create a function to resolve string indices from the CDP strings array."""
 
     def resolve(index: Any) -> str:
         if isinstance(index, int) and 0 <= index < len(strings):
@@ -19,15 +17,6 @@ def _get_string_resolver(strings: List[str]) -> Callable[[Any], str]:
 def _parse_layout_data(
     layout_data: Dict[str, Any], get_string: Callable[[Any], str]
 ) -> Dict[int, Tuple[Optional[BoundingBox], Dict[str, str]]]:
-    """
-    Parse layout information from CDP snapshot.
-
-    Important: CDP only includes layout data for nodes in the browser's render tree.
-    Nodes that are not rendered (e.g., display:none, detached, etc.) will NOT be
-    in this layout data.
-
-    Returns a map from node index to (bounds, styles).
-    """
     layout_node_indices = layout_data.get("nodeIndex", [])
     layout_bounds = layout_data.get("bounds", [])
     layout_styles = layout_data.get("styles", [])
@@ -64,11 +53,6 @@ def _create_element_nodes(
     layout_map: Dict[int, Tuple[Optional[BoundingBox], Dict[str, str]]],
     get_string: Callable[[Any], str],
 ) -> List[Optional[DomNode]]:
-    """
-    Create DomNode objects for element nodes (node_type == 1).
-
-    Returns a list where element nodes are at their CDP index and other types are None.
-    """
     node_types = nodes_data.get("nodeType", [])
     node_names = nodes_data.get("nodeName", [])
     attributes_arrays = nodes_data.get("attributes", [])
@@ -124,7 +108,6 @@ def _add_text_nodes(
     element_nodes: List[Optional[DomNode]],
     get_string: Callable[[Any], str],
 ) -> None:
-    """Add text nodes (node_type == 3) as children to their parent elements."""
     node_types = nodes_data.get("nodeType", [])
     node_values = nodes_data.get("nodeValue", [])
     parent_indices = nodes_data.get("parentIndex", [])
@@ -159,11 +142,6 @@ def _add_text_nodes(
 def _build_tree(
     nodes_data: Dict[str, Any], element_nodes: List[Optional[DomNode]]
 ) -> Optional[DomNode]:
-    """
-    Build the DOM tree by linking child nodes to parents.
-
-    Returns the root node of the tree.
-    """
     node_types = nodes_data.get("nodeType", [])
     parent_indices = nodes_data.get("parentIndex", [])
 
@@ -203,7 +181,6 @@ def _parse_document(
     document_data: Dict[str, Any],
     get_string: Callable[[Any], str]
 ) -> Optional[DomNode]:
-    """Parse a single document (main frame or iframe) into a DomNode tree."""
     nodes_data = document_data.get("nodes", {})
     layout_data = document_data.get("layout", {})
 
@@ -223,15 +200,6 @@ def _parse_document(
 
 
 def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
-    """
-    Parse CDP snapshot into DomNode tree, including all iframes.
-
-    Args:
-        snapshot_data: CDP snapshot data with documents, strings, and layout info
-
-    Returns:
-        Root DomNode of the parsed tree with iframe contents included
-    """
     documents_data = snapshot_data.get("documents", [])
     strings = snapshot_data.get("strings", [])
 

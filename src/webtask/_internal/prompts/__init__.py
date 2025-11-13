@@ -1,4 +1,3 @@
-"""Prompts module - centralized prompt management."""
 
 from .worker_prompt import build_worker_prompt
 from .verifier_prompt import build_verifier_prompt

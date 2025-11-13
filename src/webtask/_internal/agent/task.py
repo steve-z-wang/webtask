@@ -1,4 +1,3 @@
-"""Task definitions and execution tracking."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -13,7 +12,6 @@ from .subtask_queue import SubtaskQueue
 
 
 class TaskStatus(str, Enum):
-    """Status of a task execution."""
 
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -22,7 +20,6 @@ class TaskStatus(str, Enum):
 
 @dataclass
 class Task:
-    """Basic task definition - input to TaskExecutor."""
 
     description: str
     resources: Dict[str, str] = field(default_factory=dict)
@@ -30,10 +27,6 @@ class Task:
 
 @dataclass
 class TaskExecution:
-    """Record of task execution - output from TaskExecutor.
-
-    Contains the original task, execution history, subtask queue state, and status.
-    """
 
     task: Task
     history: List[Union["ManagerSession", "SubtaskExecution"]] = field(
@@ -44,24 +37,16 @@ class TaskExecution:
     failure_reason: str | None = None
 
     def add_session(self, session: Union["ManagerSession", "SubtaskExecution"]) -> None:
-        """Add a session to execution history."""
         self.history.append(session)
 
     def mark_completed(self) -> None:
-        """Mark task as completed."""
         self.status = TaskStatus.COMPLETED
 
     def mark_aborted(self, reason: str) -> None:
-        """Mark task as aborted.
-
-        Args:
-            reason: Explanation of why the task was aborted
-        """
         self.status = TaskStatus.ABORTED
         self.failure_reason = reason
 
     def __str__(self) -> str:
-        """Return formatted string representation for debugging."""
         lines = []
         lines.append("=" * 80)
         lines.append("TASK EXECUTION")

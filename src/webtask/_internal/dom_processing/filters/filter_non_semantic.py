@@ -1,4 +1,3 @@
-"""Filter non-semantic elements and attributes."""
 
 from typing import Optional
 from webtask._internal.dom.domnode import DomNode, Text
@@ -6,7 +5,6 @@ from ..knowledge import has_semantic_value, is_semantic_attribute
 
 
 def filter_non_semantic(node: DomNode) -> Optional[DomNode]:
-    """Apply all semantic filters: attributes, elements, and wrapper collapse."""
     # 1. Remove non-semantic attributes
     node = _remove_non_semantic_attributes(node)
 
@@ -22,7 +20,6 @@ def filter_non_semantic(node: DomNode) -> Optional[DomNode]:
 
 
 def _remove_non_semantic_attributes(node: DomNode) -> DomNode:
-    """Keep only semantic attributes."""
     new_node = node.deepcopy()
     new_node.attrib = {k: v for k, v in node.attrib.items() if is_semantic_attribute(k)}
 
@@ -37,7 +34,6 @@ def _remove_non_semantic_attributes(node: DomNode) -> DomNode:
 
 
 def _remove_non_semantic_elements(node: DomNode) -> Optional[DomNode]:
-    """Remove nodes that have no semantic value."""
     filtered_children = []
     for child in node.children:
         if isinstance(child, Text):
@@ -60,7 +56,6 @@ def _remove_non_semantic_elements(node: DomNode) -> Optional[DomNode]:
 
 
 def _collapse_non_semantic_wrappers(node: DomNode) -> DomNode:
-    """Collapse wrapper elements with no semantic value and one element child."""
     new_children = []
     for child in node.children:
         if isinstance(child, Text):

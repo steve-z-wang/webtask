@@ -1,8 +1,3 @@
-"""DOM knowledge functions - pure predicates about HTML elements.
-
-All functions in this module are pure functions that answer questions about DOM elements
-based on web standards (HTML, ARIA, etc.). They don't modify anything, just return True/False.
-"""
 
 from .interactive import is_interactive
 from .semantic import has_semantic_value, is_presentational_role, is_semantic_attribute

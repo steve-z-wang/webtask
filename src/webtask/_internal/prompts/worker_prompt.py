@@ -1,10 +1,8 @@
-"""Worker system prompt."""
 
 from .markdown_builder import MarkdownBuilder
 
 
 def build_worker_prompt() -> str:
-    """Build the Worker system prompt."""
 
     # Who You Are section
     who_you_are = (

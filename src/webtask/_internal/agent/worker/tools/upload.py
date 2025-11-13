@@ -1,4 +1,3 @@
-"""Upload tool for file uploads."""
 
 from typing import List
 from pydantic import BaseModel, Field
@@ -6,13 +5,11 @@ from ...tool import Tool
 
 
 class UploadTool(Tool):
-    """Upload file resources to a file input element."""
 
     name = "upload"
     description = "Upload file resources to a file input element. Use resource names that were provided with the task."
 
     class Params(BaseModel):
-        """Parameters for upload tool."""
 
         element_id: str = Field(
             description="Element ID of the file input (e.g., 'input-5')"
@@ -22,12 +19,6 @@ class UploadTool(Tool):
         )
 
     async def execute(self, params: Params, **kwargs) -> None:
-        """Execute file upload.
-
-        Args:
-            params: Validated parameters
-            **kwargs: worker_browser and resources injected by ToolRegistry
-        """
         worker_browser = kwargs.get("worker_browser")
         resources = kwargs.get("resources", {})
 

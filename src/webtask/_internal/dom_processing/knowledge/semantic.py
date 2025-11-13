@@ -1,4 +1,3 @@
-"""Knowledge: Determine if elements have semantic value."""
 
 from webtask._internal.dom.domnode import DomNode
 from .interactive import is_interactive
@@ -34,18 +33,15 @@ SEMANTIC_ATTRIBUTES = {
 
 
 def is_semantic_attribute(attr_name: str) -> bool:
-    """Check if an attribute is semantically meaningful."""
     return attr_name in SEMANTIC_ATTRIBUTES
 
 
 def is_presentational_role(node: DomNode) -> bool:
-    """Check if element has role="presentation" or role="none"."""
     role = node.attrib.get("role", "").lower().strip()
     return role in ("presentation", "none")
 
 
 def has_semantic_value(node: DomNode) -> bool:
-    """Check if element has semantic value (should be kept)."""
     if is_presentational_role(node):
         return False
 

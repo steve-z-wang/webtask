@@ -1,4 +1,3 @@
-"""Media handling - images, screenshots, etc."""
 
 from .image import Image
 

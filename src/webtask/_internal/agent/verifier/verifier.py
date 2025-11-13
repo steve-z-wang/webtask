@@ -1,4 +1,3 @@
-"""Verifier role - checks if subtask succeeded and if task is complete."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,7 +20,6 @@ if TYPE_CHECKING:
 
 
 class Verifier:
-    """Verifier role - checks if subtask succeeded and if task is complete."""
 
     def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
         self._llm = typed_llm
@@ -33,7 +31,6 @@ class Verifier:
         self._tool_registry.register(WaitTool())
 
     def _save_debug_context(self, filename: str, context):
-        """Save context (text + images) for debugging. Returns dict with paths."""
         debug_dir = Path(Config().get_debug_dir())
         debug_dir.mkdir(parents=True, exist_ok=True)
 
@@ -66,10 +63,6 @@ class Verifier:
         return block
 
     def _format_worker_actions(self, worker_iterations: list) -> Block:
-        """Format worker actions for verifier context.
-
-        Only shows the actions taken, not internal reasoning.
-        """
         if not worker_iterations:
             return Block(heading="Worker Actions", content="No worker actions yet.")
 
@@ -85,7 +78,6 @@ class Verifier:
         return Block(heading="Worker Actions", content=content.strip())
 
     def _format_correction_history(self, subtask_execution) -> Block:
-        """Format correction history showing Worker/Verifier attempts."""
         if not subtask_execution or not subtask_execution.history:
             return Block(
                 heading="Correction History",

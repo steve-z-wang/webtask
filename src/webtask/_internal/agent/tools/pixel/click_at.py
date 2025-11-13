@@ -1,4 +1,3 @@
-"""Click at pixel coordinates tool."""
 
 from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class ClickAtTool(Tool):
-    """Click at specific x, y pixel coordinates."""
 
     name = "click_at"
     description = "Click at specific x, y coordinates on the page. Coordinates are normalized 0-1000."
@@ -19,15 +17,6 @@ class ClickAtTool(Tool):
         y: int = Field(description="Y coordinate (0-1000, normalized to screen height)")
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute click at coordinates.
-
-        Args:
-            params: Validated parameters with x, y coordinates
-            page: Page to click on
-
-        Returns:
-            Success message with coordinates
-        """
         # Get screen size
         viewport = await page.get_viewport_size()
         screen_width = viewport["width"]

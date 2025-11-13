@@ -1,4 +1,3 @@
-"""Scroll document tool."""
 
 from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, Field
@@ -9,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class ScrollDocumentTool(Tool):
-    """Scroll the entire webpage."""
 
     name = "scroll_document"
     description = 'Scroll the entire webpage in a direction: "up", "down", "left", or "right".'
@@ -20,15 +18,6 @@ class ScrollDocumentTool(Tool):
         )
 
     async def execute(self, params: Params, page: "Page") -> str:
-        """Execute document scroll.
-
-        Args:
-            params: Validated parameters with direction
-            page: Page to scroll
-
-        Returns:
-            Success message
-        """
         # Scroll the page
         await page.scroll(direction=params.direction)
 

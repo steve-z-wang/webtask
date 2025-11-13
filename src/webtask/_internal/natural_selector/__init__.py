@@ -1,4 +1,3 @@
-"""Natural language element selector."""
 
 from .selector import NaturalSelector
 from .schema import SelectorResponse

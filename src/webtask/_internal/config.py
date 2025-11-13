@@ -1,29 +1,8 @@
-"""Internal configuration management for webtask."""
 
 import os
 
 
 class Config:
-    """
-    Singleton configuration loaded from environment variables.
-
-    Environment variables are read once on first access (lazy loading).
-
-    Environment variables:
-        WEBTASK_DEBUG: Enable debug mode (saves screenshots and context)
-                      Values: 1, true, True, yes
-        WEBTASK_DEBUG_DIR: Directory for debug output (default: "debug")
-                          Example: "debug/test_case_42"
-        WEBTASK_TEST_MODE: Test recording/replay mode
-                          Values: "record", "replay", or unset for live mode
-
-    Usage:
-        from webtask._internal.config import Config
-
-        if Config().is_debug_enabled():
-            debug_dir = Config().get_debug_dir()
-            # Save debug info to debug_dir
-    """
 
     _instance = None
 
@@ -38,37 +17,13 @@ class Config:
         return cls._instance
 
     def is_debug_enabled(self) -> bool:
-        """
-        Check if debug mode is enabled.
-
-        Returns:
-            True if WEBTASK_DEBUG is set to a truthy value
-        """
         return self._debug
 
     def get_debug_dir(self) -> str:
-        """
-        Get the debug output directory.
-
-        Returns:
-            Path to debug directory (default: "debug")
-        """
         return self._debug_dir
 
     def is_recording(self) -> bool:
-        """
-        Check if test recording mode is enabled.
-
-        Returns:
-            True if WEBTASK_TEST_MODE is set to "record"
-        """
         return self._test_mode == "record"
 
     def is_replaying(self) -> bool:
-        """
-        Check if test replay mode is enabled.
-
-        Returns:
-            True if WEBTASK_TEST_MODE is set to "replay"
-        """
         return self._test_mode == "replay"

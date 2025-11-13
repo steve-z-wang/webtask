@@ -1,4 +1,3 @@
-"""BoundingBoxRenderer - visualizes element_map with bounding boxes."""
 
 from typing import Dict
 from webtask.browser import Page
@@ -6,7 +5,6 @@ from ..dom.domnode import DomNode
 
 
 class BoundingBoxRenderer:
-    """Renders screenshots with bounding boxes and element IDs using browser-side drawing."""
 
     @staticmethod
     def _generate_draw_script(
@@ -15,7 +13,6 @@ class BoundingBoxRenderer:
         line_width: int,
         font_size: int,
     ) -> str:
-        """Generate JavaScript to draw bounding boxes in the browser."""
 
         # Build element data for JavaScript
         elements_data = []
@@ -113,7 +110,6 @@ class BoundingBoxRenderer:
 
     @staticmethod
     def _generate_remove_script() -> str:
-        """Generate JavaScript to remove the bounding box overlay."""
         return """
         (() => {
             const overlay = document.getElementById('__webtask_bbox_overlay__');
@@ -132,19 +128,6 @@ class BoundingBoxRenderer:
         font_size: int = 12,
         full_page: bool = False,
     ) -> bytes:
-        """Render screenshot with bounding boxes for each element in element_map.
-
-        Args:
-            page: Browser page to screenshot
-            element_map: Map of element_id -> DomNode (from DomContextBuilder)
-            color: Box and label color (default: "red")
-            line_width: Border width in pixels (default: 2)
-            font_size: Label font size (default: 12)
-            full_page: Capture full scrollable page (default: False, viewport only)
-
-        Returns:
-            Screenshot bytes with bounding boxes
-        """
         # Draw boxes in browser
         draw_script = BoundingBoxRenderer._generate_draw_script(
             element_map, color, line_width, font_size
@@ -169,16 +152,6 @@ class BoundingBoxRenderer:
         line_width: int = 2,
         font_size: int = 12,
     ) -> None:
-        """Render and save screenshot with bounding boxes.
-
-        Args:
-            page: Browser page to screenshot
-            element_map: Map of element_id -> DomNode
-            output_path: Path to save the image (e.g., "screenshot.png")
-            color: Box and label color (default: "red")
-            line_width: Border width in pixels (default: 2)
-            font_size: Label font size (default: 12)
-        """
         from webtask._internal.media import Image
 
         screenshot_bytes = await BoundingBoxRenderer.render(

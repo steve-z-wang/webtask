@@ -1,10 +1,8 @@
-"""Selector system prompt."""
 
 from .markdown_builder import MarkdownBuilder
 
 
 def build_selector_prompt() -> str:
-    """Build the Natural Selector system prompt."""
 
     # Who You Are section
     who_you_are = (
