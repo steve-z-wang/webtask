@@ -179,15 +179,15 @@ class Verifier:
             dom_snapshot = await self.verifier_browser.get_dom_snapshot()
             screenshot_b64 = await self.verifier_browser.get_screenshot()
 
-            # Create tool result message with acknowledgments + page state
-            page_state = [
+            # Create tool result message with acknowledgments + observation content
+            content = [
                 TextContent(text=dom_snapshot),
                 ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG),
             ]
 
             result_message = ToolResultMessage(
                 results=tool_results,
-                page_state=page_state,
+                content=content,
             )
             messages.append(result_message)
 

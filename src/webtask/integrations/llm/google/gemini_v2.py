@@ -223,7 +223,7 @@ class GeminiLLMV2(LLM):
                     )
                     parts.append(function_response)
 
-                # Add page state content (DOM + screenshot)
+                # Add observation content (DOM + screenshot)
                 for content_part in msg.content:
                     if isinstance(content_part, TextContent):
                         parts.append(content_part.text)

@@ -150,19 +150,19 @@ class AssistantMessage(Message):
 
 
 class ToolResultMessage(Message):
-    """Tool execution results with page state."""
+    """Tool execution results with observation content."""
 
     results: List[ToolResult]  # Acknowledgment for each tool call
-    page_state: List[Union[TextContent, ImageContent]]  # Page state after all tools execute
+    content: List[Union[TextContent, ImageContent]]  # Observation after all tools execute
 
     def __str__(self) -> str:
         # Summary of results
         result_summary = [f"{r.name}:{r.status}" for r in self.results]
         results_str = ", ".join(result_summary)
 
-        # Count page state content types
-        text_count = sum(1 for part in self.page_state if isinstance(part, TextContent))
-        image_count = sum(1 for part in self.page_state if isinstance(part, ImageContent))
+        # Count content types
+        text_count = sum(1 for part in self.content if isinstance(part, TextContent))
+        image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
 
         return f"ToolResultMessage(results=[{results_str}], text_parts={text_count}, images={image_count})"
 
