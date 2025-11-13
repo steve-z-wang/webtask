@@ -165,13 +165,15 @@ class Worker:
             screenshot_b64 = await self.worker_browser.get_screenshot()
 
             # Create tool result message with acknowledgments + page state
+            content = [TextContent(text=dom_snapshot)]
+
+            # Only add screenshot if we have valid data
+            if screenshot_b64:
+                content.append(ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG))
+
             result_message = ToolResultMessage(
                 results=tool_results,
-                content=[
-                    TextContent(text=dom_snapshot),
-                    ImageContent(data=screenshot_b64,
-                                 mime_type=ImageMimeType.PNG),
-                ],
+                content=content,
             )
             messages.append(result_message)
 

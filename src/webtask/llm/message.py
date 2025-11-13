@@ -20,12 +20,21 @@ class TextContent(BaseModel):
 
     text: str
 
+    def __str__(self) -> str:
+        # Truncate long text
+        if len(self.text) > 100:
+            return f"TextContent({self.text[:100]}...)"
+        return f"TextContent({self.text})"
+
 
 class ImageContent(BaseModel):
     """Image content part (base64-encoded)."""
 
     data: str  # base64-encoded
     mime_type: ImageMimeType = ImageMimeType.PNG
+
+    def __str__(self) -> str:
+        return f"ImageContent(mime_type={self.mime_type.value}, size={len(self.data)} bytes)"
 
 
 class ToolCall(BaseModel):
@@ -35,6 +44,12 @@ class ToolCall(BaseModel):
     name: str
     arguments: Dict[str, Any]
 
+    def __str__(self) -> str:
+        args_str = ", ".join(f"{k}={v}" for k, v in self.arguments.items())
+        if len(args_str) > 100:
+            args_str = args_str[:100] + "..."
+        return f"ToolCall({self.name}, {args_str})"
+
 
 class ToolResult(BaseModel):
     """Acknowledgment of tool execution."""
@@ -43,6 +58,11 @@ class ToolResult(BaseModel):
     name: str  # Tool name
     status: str  # "success" or "error"
     error: Optional[str] = None  # Error message if status is "error"
+
+    def __str__(self) -> str:
+        if self.error:
+            return f"ToolResult({self.name}: {self.status}, error={self.error})"
+        return f"ToolResult({self.name}: {self.status})"
 
 
 class Message(BaseModel):
@@ -56,11 +76,30 @@ class SystemMessage(Message):
 
     content: List[TextContent]
 
+    def __str__(self) -> str:
+        texts = [part.text for part in self.content]
+        combined = " ".join(texts)
+        if len(combined) > 200:
+            combined = combined[:200] + "..."
+        return f"SystemMessage({combined})"
+
 
 class UserMessage(Message):
     """User message with text/images."""
 
     content: List[Union[TextContent, ImageContent]]
+
+    def __str__(self) -> str:
+        text_parts = [part.text for part in self.content if isinstance(part, TextContent)]
+        image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
+
+        text_str = " ".join(text_parts)
+        if len(text_str) > 200:
+            text_str = text_str[:200] + "..."
+
+        if image_count > 0:
+            return f"UserMessage(text={text_str}, images={image_count})"
+        return f"UserMessage({text_str})"
 
 
 class AssistantMessage(Message):
@@ -69,12 +108,49 @@ class AssistantMessage(Message):
     content: Optional[List[Union[TextContent, ImageContent]]] = None
     tool_calls: Optional[List[ToolCall]] = None
 
+    def __str__(self) -> str:
+        parts = []
+
+        # Add content summary
+        if self.content:
+            text_parts = [part.text for part in self.content if isinstance(part, TextContent)]
+            image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
+
+            if text_parts:
+                text_str = " ".join(text_parts)
+                if len(text_str) > 100:
+                    text_str = text_str[:100] + "..."
+                parts.append(f"text={text_str}")
+
+            if image_count > 0:
+                parts.append(f"images={image_count}")
+
+        # Add tool calls summary
+        if self.tool_calls:
+            tool_names = [tc.name for tc in self.tool_calls]
+            parts.append(f"tools=[{', '.join(tool_names)}]")
+
+        if parts:
+            return f"AssistantMessage({', '.join(parts)})"
+        return "AssistantMessage(empty)"
+
 
 class ToolResultMessage(Message):
     """Tool execution results with page state."""
 
     results: List[ToolResult]  # Acknowledgment for each tool call
     content: List[Union[TextContent, ImageContent]]  # Page state after all tools execute
+
+    def __str__(self) -> str:
+        # Summary of results
+        result_summary = [f"{r.name}:{r.status}" for r in self.results]
+        results_str = ", ".join(result_summary)
+
+        # Count content types
+        text_count = sum(1 for part in self.content if isinstance(part, TextContent))
+        image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
+
+        return f"ToolResultMessage(results=[{results_str}], text_parts={text_count}, images={image_count})"
 
 
 # ========== Helper Functions ==========

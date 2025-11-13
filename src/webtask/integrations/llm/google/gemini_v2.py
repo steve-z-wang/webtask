@@ -9,6 +9,7 @@ import base64
 
 import google.generativeai as genai
 from google.generativeai import types
+from google.generativeai import protos
 
 from webtask.llm import LLM
 from webtask.llm.message import (
@@ -84,6 +85,35 @@ class GeminiLLMV2(LLM):
 
         return cls(gemini_model, model, temperature)
 
+    def _clean_schema_for_gemini(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Clean Pydantic JSON schema to be compatible with Gemini.
+
+        Gemini only accepts a subset of JSON schema fields. We need to remove
+        unsupported fields like title, maximum, minimum, maxLength, etc.
+        """
+        # Fields that Gemini supports
+        allowed_fields = {"type", "description", "enum", "items", "properties", "required", "nullable", "format"}
+
+        # Create cleaned schema
+        cleaned = {}
+
+        for key, value in schema.items():
+            if key in allowed_fields:
+                if key == "properties" and isinstance(value, dict):
+                    # Recursively clean nested properties
+                    cleaned[key] = {
+                        prop_name: self._clean_schema_for_gemini(prop_schema)
+                        for prop_name, prop_schema in value.items()
+                    }
+                elif key == "items" and isinstance(value, dict):
+                    # Recursively clean array items schema
+                    cleaned[key] = self._clean_schema_for_gemini(value)
+                else:
+                    cleaned[key] = value
+
+        return cleaned
+
     def _build_tool_declarations(self, tools: List[Tool]) -> types.Tool:
         """Build Gemini function declarations from tools."""
         function_declarations = []
@@ -91,6 +121,9 @@ class GeminiLLMV2(LLM):
         for tool in tools:
             # Convert Pydantic model to JSON schema
             params_schema = tool.Params.model_json_schema()
+
+            # Clean schema to be Gemini-compatible
+            params_schema = self._clean_schema_for_gemini(params_schema)
 
             function_declarations.append(
                 types.FunctionDeclaration(
@@ -157,9 +190,11 @@ class GeminiLLMV2(LLM):
                 # Include tool calls as function calls
                 if msg.tool_calls:
                     for tc in msg.tool_calls:
-                        function_call = types.FunctionCall(
-                            name=tc.name,
-                            args=tc.arguments,
+                        function_call = protos.Part(
+                            function_call=protos.FunctionCall(
+                                name=tc.name,
+                                args=tc.arguments,
+                            )
                         )
                         parts.append(function_call)
 
@@ -172,12 +207,14 @@ class GeminiLLMV2(LLM):
 
                 # Add function responses for each tool result
                 for result in msg.results:
-                    function_response = types.FunctionResponse(
-                        name=result.name,
-                        response={
-                            "status": result.status,
-                            "error": result.error if result.error else None,
-                        },
+                    function_response = protos.Part(
+                        function_response=protos.FunctionResponse(
+                            name=result.name,
+                            response={
+                                "status": result.status,
+                                "error": result.error if result.error else None,
+                            },
+                        )
                     )
                     parts.append(function_response)
 
@@ -228,11 +265,19 @@ class GeminiLLMV2(LLM):
             temperature=self.temperature,
         )
 
+        # Create tool config to force function calling using protos
+        tool_config = protos.ToolConfig(
+            function_calling_config=protos.FunctionCallingConfig(
+                mode=protos.FunctionCallingConfig.Mode.ANY,
+            )
+        )
+
         # Call Gemini API with tools
         response = await self.model.generate_content_async(
             gemini_content,
             generation_config=generation_config,
             tools=[gemini_tools],
+            tool_config=tool_config,
         )
 
         # Log token usage
@@ -243,6 +288,20 @@ class GeminiLLMV2(LLM):
                 f"completion_tokens: {response.usage_metadata.candidates_token_count}, "
                 f"total_tokens: {response.usage_metadata.total_token_count}"
             )
+
+        # Debug: Log response structure
+        self.logger.debug(f"Response candidates: {len(response.candidates) if response.candidates else 0}")
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            self.logger.debug(f"Candidate content: {candidate.content}")
+            if candidate.content and candidate.content.parts:
+                self.logger.debug(f"Parts count: {len(candidate.content.parts)}")
+                for i, part in enumerate(candidate.content.parts):
+                    self.logger.debug(f"Part {i}: {type(part).__name__}")
+                    if hasattr(part, "function_call"):
+                        self.logger.debug(f"  Has function_call: {part.function_call}")
+                    if hasattr(part, "text"):
+                        self.logger.debug(f"  Has text: {part.text[:200] if part.text else None}")
 
         # Extract tool calls from response
         tool_calls = []
