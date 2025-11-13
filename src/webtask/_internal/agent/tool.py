@@ -1,51 +1,12 @@
-"""Tool base class and registry for agent tools."""
+"""Tool registry for agent tools."""
 
 import json
 from typing import Dict, Any, List, TYPE_CHECKING
-from pydantic import BaseModel
+from webtask.agent.tool import Tool
 from webtask._internal.llm import Block
 
 if TYPE_CHECKING:
     from .tool_call import ProposedToolCall, ToolCall
-
-
-class Tool:
-    """Base class for agent tools.
-
-    Tools must define:
-    - name: str - Tool identifier
-    - description: str - What the tool does
-    - Params: BaseModel - Nested Pydantic model for parameters
-    - async execute(params: Params, **kwargs) -> Any
-
-    Example:
-        class AddSubtaskTool(Tool):
-            name = "add_subtask"
-            description = "Add a new subtask to the end of the backlog"
-
-            class Params(BaseModel):
-                description: str = Field(description="Subtask description")
-
-            async def execute(self, params: Params, task: "Task") -> None:
-                subtask = Subtask(description=params.description)
-                task.subtasks.append(subtask)
-    """
-
-    name: str
-    description: str
-    Params: type[BaseModel]
-
-    async def execute(self, params: BaseModel, **kwargs) -> Any:
-        """Execute the tool with validated parameters.
-
-        Args:
-            params: Validated Params instance
-            **kwargs: Additional dependencies (llm_browser, resources, task, etc.)
-
-        Returns:
-            Tool execution result
-        """
-        raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
 
 
 class ToolRegistry:

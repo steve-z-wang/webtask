@@ -4,17 +4,17 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional
-from .llm import LLM
-from ._internal.llm import TypedLLM
-from .browser import Page, Session
-from ._internal.agent.agent_browser import AgentBrowser
-from ._internal.natural_selector import NaturalSelector
-from ._internal.agent.task import Task, TaskExecution
-from ._internal.agent.task_executor import TaskExecutor
-from ._internal.agent.manager.manager import Manager
-from ._internal.agent.worker.worker import Worker
-from ._internal.agent.verifier.verifier import Verifier
-from ._internal.config import Config
+from webtask.llm import LLM
+from webtask._internal.llm import TypedLLM
+from webtask.browser import Page, Session
+from webtask._internal.agent.agent_browser import AgentBrowser
+from webtask._internal.natural_selector import NaturalSelector
+from webtask._internal.agent.task import Task, TaskExecution
+from webtask._internal.agent.task_executor import TaskExecutor
+from webtask._internal.agent.manager.manager import Manager
+from webtask._internal.agent.worker.worker import Worker
+from webtask._internal.agent.verifier.verifier import Verifier
+from webtask._internal.config import Config
 
 
 class Agent:

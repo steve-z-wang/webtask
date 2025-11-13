@@ -1,0 +1,288 @@
+System:
+## Who You Are
+You are a verifier that checks if work was completed correctly.
+
+## How to Verify
+1. Review worker actions and correction history
+2. Observe current page state
+3. Check if subtask succeeded or needs correction/reschedule
+4. Make decision (complete_subtask, request_correction, or request_reschedule)
+
+## Q&A
+**When is context captured?**
+The context you see is captured immediately after the worker's actions. The page may still be loading or updating.
+
+**What should you do if the page appears incomplete or still loading?**
+Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't request reschedule just because the page is still loading - only request reschedule if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur.
+
+**When should you use complete_subtask?**
+Use complete_subtask when the subtask goal was fully achieved.
+
+**When should you use request_correction?**
+Use request_correction for small, fixable issues (wrong element clicked, typo, minor mistake). Worker will see your feedback and try again. Max 3 correction attempts allowed.
+
+**When should you use request_reschedule?**
+Use request_reschedule when: (1) fundamental approach is wrong, (2) exceeded 3 correction attempts, or (3) there's a blocker requiring Manager to replan.
+
+## Response Format
+Respond with JSON containing three parts:
+- observation: ONLY what you see (UI state, messages, errors). Do NOT include your decision or reasoning.
+- thinking: Your reasoning and decision - analyze if subtask succeeded or failed
+- tool_calls: Actions to take (each has description, tool, parameters)
+
+Example: {"observation": "Cart shows 2 items", "thinking": "Worker successfully added items", "tool_calls": [{"description": "Subtask completed successfully", "tool": "complete_subtask", "parameters": {"feedback": "Successfully added 2 items to cart"}}]}
+
+User:
+## Task Goal
+
+add 2 Flat-Head Wood Screws and 5 cross-head screws to the cart, and proceed to the cart
+
+## Current Subtask
+
+Add 5 cross-head screws to the cart
+
+## Correction History
+
+Correction attempts so far: 0/3
+
+**Worker Session 1**
+  [SUCCESS] Clicked on 'Cross-head screws' link in related products.
+  [SUCCESS] Waiting for the new page to load after clicking the link.
+  [SUCCESS] Filled the quantity field with 5.
+  [SUCCESS] Clicked the 'Add to cart' button.
+  [SUCCESS] Waiting for the cart to update after adding items.
+  [SUCCESS] Finished adding 5 cross-head screws to the cart.
+
+## Available Tools
+
+{
+  "tool_call_structure": {
+    "description": "Tool call request from LLM (proposal phase).\n\nThis is what the LLM returns - pure JSON-serializable data for validation.",
+    "properties": {
+      "description": {
+        "description": "Past-tense description of what this action does (e.g., 'Clicked the cart icon', 'Filled quantity field with 2')",
+        "type": "string"
+      },
+      "tool": {
+        "description": "Tool name to execute",
+        "type": "string"
+      },
+      "parameters": {
+        "additionalProperties": true,
+        "description": "Tool-specific parameters",
+        "type": "object"
+      }
+    },
+    "required": [
+      "description",
+      "tool"
+    ],
+    "type": "object"
+  },
+  "available_tools": [
+    {
+      "tool": "complete_subtask",
+      "description": "Signal that the current subtask was successfully completed and all requirements were met",
+      "parameters": {
+        "feedback": {
+          "description": "What was accomplished and how requirements were met",
+          "type": "string"
+        }
+      },
+      "required": [
+        "feedback"
+      ]
+    },
+    {
+      "tool": "request_reschedule",
+      "description": "Signal that the current subtask could not be completed and Manager needs to reschedule/replan (e.g., subtask failed, wrong approach, blocker encountered, unclear goal)",
+      "parameters": {
+        "feedback": {
+          "description": "Explanation of why reschedule is needed - what went wrong, what was tried, what blocked progress",
+          "type": "string"
+        }
+      },
+      "required": [
+        "feedback"
+      ]
+    },
+    {
+      "tool": "request_correction",
+      "description": "Request Worker to make corrections to fix issues (use when fixable without replanning)",
+      "parameters": {
+        "feedback": {
+          "description": "What needs to be corrected and how to fix it",
+          "type": "string"
+        }
+      },
+      "required": [
+        "feedback"
+      ]
+    },
+    {
+      "tool": "wait",
+      "description": "Wait for specified seconds (useful after actions that trigger page changes, modals, or dynamic content loading)",
+      "parameters": {
+        "seconds": {
+          "description": "Seconds to wait (max 10)",
+          "maximum": 10.0,
+          "minimum": 0.1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "seconds"
+      ]
+    }
+  ]
+}
+
+## Current Page
+
+Page:
+  URL: https://practicesoftwaretesting.com/product/01K9Y738HSDDSAP53NPW55AZPV
+
+- body
+  - app-root
+    - app-header
+      - div
+        - span
+          - "Practice Black Box Testing & Bug Hunting"
+        - button
+          - " Testing Guide "
+        - button
+          - " 🐛 Bug Hunting "
+      - div
+        - a (title="Practice Software Testing - Toolshop")
+        - div
+          - ul (role="menubar" aria-label="Main menu")
+            - li (role="menuitem")
+              - a
+                - "Home"
+            - li (role="menuitem")
+              - a (role="button" aria-expanded="false")
+                - " Categories "
+            - li (role="menuitem")
+              - a
+                - "Contact"
+            - li (role="menuitem")
+              - a
+                - "Sign in"
+            - li (role="menuitem")
+              - a (aria-label="cart")
+                - svg (role="img" aria-hidden="true")
+                - span
+                  - "7"
+          - button (type="button" aria-hidden="true" aria-expanded="false")
+            - " EN "
+            - svg (role="img" aria-hidden="true")
+    - app-detail
+      - div
+        - figure
+          - img (alt="Cross-head screws")
+          - figcaption
+            - "Photo by "
+            - " on "
+            - ". "
+            - a
+              - "Milad Fallah"
+            - a
+              - "Unsplash"
+        - div
+          - h1
+            - " Cross-head screws "
+          - p
+            - span (aria-label="category")
+              - "Fasteners"
+            - span (aria-label="brand")
+              - "ForgeFlex Tools "
+          - span
+            - "$"
+            - span (aria-label="unit-price")
+              - "7.99"
+          - div (title="A = most environmentally friendly, E = higher environmental impact")
+            - span
+              - "A"
+            - span
+              - "B"
+            - span
+              - "C"
+            - span
+              - "D"
+            - span
+              - "E"
+          - p
+            - " Sed cursus nibh eros, nec placerat diam vestibulum sed. Nulla at dapibus mauris. Sed a ornare lorem, nec tempus lacus. Donec a sem molestie, aliquam est eu, mollis urna. Vestibulum sed lacinia urna. Quisque porta justo eget ex cursus, et eleifend mi lobortis. Donec ornare velit elit, vel dapibus quam malesuada nec. Mauris egestas ligula urna, eu lacinia nulla scelerisque a. Suspendisse sit amet congue justo, quis luctus mi."
+          - div
+            - button (aria-label="Decrease quantity")
+              - svg (role="img" aria-hidden="true")
+            - label
+              - "Quantity"
+            - input (type="number" aria-labelledby="Quantity")
+            - button (aria-label="Increase quantity")
+              - svg (role="img" aria-hidden="true")
+          - div
+            - button
+              - "Add to cart "
+              - svg (role="img" aria-hidden="true")
+            - button
+              - " Add to favourites "
+              - svg (role="img" aria-hidden="true")
+      - div
+        - h2
+          - "Related products"
+        - div
+          - a
+            - img (alt="Screws")
+            - div
+              - h5
+                - " Screws "
+              - a
+                - "More information"
+          - a
+            - img (alt="Nuts and bolts")
+            - div
+              - h5
+                - " Nuts and bolts "
+              - a
+                - "More information"
+          - a
+            - img (alt="Flat-Head Wood Screws")
+            - div
+              - h5
+                - " Flat-Head Wood Screws "
+              - a
+                - "More information"
+          - a
+            - img (alt="M4 Nuts")
+            - div
+              - h5
+                - " M4 Nuts "
+              - a
+                - "More information"
+          - a
+            - img (alt="Washers")
+            - div
+              - h5
+                - " Washers "
+              - a
+                - "More information"
+    - p
+      - "This is a DEMO application ("
+      - "), used for software testing training purpose. | "
+      - " | "
+      - " | Banner photo by "
+      - " on "
+      - ". "
+      - a
+        - "GitHub repo"
+      - a
+        - "Support this project"
+      - a
+        - "Privacy Policy"
+      - a
+        - "Barn Images"
+      - a
+        - "Unsplash"
+  - div (role="alert" aria-label="Product added to shopping cart.")
+    - " Product added to shopping cart. "

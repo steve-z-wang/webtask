@@ -71,11 +71,11 @@ def build_worker_prompt() -> str:
             "thinking: Your reasoning and planning - what you need to do next and why"
         )
         .add_bullet(
-            "tool_calls: Actions to take (each has description, tool, parameters)"
+            "tool_calls: Actions to take (each has name, arguments, description)"
         )
         .add()
         .add(
-            'Example: {"observation": "Search page loaded", "thinking": "Need to search for the product", "tool_calls": [{"description": "Typed product name into search", "tool": "type", "parameters": {"element_id": "input-0", "text": "screws"}}]}'
+            'Example: {"observation": "Search page loaded", "thinking": "Need to search for the product", "tool_calls": [{"name": "type", "arguments": {"element_id": "input-0", "text": "screws"}, "description": "Type product name into search field"}]}'
         )
     )
 

@@ -1,0 +1,400 @@
+System:
+## Who You Are
+You are a web automation worker that executes browser actions to complete subtasks.
+
+## How to Work
+1. Check previous attempts and verifier feedback
+2. Check your current session action history
+3. Observe current page
+4. Reason about next step
+5. Propose action
+
+## Q&A
+**What are 'Previous Attempts'?**
+If you see a 'Previous Attempts' section, it shows your earlier work on this subtask and Verifier's correction feedback. Read the feedback carefully and fix the issues identified.
+
+**When are actions executed?**
+Actions are executed immediately one after another.
+
+**When is context captured?**
+The context you see is captured immediately after your actions. The page may still be loading or updating.
+
+**What should you do if the page appears incomplete or still loading?**
+Use the 'wait' tool to give the page time to fully load, especially after navigation or clicks. If critical elements are missing from the page context but you see them in the screenshot, wait 1-2 seconds and continue in the next iteration. Common signs: missing buttons/inputs you expect, incomplete DOM structure, or elements visible in screenshot but not in text context.
+
+**How to avoid page not loading issues?**
+Use the wait tool after actions that trigger page changes (navigate, clicking links/buttons that change pages, form submissions). Wait 1-2 seconds to let the page fully load before proceeding.
+
+**How to avoid repeating actions you already did?**
+Before taking an action, check your 'Current Session Iterations' history. If you already clicked a button, filled a field, or navigated in a previous iteration, DON'T repeat it. Instead, look for confirmation of success (success messages, cart count updates, page changes). Only retry if the previous attempt clearly failed or you see an error message.
+
+## Response Format
+Respond with JSON containing three parts:
+- observation: ONLY what you see (UI state, messages, errors). Do NOT include what you plan to do.
+- thinking: Your reasoning and planning - what you need to do next and why
+- tool_calls: Actions to take (each has description, tool, parameters)
+
+Example: {"observation": "Search page loaded", "thinking": "Need to search for the product", "tool_calls": [{"description": "Typed product name into search", "tool": "type", "parameters": {"element_id": "input-0", "text": "screws"}}]}
+
+User:
+## Current Subtask
+
+Add 2 Flat-Head Wood Screws to the cart
+
+## Available Tools
+
+{
+  "tool_call_structure": {
+    "description": "Tool call request from LLM (proposal phase).\n\nThis is what the LLM returns - pure JSON-serializable data for validation.",
+    "properties": {
+      "description": {
+        "description": "Past-tense description of what this action does (e.g., 'Clicked the cart icon', 'Filled quantity field with 2')",
+        "type": "string"
+      },
+      "tool": {
+        "description": "Tool name to execute",
+        "type": "string"
+      },
+      "parameters": {
+        "additionalProperties": true,
+        "description": "Tool-specific parameters",
+        "type": "object"
+      }
+    },
+    "required": [
+      "description",
+      "tool"
+    ],
+    "type": "object"
+  },
+  "available_tools": [
+    {
+      "tool": "navigate",
+      "description": "Navigate to a URL",
+      "parameters": {
+        "url": {
+          "description": "URL to navigate to",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    {
+      "tool": "click",
+      "description": "Click an element on the page",
+      "parameters": {
+        "element_id": {
+          "description": "ID of the element to click",
+          "type": "string"
+        }
+      },
+      "required": [
+        "element_id"
+      ]
+    },
+    {
+      "tool": "fill",
+      "description": "Fill a form element with a value (fast, direct value setting)",
+      "parameters": {
+        "element_id": {
+          "description": "ID of the element to fill",
+          "type": "string"
+        },
+        "value": {
+          "description": "Value to fill into the element",
+          "type": "string"
+        }
+      },
+      "required": [
+        "element_id",
+        "value"
+      ]
+    },
+    {
+      "tool": "type",
+      "description": "Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)",
+      "parameters": {
+        "element_id": {
+          "description": "ID of the element to type into",
+          "type": "string"
+        },
+        "text": {
+          "description": "Text to type into the element",
+          "type": "string"
+        }
+      },
+      "required": [
+        "element_id",
+        "text"
+      ]
+    },
+    {
+      "tool": "upload",
+      "description": "Upload file resources to a file input element. Use resource names that were provided with the task.",
+      "parameters": {
+        "element_id": {
+          "description": "Element ID of the file input (e.g., 'input-5')",
+          "type": "string"
+        },
+        "resource_names": {
+          "description": "List of resource names to upload (e.g., ['photo1', 'photo2'])",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "element_id",
+        "resource_names"
+      ]
+    },
+    {
+      "tool": "wait",
+      "description": "Wait for specified seconds (useful after actions that trigger page changes, modals, or dynamic content loading)",
+      "parameters": {
+        "seconds": {
+          "description": "Seconds to wait (max 10)",
+          "maximum": 10.0,
+          "minimum": 0.1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "seconds"
+      ]
+    },
+    {
+      "tool": "mark_done_working",
+      "description": "Signal that you've finished attempting this subtask and are ready for verification (Verifier will check if it succeeded)",
+      "parameters": {
+        "details": {
+          "description": "Summary of what you attempted and what state the page is in",
+          "type": "string"
+        }
+      },
+      "required": [
+        "details"
+      ]
+    }
+  ]
+}
+
+## Previous Attempts
+
+No previous attempts for this subtask.
+
+## Current Session Iterations
+
+**Iteration 1**
+Observation: Currently on the homepage. Need to find 'Flat-Head Wood Screws'.
+Thinking: I need to search for 'Flat-Head Wood Screws'. I will use the search input field (input-0) to type the product name and then click the search button (button-4).
+Actions: 3
+  [SUCCESS] Typed 'Flat-Head Wood Screws' into the search input field.
+  [SUCCESS] Clicked the search button to initiate the search.
+  [SUCCESS] Waiting for 2 seconds to allow the search results page to load.
+
+## Current Page
+
+Page:
+  URL: https://practicesoftwaretesting.com/
+
+- app-root-0
+  - app-header-0
+    - div-0
+      - span-0
+        - "Practice Black Box Testing & Bug Hunting"
+      - button-0
+        - " Testing Guide "
+      - button-1
+        - " 🐛 Bug Hunting "
+    - div-1
+      - a-0 (title="Practice Software Testing - Toolshop")
+      - div-2
+        - ul-0 (role="menubar" aria-label="Main menu")
+          - li-0 (role="menuitem")
+            - a-1
+              - "Home"
+          - li-1 (role="menuitem")
+            - a-2 (role="button" aria-expanded="false")
+              - " Categories "
+          - li-2 (role="menuitem")
+            - a-3
+              - "Contact"
+          - li-3 (role="menuitem")
+            - a-4
+              - "Sign in"
+        - button-2 (type="button" aria-hidden="true" aria-expanded="false")
+          - " EN "
+          - svg-0 (role="img" aria-hidden="true")
+  - app-overview-0
+    - img-0 (alt="Banner")
+    - div-3
+      - div-4
+        - h4-0
+          - " Sort "
+          - svg-1 (role="img" aria-hidden="true")
+        - select-0 (aria-label="sort")
+        - h4-1
+          - " Price Range "
+          - svg-2 (role="img" aria-hidden="true")
+        - ngx-slider-0 (aria-label="ngx-slider")
+          - span-1 (role="slider" tabindex="0" aria-label="ngx-slider")
+          - span-2 (role="slider" tabindex="0" aria-label="ngx-slider-max")
+          - span-3
+            - "0"
+          - span-4
+            - "200"
+          - span-5
+            - "1"
+          - span-6
+            - "100"
+        - h4-2
+          - " Search "
+          - svg-3 (role="img" aria-hidden="true")
+        - div-5
+          - label-0
+            - "Search"
+          - input-0 (type="text" placeholder="Search")
+          - button-3 (type="reset")
+            - "X "
+          - button-4 (type="submit")
+            - "Search "
+        - h4-3
+          - " Filters "
+          - svg-4 (role="img" aria-hidden="true")
+        - h4-4
+          - "By category:"
+        - fieldset-0
+          - legend-0
+            - "Categories"
+          - div-6
+            - label-1
+              - " Hand Tools "
+              - input-1 (type="checkbox" name="category_id" value="01K9Y738DNY0B2NW0Z4MMB1QAY")
+            - fieldset-1
+              - legend-1
+                - "Categories"
+              - label-2
+                - " Hammer "
+                - input-2 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJ5")
+              - label-3
+                - " Hand Saw "
+                - input-3 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJ6")
+              - label-4
+                - " Wrench "
+                - input-4 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJ7")
+              - label-5
+                - " Screwdriver "
+                - input-5 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJ8")
+              - label-6
+                - " Pliers "
+                - input-6 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJ9")
+              - label-7
+                - " Chisels "
+                - input-7 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJA")
+              - label-8
+                - " Measures "
+                - input-8 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJB")
+          - div-7
+            - label-9
+              - " Power Tools "
+              - input-9 (type="checkbox" name="category_id" value="01K9Y738DNY0B2NW0Z4MMB1QAZ")
+            - fieldset-2
+              - legend-2
+                - "Categories"
+              - label-10
+                - " Grinder "
+                - input-10 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJC")
+              - label-11
+                - " Sander "
+                - input-11 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJD")
+              - label-12
+                - " Saw "
+                - input-12 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJE")
+              - label-13
+                - " Drill "
+                - input-13 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJF")
+          - div-8
+            - label-14
+              - " Other "
+              - input-14 (type="checkbox" name="category_id" value="01K9Y738DNY0B2NW0Z4MMB1QB0")
+            - fieldset-3
+              - legend-3
+                - "Categories"
+              - label-15
+                - " Tool Belts "
+                - input-15 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJG")
+              - label-16
+                - " Storage Solutions "
+                - input-16 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJH")
+              - label-17
+                - " Workbench "
+                - input-17 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJJ")
+              - label-18
+                - " Safety Gear "
+                - input-18 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJK")
+              - label-19
+                - " Fasteners "
+                - input-19 (type="checkbox" name="category_id" value="01K9Y738EGQB3YB2ZQ8HDRBZJM")
+        - h4-5
+          - "By brand:"
+        - fieldset-4
+          - legend-4
+            - "Brands"
+          - label-20
+            - " ForgeFlex Tools"
+            - input-20 (type="checkbox" name="brand_id" value="01K9Y7383JE396KX4JRTPZ41MF")
+          - label-21
+            - " MightyCraft Hardware"
+            - input-21 (type="checkbox" name="brand_id" value="01K9Y7383JE396KX4JRTPZ41MG")
+        - h4-6
+          - "Sustainability:"
+        - fieldset-5
+          - legend-5
+            - "Eco-Friendly Products"
+          - label-22
+            - " Show only eco-friendly products"
+            - input-22 (type="checkbox" name="eco_friendly")
+      - div-9
+        - h3-0
+          - "Searched for: "
+          - span-7
+            - "Flat-Head Wood Screws"
+        - a-5
+          - img-1 (alt="Flat-Head Wood Screws")
+          - div-10
+            - h5-0
+              - " Flat-Head Wood Screws "
+            - div-11 (title="A = most environmentally friendly, E = higher environmental impact")
+              - span-8
+                - "A"
+              - span-9
+                - "B"
+              - span-10
+                - "C"
+              - span-11
+                - "D"
+              - span-12
+                - "E"
+          - span-13
+            - "$3.95"
+  - p-0
+    - "This is a DEMO application ("
+    - "), used for software testing training purpose. | "
+    - " | "
+    - " | Banner photo by "
+    - " on "
+    - ". "
+    - a-6
+      - "GitHub repo"
+    - a-7
+      - "Support this project"
+    - a-8
+      - "Privacy Policy"
+    - a-9
+      - "Barn Images"
+    - a-10
+      - "Unsplash"

@@ -2,7 +2,7 @@
 
 import asyncio
 from pydantic import BaseModel, Field
-from ...tool import Tool
+from webtask.agent.tool import Tool
 
 
 class WaitTool(Tool):
@@ -20,11 +20,6 @@ class WaitTool(Tool):
             le=10.0,
         )
 
-    async def execute(self, params: Params, **kwargs) -> None:
-        """Wait for the specified duration.
-
-        Args:
-            params: Validated parameters
-            **kwargs: Unused
-        """
+    async def execute(self, params: Params) -> None:
+        """Wait for the specified duration."""
         await asyncio.sleep(params.seconds)
