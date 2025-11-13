@@ -19,13 +19,13 @@ from webtask.llm import (
 class WorkerSession:
     """Worker session with conversation history."""
 
-    session_number: int
-    subtask_description: str
-    max_steps: int = 10
-    steps_used: int = 0  # Number of steps actually used
+    task_description: str
+    start_time: datetime
+    end_time: datetime
+    max_steps: int = 20
+    steps_used: int = 0
     end_reason: Optional[Literal["complete_work", "abort_work", "max_steps"]] = None
     messages: List[Message] = field(default_factory=list)
-    timestamp: datetime = field(default_factory=datetime.now)
 
     @property
     def summary(self) -> str:
@@ -33,11 +33,11 @@ class WorkerSession:
         lines = ["=" * 80]
         lines.append("WORKER SESSION SUMMARY")
         lines.append("=" * 80)
-        lines.append(f"Subtask: {self.subtask_description}")
-        lines.append(f"Session Number: {self.session_number}")
+        lines.append(f"Task: {self.task_description}")
         lines.append(f"Steps: {self.steps_used}/{self.max_steps}")
         lines.append(f"End Reason: {self.end_reason}")
-        lines.append(f"Timestamp: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+        duration = (self.end_time - self.start_time).total_seconds()
+        lines.append(f"Duration: {duration:.2f}s ({self.start_time.strftime('%Y-%m-%d %H:%M:%S')} - {self.end_time.strftime('%H:%M:%S')})")
         lines.append("")
 
         # Show each message with full details
@@ -122,4 +122,4 @@ class WorkerSession:
 
     def __str__(self) -> str:
         """Simple string representation showing basic info."""
-        return f"WorkerSession(subtask='{self.subtask_description}', steps={self.steps_used}/{self.max_steps}, end_reason={self.end_reason}, messages={len(self.messages)})"
+        return f"WorkerSession(task='{self.task_description}', steps={self.steps_used}/{self.max_steps}, end_reason={self.end_reason}, messages={len(self.messages)})"

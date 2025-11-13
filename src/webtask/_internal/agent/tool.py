@@ -55,21 +55,39 @@ class ToolRegistry:
             tool_calls.append(tool_call)
         return tool_calls
 
-    async def execute_tool_call(self, tool_call: "ToolCall", **kwargs) -> None:
-        """Execute a validated ToolCall.
+    async def execute_tool_call(self, tool_call) -> "ToolResult":
+        """Execute a tool call and return the result.
 
         Args:
-            tool_call: The tool call to execute
-            **kwargs: Additional dependencies to pass to tool.execute()
+            tool_call: ToolCall from LLM (with name, arguments, id fields)
+
+        Returns:
+            ToolResult with success or error status
         """
+        from webtask.llm import ToolResult, ToolResultStatus
 
-        if tool_call.executed:
-            return
+        try:
+            # Get tool and validate parameters
+            tool = self.get(tool_call.name)
+            params = tool.Params(**tool_call.arguments)
 
-        tool = self.get(tool_call.tool)
-        validated_params = tool.Params(**tool_call.parameters)
-        result = await tool.execute(validated_params, **kwargs)
-        tool_call.mark_success(result=result)
+            # Execute tool and capture output
+            output = await tool.execute(params)
+
+            return ToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_call.name,
+                status=ToolResultStatus.SUCCESS,
+                output=output,
+            )
+
+        except Exception as e:
+            return ToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_call.name,
+                status=ToolResultStatus.ERROR,
+                error=str(e),
+            )
 
     def get_context(self) -> Block:
         """Get formatted context for LLM."""

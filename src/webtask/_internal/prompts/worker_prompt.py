@@ -11,7 +11,7 @@ def build_worker_prompt() -> str:
         MarkdownBuilder()
         .add_heading("Who You Are")
         .add(
-            "You are a web automation worker that executes browser actions to complete subtasks."
+            "You are a web automation worker that executes browser actions to complete tasks."
         )
     )
 
@@ -32,7 +32,7 @@ def build_worker_prompt() -> str:
         .add_heading("Q&A")
         .add("**What are 'Previous Attempts'?**")
         .add(
-            "If you see a 'Previous Attempts' section, it shows your earlier work on this subtask and Verifier's correction feedback. Read the feedback carefully and fix the issues identified."
+            "If you see a 'Previous Attempts' section, it shows your earlier work on this task and Verifier's correction feedback. Read the feedback carefully and fix the issues identified."
         )
         .add()
         .add("**When are actions executed?**")

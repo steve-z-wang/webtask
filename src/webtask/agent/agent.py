@@ -9,9 +9,9 @@ from webtask._internal.llm import TypedLLM
 from webtask.browser import Page, Session
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.natural_selector import NaturalSelector
-from webtask._internal.agent.task import Task, TaskExecution
+from webtask._internal.agent.task import Task
+from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
-from webtask._internal.agent.manager.manager import Manager
 from webtask._internal.agent.worker.worker import Worker
 from webtask._internal.agent.verifier.verifier import Verifier
 from webtask._internal.config import Config
@@ -24,7 +24,7 @@ class Agent:
     Requires a Session for browser management and page operations.
 
     Two modes of operation:
-    - High-level autonomous: execute(task) - Agent autonomously plans and executes with manager-worker architecture
+    - High-level autonomous: execute(task) - Agent autonomously executes with Worker/Verifier loop
     - Low-level imperative: navigate(), select(), wait() - Direct control for manual workflows
     """
 
@@ -59,28 +59,25 @@ class Agent:
         )
 
         # Create roles (reused across tasks)
-        self.manager = Manager(typed_llm=self.typed_llm)
-        self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser)
-        self.verifier = Verifier(
-            typed_llm=self.typed_llm, agent_browser=self.agent_browser
-        )
+        self.worker = Worker(llm=llm, agent_browser=self.agent_browser)
+        self.verifier = Verifier(llm=llm, agent_browser=self.agent_browser)
 
     async def execute(
         self,
         task_description: str,
-        max_cycles: int = 10,
+        max_correction_attempts: int = 3,
         resources: Optional[Dict[str, str]] = None,
     ) -> TaskExecution:
         """
-        Execute a task autonomously using manager-worker architecture.
+        Execute a task autonomously using Worker/Verifier loop.
 
         Args:
             task_description: Task description in natural language
-            max_cycles: Maximum manager-worker cycles (default: 10)
+            max_correction_attempts: Maximum correction retry attempts (default: 3)
             resources: Optional dict of file resources (name -> path)
 
         Returns:
-            TaskExecution object with execution history (sessions and subtasks)
+            TaskExecution object with execution history and final result
 
         Raises:
             RuntimeError: If no session is available
@@ -88,27 +85,18 @@ class Agent:
         if not self.agent_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
 
-        # Create task definition
-        task = Task(
-            description=task_description,
-            resources=resources or {},
-        )
-
-        # Create task execution (state container)
-        task_execution = TaskExecution(task=task)
-
-        # Update roles for this task
-        self.worker.set_resources(task.resources)
-
         # Create task executor
         task_executor = TaskExecutor(
-            manager=self.manager,
             worker=self.worker,
             verifier=self.verifier,
         )
 
-        # Run adaptive Manager→Worker→Verifier loop
-        result = await task_executor.run(task_execution, max_cycles=max_cycles)
+        # Run Worker→Verifier loop with correction retries
+        result = await task_executor.run(
+            task_description=task_description,
+            max_correction_attempts=max_correction_attempts,
+            resources=resources,
+        )
 
         # Save debug summary if enabled
         if Config().is_debug_enabled():

@@ -1,5 +1,6 @@
 """Worker role - executes one subtask with conversation-based LLM."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 from webtask.llm import (
@@ -48,20 +49,16 @@ class Worker:
         self,
         llm: "LLM",
         agent_browser: "AgentBrowser",
-        resources: Optional[Dict[str, str]] = None,
     ):
         self._llm = llm
         self.worker_browser = WorkerBrowser(agent_browser)
-        self.resources = resources or {}
         self._tool_registry = ToolRegistry()
 
-        # Register all tools with dependencies
+        # Register all tools with dependencies (except upload which needs resources)
         self._tool_registry.register(NavigateTool(self.worker_browser))
         self._tool_registry.register(ClickTool(self.worker_browser))
         self._tool_registry.register(FillTool(self.worker_browser))
         self._tool_registry.register(TypeTool(self.worker_browser))
-        self._tool_registry.register(UploadTool(
-            self.worker_browser, self.resources))
         self._tool_registry.register(WaitTool())
         self._tool_registry.register(ObserveTool())
         self._tool_registry.register(ThinkTool())
@@ -83,64 +80,38 @@ class Worker:
         results = []
 
         for tool_call in tool_calls:
-            try:
-                # Get tool and validate parameters
+            # Execute using registry
+            tool_result = await self._tool_registry.execute_tool_call(tool_call)
+            results.append(tool_result)
+
+            # Return immediately if complete_work or abort_work (only on success)
+            if tool_result.status == ToolResultStatus.SUCCESS:
                 tool = self._tool_registry.get(tool_call.name)
-                params = tool.Params(**tool_call.arguments)
-
-                # Execute tool and capture output
-                output = await tool.execute(params)
-
-                # Append success result
-                results.append(
-                    ToolResult(
-                        tool_call_id=tool_call.id,
-                        name=tool_call.name,
-                        status=ToolResultStatus.SUCCESS,
-                        output=output,
-                    )
-                )
-
-                # Return immediately if complete_work or abort_work (should be last tool)
                 if isinstance(tool, CompleteWorkTool):
                     return results, "complete_work"
                 elif isinstance(tool, AbortWorkTool):
                     return results, "abort_work"
 
-            except Exception as e:
-                # Append error result
-                results.append(
-                    ToolResult(
-                        tool_call_id=tool_call.id,
-                        name=tool_call.name,
-                        status=ToolResultStatus.ERROR,
-                        error=str(e),
-                    )
-                )
-
         return results, None
 
     async def run(
         self,
-        subtask_description: str,
-        max_steps: int = 10,
-        session_number: int = 1,
+        task_description: str,
+        max_steps: int,
+        resources: Optional[Dict[str, str]] = None,
     ) -> WorkerSession:
-        """Execute subtask using conversation-based LLM.
+        """Execute task using conversation-based LLM."""
+        start_time = datetime.now()
 
-        Args:
-            subtask_description: Description of the subtask to execute
-            max_steps: Maximum number of steps (assistant message rounds)
-            session_number: Session number for tracking
+        # Register upload tool with resources for this task
+        if resources:
+            self._tool_registry.register(UploadTool(self.worker_browser, resources))
 
-        Returns:
-            WorkerSession with complete message history
-        """
         # Initialize conversation with system message and initial user message
         messages: List[Message] = [
             SystemMessage(content=[TextContent(text=build_worker_prompt())]),
             UserMessage(content=[TextContent(
-                text=f"Subtask: {subtask_description}")]),
+                text=f"Task: {task_description}")]),
         ]
 
         # Main execution loop
@@ -167,23 +138,23 @@ class Worker:
             screenshot_b64 = await self.worker_browser.get_screenshot()
 
             # Create tool result message with acknowledgments + page state
-            content = [TextContent(text=dom_snapshot)]
-
-            # Only add screenshot if we have valid data
-            if screenshot_b64:
-                content.append(ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG))
+            page_state = [
+                TextContent(text=dom_snapshot),
+                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG),
+            ]
 
             result_message = ToolResultMessage(
                 results=tool_results,
-                content=content,
+                page_state=page_state,
             )
             messages.append(result_message)
 
             # Check if finished and return immediately
             if end_reason:
                 return WorkerSession(
-                    session_number=session_number,
-                    subtask_description=subtask_description,
+                    task_description=task_description,
+                    start_time=start_time,
+                    end_time=datetime.now(),
                     max_steps=max_steps,
                     steps_used=step + 1,
                     end_reason=end_reason,
@@ -192,8 +163,9 @@ class Worker:
 
         # Create session at the end with all messages (max_steps reached)
         return WorkerSession(
-            session_number=session_number,
-            subtask_description=subtask_description,
+            task_description=task_description,
+            start_time=start_time,
+            end_time=datetime.now(),
             max_steps=max_steps,
             steps_used=max_steps,
             end_reason="max_steps",
