@@ -133,8 +133,8 @@ class Verifier:
     async def run(
         self,
         task_description: str,
-        worker_session: Optional[WorkerSession] = None,
         max_steps: int,
+        worker_session: Optional[WorkerSession] = None,
     ) -> VerifierSession:
         """Execute verification using conversation-based LLM."""
         start_time = datetime.now()

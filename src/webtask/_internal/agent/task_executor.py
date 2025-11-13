@@ -43,8 +43,8 @@ class TaskExecutor:
             # Verifier checks task
             verifier_session = await self._verifier.run(
                 task_description=task_description,
-                worker_session=worker_session,
                 max_steps=5,
+                worker_session=worker_session,
             )
             sessions.append(verifier_session)
 

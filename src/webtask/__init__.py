@@ -26,7 +26,7 @@ from .llm import (
     ToolResult,
 )
 
-from ._internal.agent.task import TaskExecution, TaskStatus
+from ._internal.agent.task_execution import TaskExecution, TaskResult
 
 __version__ = "0.11.0"
 
@@ -37,7 +37,7 @@ __all__ = [
     "Agent",
     "Tool",
     "TaskExecution",
-    "TaskStatus",
+    "TaskResult",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Session",

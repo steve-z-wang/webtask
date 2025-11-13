@@ -1,6 +1,6 @@
 """VerifierBrowser - simplified browser wrapper for verification without element interaction."""
 
-from ..agent_browser import AgentBrowser
+from .agent_browser import AgentBrowser
 from ..page_context.dom_context_builder import DomContextBuilder
 
 
