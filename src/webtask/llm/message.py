@@ -15,6 +15,13 @@ class ImageMimeType(str, Enum):
     GIF = "image/gif"
 
 
+class ToolResultStatus(str, Enum):
+    """Tool execution result status."""
+
+    SUCCESS = "success"
+    ERROR = "error"
+
+
 class TextContent(BaseModel):
     """Text content part."""
 
@@ -56,13 +63,20 @@ class ToolResult(BaseModel):
 
     tool_call_id: Optional[str] = None  # Match by ID if available (OpenAI/Anthropic)
     name: str  # Tool name
-    status: str  # "success" or "error"
-    error: Optional[str] = None  # Error message if status is "error"
+    status: ToolResultStatus  # Execution status
+    output: Optional[Any] = None  # Return value from tool execution (if any)
+    error: Optional[str] = None  # Error message if status is ERROR
 
     def __str__(self) -> str:
+        parts = [f"{self.name}: {self.status.value}"]
+        if self.output is not None:
+            output_str = str(self.output)
+            if len(output_str) > 50:
+                output_str = output_str[:50] + "..."
+            parts.append(f"output={output_str}")
         if self.error:
-            return f"ToolResult({self.name}: {self.status}, error={self.error})"
-        return f"ToolResult({self.name}: {self.status})"
+            parts.append(f"error={self.error}")
+        return f"ToolResult({', '.join(parts)})"
 
 
 class Message(BaseModel):

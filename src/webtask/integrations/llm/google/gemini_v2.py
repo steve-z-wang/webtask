@@ -207,13 +207,18 @@ class GeminiLLMV2(LLM):
 
                 # Add function responses for each tool result
                 for result in msg.results:
+                    response_data = {
+                        "status": result.status.value,
+                    }
+                    if result.output is not None:
+                        response_data["output"] = result.output
+                    if result.error:
+                        response_data["error"] = result.error
+
                     function_response = protos.Part(
                         function_response=protos.FunctionResponse(
                             name=result.name,
-                            response={
-                                "status": result.status,
-                                "error": result.error if result.error else None,
-                            },
+                            response=response_data,
                         )
                     )
                     parts.append(function_response)

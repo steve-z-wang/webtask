@@ -13,6 +13,7 @@ from .message import (
     ImageMimeType,
     ToolCall,
     ToolResult,
+    ToolResultStatus,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "ImageMimeType",
     "ToolCall",
     "ToolResult",
+    "ToolResultStatus",
 ]

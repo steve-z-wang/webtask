@@ -12,6 +12,7 @@ from webtask.llm import (
     ImageContent,
     ImageMimeType,
     ToolResult,
+    ToolResultStatus,
 )
 from webtask.agent.tool import Tool
 from ..tool import ToolRegistry
@@ -87,15 +88,16 @@ class Worker:
                 tool = self._tool_registry.get(tool_call.name)
                 params = tool.Params(**tool_call.arguments)
 
-                # Execute tool
-                await tool.execute(params)
+                # Execute tool and capture output
+                output = await tool.execute(params)
 
                 # Append success result
                 results.append(
                     ToolResult(
                         tool_call_id=tool_call.id,
                         name=tool_call.name,
-                        status="success",
+                        status=ToolResultStatus.SUCCESS,
+                        output=output,
                     )
                 )
 
@@ -111,7 +113,7 @@ class Worker:
                     ToolResult(
                         tool_call_id=tool_call.id,
                         name=tool_call.name,
-                        status="error",
+                        status=ToolResultStatus.ERROR,
                         error=str(e),
                     )
                 )

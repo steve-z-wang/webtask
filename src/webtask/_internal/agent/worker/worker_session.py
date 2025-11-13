@@ -92,7 +92,12 @@ class WorkerSession:
                 # Show results
                 lines.append(f"Results: {len(msg.results)}")
                 for j, result in enumerate(msg.results, 1):
-                    status_str = f"{result.name}: {result.status}"
+                    status_str = f"{result.name}: {result.status.value}"
+                    if result.output is not None:
+                        output_str = str(result.output)
+                        if len(output_str) > 100:
+                            output_str = output_str[:100] + "..."
+                        status_str += f" -> {output_str}"
                     if result.error:
                         status_str += f" (error: {result.error})"
                     lines.append(f"  [{j}] {status_str}")
