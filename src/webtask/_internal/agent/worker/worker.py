@@ -1,211 +1,352 @@
-"""Worker role - executes one subtask."""
+"""Message-based Worker implementation (V2)."""
 
-from pathlib import Path
-from typing import Dict, Any, TYPE_CHECKING
-from ..tool import ToolRegistry
-from ..tool_call import ProposedIteration, Iteration
-from webtask._internal.llm import Context, Block
-from webtask._internal.llm import TypedLLM
-from webtask._internal.config import Config
-from ...prompts.worker_prompt import build_worker_prompt
-from webtask._internal.utils.wait import wait
-from .worker_browser import WorkerBrowser
+from typing import List, Optional
+import base64
+from ....llm import LLM
+from ....llm.message import (
+    Message,
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    TextContent,
+    ImageContent,
+    ToolResult,
+)
+from ..agent_browser import AgentBrowser
+from ..tool import Tool, ToolRegistry
 from .worker_session import WorkerSession
-from .tools.navigate import NavigateTool
-from .tools.click import ClickTool
-from .tools.fill import FillTool
-from .tools.type import TypeTool
-from .tools.upload import UploadTool
-from .tools.wait import WaitTool
-from .tools.mark_done_working import MarkDoneWorkingTool
 
-if TYPE_CHECKING:
-    from ..agent_browser import AgentBrowser
+
+WORKER_SYSTEM_PROMPT = """You are a browser automation worker executing subtasks using pixel-based coordinates.
+
+You can interact with the page using these tools:
+- click_at(x, y): Click at normalized coordinates (0-1000)
+- hover_at(x, y): Hover at coordinates
+- type_text_at(x, y, text): Click and type text
+- scroll_document(direction): Scroll the page
+- scroll_at(x, y, direction, magnitude): Scroll at coordinates
+- navigate(url): Navigate to URL
+- key_combination(keys): Press keyboard keys
+
+Coordinates are normalized 0-1000:
+- (0, 0) = top-left corner
+- (500, 500) = center
+- (1000, 1000) = bottom-right corner
+
+You will receive screenshots of the current page. Analyze the visual layout and use appropriate coordinates.
+
+When the subtask is complete, respond without any tool calls to indicate completion."""
 
 
 class Worker:
-    """Worker role - executes one subtask."""
+    """Message-based Worker for executing subtasks with pixel coordinates."""
 
-    # Small delay after each action to prevent race conditions
-    ACTION_DELAY = 0.1
+    # Configuration constants
+    MAX_SCREENSHOTS_TO_KEEP = 2  # Keep only last 2 screenshots in message history
 
-    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
-        self._llm = typed_llm
-        self.worker_browser = WorkerBrowser(agent_browser)
-        self.resources: Dict[str, Any] = {}
-        self._tool_registry = ToolRegistry()
-        self._tool_registry.register(NavigateTool())
-        self._tool_registry.register(ClickTool())
-        self._tool_registry.register(FillTool())
-        self._tool_registry.register(TypeTool())
-        self._tool_registry.register(UploadTool())
-        self._tool_registry.register(WaitTool())
-        self._tool_registry.register(MarkDoneWorkingTool())
-
-    def set_resources(self, resources: Dict[str, str]) -> None:
-        self.resources = resources
-
-    def _save_debug_context(self, filename: str, context: Context):
-        """Save context (text + images) for debugging. Returns dict with paths."""
-        debug_dir = Path(Config().get_debug_dir())
-        debug_dir.mkdir(parents=True, exist_ok=True)
-
-        paths = {}
-
-        # Save text context
-        text_path = debug_dir / f"{filename}.txt"
-        with open(text_path, "w") as f:
-            f.write(context.to_text())
-        paths["text"] = str(text_path)
-
-        # Extract and save images from context
-        images = context.get_images()
-        for i, image in enumerate(images):
-            img_path = debug_dir / f"{filename}_img_{i}.png"
-            image.save(str(img_path))
-            paths[f"image_{i}"] = str(img_path)
-
-        return paths
-
-    def _format_own_iterations(self, iterations: list) -> Block:
-        """Format worker's own iterations for context (shows full observation/thinking).
-
-        Since this is the worker's own history within the same session,
-        it shows full details to help maintain continuity.
+    def __init__(
+        self,
+        llm: LLM,
+        agent_browser: AgentBrowser,
+        tools: Optional[List[Tool]] = None,
+    ):
         """
-        if not iterations:
-            return Block(
-                heading="Current Session Iterations",
-                content="No iterations yet in this session.",
-            )
+        Initialize Worker.
 
-        content = ""
-        for iteration in iterations:
-            content += f"\n**Iteration {iteration.iteration_number}**\n"
-            content += f"Observation: {iteration.observation}\n"
-            content += f"Thinking: {iteration.thinking}\n"
-            content += f"Actions: {len(iteration.tool_calls)}\n"
-            for tc in iteration.tool_calls:
-                status = "[SUCCESS]" if tc.success else "[FAILED]"
-                content += f"  {status} {tc.description}\n"
-                if not tc.success and tc.error:
-                    content += f"     Error: {tc.error}\n"
+        Args:
+            llm: LLM instance (must support message-based interface)
+            agent_browser: AgentBrowser for page management
+            tools: Optional list of tools (defaults to pixel-based tools)
+        """
+        self.llm = llm
+        self.agent_browser = agent_browser
 
-        return Block(heading="Current Session Iterations", content=content.strip())
+        # Setup tool registry
+        self.tool_registry = ToolRegistry()
+        if tools:
+            for tool in tools:
+                self.tool_registry.register(tool)
+        else:
+            # Register default pixel-based tools
+            self._register_default_tools()
 
-    def _format_subtask_history(self, subtask_execution) -> Block:
-        """Format complete Worker/Verifier history for context."""
-        if not subtask_execution or not subtask_execution.history:
-            return Block(
-                heading="Previous Attempts",
-                content="No previous attempts for this subtask.",
-            )
-
-        from .worker_session import WorkerSession
-        from ..verifier.verifier_session import VerifierSession
-
-        content = ""
-        for session in subtask_execution.history:
-            if isinstance(session, WorkerSession):
-                content += f"\n**Worker Session {session.session_number}**\n"
-                for iteration in session.iterations:
-                    for tc in iteration.tool_calls:
-                        status = "[SUCCESS]" if tc.success else "[FAILED]"
-                        content += f"  {status} {tc.description}\n"
-                        if not tc.success and tc.error:
-                            content += f"     Error: {tc.error}\n"
-            elif isinstance(session, VerifierSession):
-                content += f"\n**Verifier Session {session.session_number}**\n"
-                if session.subtask_decision:
-                    content += f"  Decision: {session.subtask_decision.tool}\n"
-                    feedback = session.subtask_decision.parameters.get("feedback", "")
-                    if feedback:
-                        content += f"  Feedback: {feedback}\n"
-
-        return Block(heading="Previous Attempts", content=content.strip())
-
-    async def _build_context(
-        self, subtask_description: str, iterations: list, subtask_execution=None, debug_filename: str = None
-    ) -> Context:
-        page_context = await self.worker_browser.get_context(
-            include_element_ids=True,
-            with_bounding_boxes=False,
-            debug_filename=debug_filename,
-        )
-        context = (
-            Context()
-            .with_system(build_worker_prompt())
-            .with_block(Block(heading="Current Subtask", content=subtask_description))
-            .with_block(self._tool_registry.get_context())
+    def _register_default_tools(self):
+        """Register default pixel-based computer use tools."""
+        from ..tools.pixel import (
+            ClickAtTool,
+            HoverAtTool,
+            TypeTextAtTool,
+            ScrollDocumentTool,
+            ScrollAtTool,
+            NavigateTool,
+            KeyCombinationTool,
         )
 
-        # Add previous attempts if available
-        if subtask_execution:
-            context = context.with_block(
-                self._format_subtask_history(subtask_execution)
-            )
-
-        context = context.with_block(self._format_own_iterations(iterations))
-        context = context.with_block(page_context)
-
-        return context
+        self.tool_registry.register(ClickAtTool())
+        self.tool_registry.register(HoverAtTool())
+        self.tool_registry.register(TypeTextAtTool())
+        self.tool_registry.register(ScrollDocumentTool())
+        self.tool_registry.register(ScrollAtTool())
+        self.tool_registry.register(NavigateTool())
+        self.tool_registry.register(KeyCombinationTool())
 
     async def run(
         self,
         subtask_description: str,
         max_iterations: int = 10,
-        session_number: int = 1,
-        subtask_index: int = 0,
-        subtask_execution=None,
     ) -> WorkerSession:
-        iterations = []
+        """
+        Execute a subtask using message-based conversation.
 
-        for i in range(max_iterations):
-            iteration_number = i + 1  # 1-indexed for display/output
+        Args:
+            subtask_description: Description of the subtask to execute
+            max_iterations: Maximum number of iterations (default: 10)
 
-            # Build debug filename if debug enabled
-            debug_filename = None
-            if Config().is_debug_enabled():
-                debug_filename = f"subtask_{subtask_index}_session_{session_number}_worker_iter_{iteration_number}"
+        Returns:
+            WorkerSession with full message history and execution results
+        """
+        # Initialize message history
+        messages: List[Message] = []
 
-            context = await self._build_context(
-                subtask_description, iterations, subtask_execution, debug_filename=debug_filename
-            )
-
-            # Save debug info if enabled
-            if Config().is_debug_enabled():
-                self._save_debug_context(
-                    debug_filename,
-                    context,
-                )
-
-            proposed = await self._llm.generate(context, ProposedIteration)
-            tool_calls = self._tool_registry.validate_proposed_tools(
-                proposed.tool_calls
-            )
-
-            for tool_call in tool_calls:
-                await self._tool_registry.execute_tool_call(
-                    tool_call,
-                    worker_browser=self.worker_browser,
-                    resources=self.resources,
-                )
-                await wait(self.ACTION_DELAY)
-
-            iteration = Iteration(
-                iteration_number=iteration_number,
-                observation=proposed.observation,
-                thinking=proposed.thinking,
-                tool_calls=tool_calls,
-            )
-            iterations.append(iteration)
-
-            if any(tc.tool == "mark_done_working" and tc.success for tc in tool_calls):
-                break
-
-        return WorkerSession(
-            session_number=session_number,
-            subtask_description=subtask_description,
-            max_iterations=max_iterations,
-            iterations=iterations,
+        # Add system message
+        messages.append(
+            SystemMessage(content=[TextContent(text=WORKER_SYSTEM_PROMPT)])
         )
+
+        # Add initial user message with subtask and screenshot
+        initial_screenshot = await self._get_screenshot_base64()
+        messages.append(
+            UserMessage(
+                content=[
+                    TextContent(text=f"Subtask: {subtask_description}"),
+                    ImageContent(data=initial_screenshot, mime_type="image/png"),
+                ]
+            )
+        )
+
+        # Execution loop
+        iteration_count = 0
+        for iteration in range(max_iterations):
+            iteration_count = iteration + 1
+
+            # Filter screenshots before calling LLM
+            filtered_messages = self._filter_screenshots(
+                messages, self.MAX_SCREENSHOTS_TO_KEEP
+            )
+
+            # Call LLM with tools
+            try:
+                assistant_msg = await self.llm.generate(
+                    messages=filtered_messages, tools=self.tool_registry.get_all()
+                )
+            except Exception as e:
+                return WorkerSession(
+                    subtask_description=subtask_description,
+                    status="failed",
+                    message_history=messages,
+                    iterations_count=iteration_count,
+                    final_url=await self._get_current_url(),
+                    error=f"LLM call failed: {str(e)}",
+                )
+
+            messages.append(assistant_msg)
+
+            # Check if task is complete (no tool calls)
+            if not assistant_msg.tool_calls:
+                return WorkerSession(
+                    subtask_description=subtask_description,
+                    status="completed",
+                    message_history=messages,
+                    iterations_count=iteration_count,
+                    final_url=await self._get_current_url(),
+                )
+
+            # Execute tool calls
+            tool_results = []
+            for tool_call in assistant_msg.tool_calls:
+                try:
+                    # Execute tool
+                    result_text = await self._execute_tool_call(tool_call)
+
+                    # Get new page state after tool execution
+                    screenshot = await self._get_screenshot_base64()
+                    current_url = await self._get_current_url()
+
+                    # Create tool result with screenshot
+                    tool_results.append(
+                        ToolResult(
+                            name=tool_call.name,
+                            content=[
+                                TextContent(text=f"Result: {result_text}\nURL: {current_url}"),
+                                ImageContent(data=screenshot, mime_type="image/png"),
+                            ],
+                        )
+                    )
+                except Exception as e:
+                    # Tool execution failed
+                    tool_results.append(
+                        ToolResult(
+                            name=tool_call.name,
+                            content=[TextContent(text=f"Error: {str(e)}")],
+                        )
+                    )
+
+            # Add tool results to history
+            messages.append(ToolResultMessage(results=tool_results))
+
+        # Max iterations reached
+        return WorkerSession(
+            subtask_description=subtask_description,
+            status="max_iterations",
+            message_history=messages,
+            iterations_count=iteration_count,
+            final_url=await self._get_current_url(),
+        )
+
+    async def _execute_tool_call(self, tool_call) -> str:
+        """Execute a single tool call.
+
+        Args:
+            tool_call: ToolCall from AssistantMessage
+
+        Returns:
+            Result string from tool execution
+        """
+        # Get current page
+        page = self.agent_browser.get_current_page()
+        if page is None:
+            raise RuntimeError("No page is currently active. Use navigate tool to open a page.")
+
+        tool = self.tool_registry.get(tool_call.name)
+
+        # Validate and create params
+        params = tool.Params(**tool_call.arguments)
+
+        # Execute tool with page
+        result = await tool.execute(params, page=page)
+
+        return str(result)
+
+    async def _get_screenshot_base64(self) -> str:
+        """Capture screenshot and return as base64 string.
+
+        Returns:
+            Base64-encoded screenshot
+        """
+        page = self.agent_browser.get_current_page()
+        if page is None:
+            return ""  # Return empty if no page
+
+        screenshot_bytes = await page.screenshot(full_page=False)
+        return base64.b64encode(screenshot_bytes).decode("utf-8")
+
+    async def _get_current_url(self) -> str:
+        """Get current page URL.
+
+        Returns:
+            Current URL
+        """
+        page = self.agent_browser.get_current_page()
+        if page is None:
+            return "about:blank"  # Return default if no page
+
+        return page.url
+
+    def _filter_screenshots(
+        self, messages: List[Message], keep_last_n: int
+    ) -> List[Message]:
+        """
+        Filter old screenshots from message history.
+
+        Keeps only the last N ToolResultMessages with screenshots to reduce token usage.
+        Similar to Gemini Computer Use preview (keeps last 3).
+
+        Args:
+            messages: List of messages
+            keep_last_n: Number of most recent screenshots to keep
+
+        Returns:
+            Filtered list of messages
+        """
+        if keep_last_n <= 0:
+            # Remove all screenshots
+            return self._remove_all_screenshots(messages)
+
+        # Find indices of ToolResultMessages with screenshots
+        screenshot_indices = []
+        for i, msg in enumerate(messages):
+            if isinstance(msg, ToolResultMessage):
+                # Check if any result has ImageContent
+                has_screenshot = any(
+                    isinstance(content, ImageContent)
+                    for result in msg.results
+                    for content in result.content
+                )
+                if has_screenshot:
+                    screenshot_indices.append(i)
+
+        # Keep all if under limit
+        if len(screenshot_indices) <= keep_last_n:
+            return messages
+
+        # Determine which to remove (keep last N)
+        remove_indices = set(screenshot_indices[:-keep_last_n])
+
+        # Create filtered message list
+        filtered = []
+        for i, msg in enumerate(messages):
+            if i in remove_indices:
+                # Remove screenshots from this ToolResultMessage
+                filtered_results = []
+                for result in msg.results:
+                    filtered_content = [
+                        c for c in result.content if not isinstance(c, ImageContent)
+                    ]
+                    if filtered_content:  # Only add if there's content left
+                        filtered_results.append(
+                            ToolResult(name=result.name, content=filtered_content)
+                        )
+                if filtered_results:  # Only add message if it has results
+                    filtered.append(ToolResultMessage(results=filtered_results))
+            else:
+                filtered.append(msg)
+
+        return filtered
+
+    def _remove_all_screenshots(self, messages: List[Message]) -> List[Message]:
+        """Remove all screenshots from all messages.
+
+        Args:
+            messages: List of messages
+
+        Returns:
+            Messages with all ImageContent removed
+        """
+        filtered = []
+        for msg in messages:
+            if isinstance(msg, UserMessage) and msg.content:
+                # Keep text, remove images
+                filtered_content = [
+                    c for c in msg.content if not isinstance(c, ImageContent)
+                ]
+                if filtered_content:
+                    filtered.append(UserMessage(content=filtered_content))
+            elif isinstance(msg, ToolResultMessage):
+                # Remove screenshots from results
+                filtered_results = []
+                for result in msg.results:
+                    filtered_content = [
+                        c for c in result.content if not isinstance(c, ImageContent)
+                    ]
+                    if filtered_content:
+                        filtered_results.append(
+                            ToolResult(name=result.name, content=filtered_content)
+                        )
+                if filtered_results:
+                    filtered.append(ToolResultMessage(results=filtered_results))
+            else:
+                # Keep other message types as-is
+                filtered.append(msg)
+
+        return filtered

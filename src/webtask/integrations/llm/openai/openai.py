@@ -1,8 +1,22 @@
 """OpenAI LLM implementation."""
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from openai import AsyncOpenAI
-from ....llm import LLM, Content, Text, Image
+from ....llm import LLM
+from ....llm.message import (
+    Message,
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    TextContent,
+    ImageContent,
+    ToolCall,
+    ToolResult,
+)
+
+if TYPE_CHECKING:
+    from webtask._internal.agent.tool import Tool
 
 
 class OpenAILLM(LLM):
@@ -57,63 +71,39 @@ class OpenAILLM(LLM):
         return cls(client, model, temperature)
 
     async def generate(
-        self, system: str, content: List[Content], use_json: bool = False
-    ) -> str:
+        self,
+        messages: List[Message],
+        tools: Optional[List["Tool"]] = None,
+    ) -> AssistantMessage:
         """
-        Generate text using OpenAI API.
-
-        Supports multimodal content (text + images) and JSON mode.
+        Generate response with optional tool calling support.
 
         Args:
-            system: System prompt
-            content: Ordered list of Text/Image content parts
-            use_json: If True, force JSON output
+            messages: Conversation history as list of Message objects
+            tools: Optional list of tools available for the LLM to call
 
         Returns:
-            Generated text response from OpenAI
+            AssistantMessage with content (text/images) and/or tool_calls
         """
-        # Build user content from Text/Image parts
-        has_images = any(isinstance(part, Image) for part in content)
-
-        if not has_images:
-            # Text-only: join all text parts
-            user_content = "\n\n".join(
-                part.text for part in content if isinstance(part, Text)
-            )
-        else:
-            # Multimodal: build content array
-            user_content = []
-            for part in content:
-                if isinstance(part, Text):
-                    user_content.append({"type": "text", "text": part.text})
-                elif isinstance(part, Image):
-                    user_content.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{part.mime_type.value};base64,{part.data}"
-                            },
-                        }
-                    )
-
         self.logger.debug(
             f"Calling OpenAI API - model: {self.model}, temperature: {self.temperature}, "
-            f"json_mode: {use_json}"
+            f"tools: {len(tools) if tools else 0}"
         )
+
+        # Convert messages to OpenAI format
+        openai_messages = self._convert_messages_to_openai(messages)
 
         # Build API call kwargs
         api_kwargs: Dict[str, Any] = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_content},
-            ],
+            "messages": openai_messages,
             "temperature": self.temperature,
         }
 
-        # Add JSON mode if requested
-        if use_json:
-            api_kwargs["response_format"] = {"type": "json_object"}
+        # Add tools if provided
+        if tools:
+            api_kwargs["tools"] = self._convert_tools_to_openai(tools)
+            api_kwargs["tool_choice"] = "auto"
 
         response = await self.client.chat.completions.create(**api_kwargs)
 
@@ -126,4 +116,148 @@ class OpenAILLM(LLM):
                 f"total_tokens: {response.usage.total_tokens}"
             )
 
-        return response.choices[0].message.content
+        # Convert response to AssistantMessage
+        return self._convert_response_to_assistant_message(response)
+
+    def _convert_messages_to_openai(self, messages: List[Message]) -> List[Dict[str, Any]]:
+        """Convert our Message types to OpenAI format."""
+        openai_messages = []
+
+        for message in messages:
+            if isinstance(message, SystemMessage):
+                # OpenAI supports system messages
+                content = []
+                for content_part in message.content:
+                    if isinstance(content_part, TextContent):
+                        content.append({"type": "text", "text": content_part.text})
+                    elif isinstance(content_part, ImageContent):
+                        content.append({
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{content_part.mime_type};base64,{content_part.data}"
+                            }
+                        })
+
+                # If single text content, use string directly
+                if len(content) == 1 and content[0]["type"] == "text":
+                    openai_messages.append({"role": "system", "content": content[0]["text"]})
+                else:
+                    openai_messages.append({"role": "system", "content": content})
+
+            elif isinstance(message, UserMessage):
+                content = []
+                for content_part in message.content:
+                    if isinstance(content_part, TextContent):
+                        content.append({"type": "text", "text": content_part.text})
+                    elif isinstance(content_part, ImageContent):
+                        content.append({
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{content_part.mime_type};base64,{content_part.data}"
+                            }
+                        })
+
+                # If single text content, use string directly
+                if len(content) == 1 and content[0]["type"] == "text":
+                    openai_messages.append({"role": "user", "content": content[0]["text"]})
+                else:
+                    openai_messages.append({"role": "user", "content": content})
+
+            elif isinstance(message, AssistantMessage):
+                msg: Dict[str, Any] = {"role": "assistant"}
+
+                # Add text content if present
+                if message.content:
+                    text_parts = [c.text for c in message.content if isinstance(c, TextContent)]
+                    if text_parts:
+                        msg["content"] = " ".join(text_parts)
+
+                # Add tool calls if present
+                if message.tool_calls:
+                    msg["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": str(tc.arguments)  # OpenAI expects JSON string
+                            }
+                        }
+                        for tc in message.tool_calls
+                    ]
+
+                openai_messages.append(msg)
+
+            elif isinstance(message, ToolResultMessage):
+                # OpenAI uses separate messages for each tool result
+                for result in message.results:
+                    # Build content from text/images
+                    content_parts = []
+                    for content_part in result.content:
+                        if isinstance(content_part, TextContent):
+                            content_parts.append(content_part.text)
+
+                    content_str = " ".join(content_parts) if content_parts else "success"
+
+                    openai_messages.append({
+                        "role": "tool",
+                        "tool_call_id": result.tool_call_id,
+                        "content": content_str
+                    })
+
+        return openai_messages
+
+    def _convert_tools_to_openai(self, tools: List["Tool"]) -> List[Dict[str, Any]]:
+        """Convert our Tool types to OpenAI format."""
+        openai_tools = []
+
+        for tool in tools:
+            # Get Pydantic schema from tool.Params
+            params_schema = tool.Params.model_json_schema()
+            properties = params_schema.get("properties", {})
+            required = params_schema.get("required", [])
+
+            openai_tools.append({
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required
+                    }
+                }
+            })
+
+        return openai_tools
+
+    def _convert_response_to_assistant_message(self, response) -> AssistantMessage:
+        """Convert OpenAI response to AssistantMessage."""
+        if not response.choices:
+            raise ValueError("Empty response from OpenAI")
+
+        choice = response.choices[0]
+        message = choice.message
+
+        content_parts = []
+        tool_calls = []
+
+        # Extract text content
+        if message.content:
+            content_parts.append(TextContent(text=message.content))
+
+        # Extract tool calls
+        if message.tool_calls:
+            import json
+            for tc in message.tool_calls:
+                tool_calls.append(ToolCall(
+                    id=tc.id,
+                    name=tc.function.name,
+                    arguments=json.loads(tc.function.arguments)
+                ))
+
+        return AssistantMessage(
+            content=content_parts if content_parts else None,
+            tool_calls=tool_calls if tool_calls else None
+        )

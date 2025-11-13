@@ -186,3 +186,129 @@ class PlaywrightPage(Page):
             Current URL of the page
         """
         return self._page.url
+
+    # Pixel-based interaction methods for Computer Use
+
+    async def click_at(self, x: int, y: int) -> None:
+        """
+        Click at specific pixel coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        await self._page.mouse.click(x, y)
+
+    async def hover_at(self, x: int, y: int) -> None:
+        """
+        Hover at specific pixel coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        await self._page.mouse.move(x, y)
+
+    async def scroll(self, direction: str) -> None:
+        """
+        Scroll the entire page.
+
+        Args:
+            direction: Direction to scroll ("up", "down", "left", "right")
+        """
+        # Determine scroll amount based on direction
+        if direction == "down":
+            delta_y = 500
+            delta_x = 0
+        elif direction == "up":
+            delta_y = -500
+            delta_x = 0
+        elif direction == "right":
+            delta_x = 500
+            delta_y = 0
+        elif direction == "left":
+            delta_x = -500
+            delta_y = 0
+        else:
+            raise ValueError(f"Invalid scroll direction: {direction}")
+
+        # Scroll using mouse wheel
+        await self._page.mouse.wheel(delta_x, delta_y)
+
+    async def scroll_at(self, x: int, y: int, direction: str, amount: int) -> None:
+        """
+        Scroll at specific coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+            direction: Direction to scroll ("up", "down", "left", "right")
+            amount: Scroll distance in pixels
+        """
+        # Move mouse to position first
+        await self._page.mouse.move(x, y)
+
+        # Determine scroll deltas
+        if direction == "down":
+            delta_y = amount
+            delta_x = 0
+        elif direction == "up":
+            delta_y = -amount
+            delta_x = 0
+        elif direction == "right":
+            delta_x = amount
+            delta_y = 0
+        elif direction == "left":
+            delta_x = -amount
+            delta_y = 0
+        else:
+            raise ValueError(f"Invalid scroll direction: {direction}")
+
+        # Scroll using mouse wheel
+        await self._page.mouse.wheel(delta_x, delta_y)
+
+    async def keyboard_press(self, key: str) -> None:
+        """
+        Press a keyboard key.
+
+        Args:
+            key: Key to press (e.g., "Enter", "Escape", "Control", "Meta")
+        """
+        await self._page.keyboard.press(key)
+
+    async def keyboard_down(self, key: str) -> None:
+        """
+        Press and hold a keyboard key.
+
+        Args:
+            key: Key to hold down (e.g., "Control", "Shift", "Meta")
+        """
+        await self._page.keyboard.down(key)
+
+    async def keyboard_up(self, key: str) -> None:
+        """
+        Release a keyboard key.
+
+        Args:
+            key: Key to release
+        """
+        await self._page.keyboard.up(key)
+
+    async def get_viewport_size(self) -> Dict[str, int]:
+        """
+        Get viewport dimensions.
+
+        Returns:
+            Dictionary with "width" and "height" keys
+        """
+        viewport = self._page.viewport_size
+        return {"width": viewport["width"], "height": viewport["height"]}
+
+    async def goto(self, url: str) -> None:
+        """
+        Navigate to a URL (alias for navigate).
+
+        Args:
+            url: URL to navigate to
+        """
+        await self.navigate(url)

@@ -60,7 +60,7 @@ class Agent:
 
         # Create roles (reused across tasks)
         self.manager = Manager(typed_llm=self.typed_llm)
-        self.worker = Worker(typed_llm=self.typed_llm, agent_browser=self.agent_browser)
+        self.worker = Worker(llm=llm, agent_browser=self.agent_browser)  # New Worker uses LLM directly
         self.verifier = Verifier(
             typed_llm=self.typed_llm, agent_browser=self.agent_browser
         )

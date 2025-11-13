@@ -2,8 +2,11 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List
-from .content import Content
+from typing import List, Optional, TYPE_CHECKING
+from .message import Message, AssistantMessage
+
+if TYPE_CHECKING:
+    from webtask._internal.agent.tool import Tool
 
 
 class LLM(ABC):
@@ -14,20 +17,17 @@ class LLM(ABC):
 
     @abstractmethod
     async def generate(
-        self, system: str, content: List[Content], use_json: bool = False
-    ) -> str:
-        """Generate text response from system prompt and content.
+        self,
+        messages: List[Message],
+        tools: Optional[List["Tool"]] = None,
+    ) -> AssistantMessage:
+        """Generate response with optional tool calling support.
 
         Args:
-            system: System prompt string
-            content: Ordered list of Text/Image content parts
-            use_json: If True, force LLM to return valid JSON (provider-specific)
+            messages: Conversation history as list of Message objects
+            tools: Optional list of tools available for the LLM to call
 
         Returns:
-            Generated text response (always str). If use_json=True, guaranteed to be valid JSON.
-
-        Note:
-            Token limit checking is handled by the LLM API itself.
-            If the prompt exceeds limits, the API will return an error.
+            AssistantMessage with content (text/images) and/or tool_calls
         """
         pass

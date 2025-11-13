@@ -1,8 +1,26 @@
 """Google Gemini LLM implementation."""
 
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 import google.generativeai as genai
-from ....llm import LLM, Content, Text, Image
+from google.generativeai import types as genai_types
+from ....llm import LLM
+from ....llm.message import (
+    Message,
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    TextContent,
+    ImageContent,
+    ToolCall,
+    ToolResult,
+)
+import base64
+import io
+from PIL import Image as PILImage
+
+if TYPE_CHECKING:
+    from webtask._internal.agent.tool import Tool
 
 
 class GeminiLLM(LLM):
@@ -68,68 +86,38 @@ class GeminiLLM(LLM):
         return cls(gemini_model, model, temperature)
 
     async def generate(
-        self, system: str, content: List[Content], use_json: bool = False
-    ) -> str:
+        self,
+        messages: List[Message],
+        tools: Optional[List["Tool"]] = None,
+    ) -> AssistantMessage:
         """
-        Generate text using Gemini API.
-
-        Supports multimodal content (text + images) and JSON mode.
+        Generate response with optional tool calling support.
 
         Args:
-            system: System prompt
-            content: Ordered list of Text/Image content parts
-            use_json: If True, force JSON output
+            messages: Conversation history as list of Message objects
+            tools: Optional list of tools available for the LLM to call
 
         Returns:
-            Generated text response from Gemini
+            AssistantMessage with content (text/images) and/or tool_calls
         """
         self.logger.debug(
             f"Calling Gemini API - model: {self.model_name}, temperature: {self.temperature}, "
-            f"json_mode: {use_json}"
+            f"tools: {len(tools) if tools else 0}"
         )
 
-        # Build content for Gemini API
-        # Gemini doesn't have separate system/user roles, so combine them
-        has_images = any(isinstance(part, Image) for part in content)
+        # Convert messages to Gemini format
+        gemini_contents = self._convert_messages_to_gemini(messages)
 
-        if not has_images:
-            # Text-only: combine system + all text parts
-            text_parts = [system] + [
-                part.text for part in content if isinstance(part, Text)
-            ]
-            gemini_content = "\n\n".join(text_parts)
-        else:
-            # Multimodal: build content array with PIL Images
-            from PIL import Image as PILImage
-            import io
-            import base64
+        # Convert tools to Gemini function declarations if provided
+        gemini_tools = None
+        if tools:
+            gemini_tools = [self._convert_tools_to_gemini(tools)]
 
-            gemini_content = []
-
-            # Add system prompt first
-            gemini_content.append(system)
-
-            # Add content parts in order
-            for part in content:
-                if isinstance(part, Text):
-                    gemini_content.append(part.text)
-                elif isinstance(part, Image):
-                    # Convert base64 to PIL Image
-                    image_bytes = base64.b64decode(part.data)
-                    pil_image = PILImage.open(io.BytesIO(image_bytes))
-                    gemini_content.append(pil_image)
-
-        # Use JSON mode if requested
-        if use_json:
-            generation_config = genai.GenerationConfig(
-                temperature=self.temperature,
-                response_mime_type="application/json",
-            )
-            response = await self.model.generate_content_async(
-                gemini_content, generation_config=generation_config
-            )
-        else:
-            response = await self.model.generate_content_async(gemini_content)
+        # Call Gemini API
+        response = await self.model.generate_content_async(
+            gemini_contents,
+            tools=gemini_tools
+        )
 
         # Log token usage if available
         if hasattr(response, "usage_metadata") and response.usage_metadata:
@@ -140,4 +128,168 @@ class GeminiLLM(LLM):
                 f"total_tokens: {response.usage_metadata.total_token_count}"
             )
 
-        return response.text
+        # Convert response to AssistantMessage
+        return self._convert_response_to_assistant_message(response)
+
+    def _convert_messages_to_gemini(self, messages: List[Message]) -> List[genai_types.Content]:
+        """Convert our Message types to Gemini Content format."""
+        gemini_contents = []
+        system_instruction = None
+
+        for message in messages:
+            if isinstance(message, SystemMessage):
+                # Gemini handles system messages separately
+                # For now, prepend to first user message
+                system_parts = []
+                for content in message.content:
+                    if isinstance(content, TextContent):
+                        system_parts.append(genai_types.Part(text=content.text))
+                    elif isinstance(content, ImageContent):
+                        pil_image = self._base64_to_pil(content.data)
+                        system_parts.append(genai_types.Part(inline_data=genai_types.Blob(
+                            mime_type=content.mime_type,
+                            data=base64.b64decode(content.data)
+                        )))
+
+                # Store system instruction to prepend later
+                system_instruction = system_parts
+
+            elif isinstance(message, UserMessage):
+                parts = []
+
+                # Prepend system instruction if exists
+                if system_instruction:
+                    parts.extend(system_instruction)
+                    system_instruction = None
+
+                for content in message.content:
+                    if isinstance(content, TextContent):
+                        parts.append(genai_types.Part(text=content.text))
+                    elif isinstance(content, ImageContent):
+                        pil_image = self._base64_to_pil(content.data)
+                        parts.append(genai_types.Part(inline_data=genai_types.Blob(
+                            mime_type=content.mime_type,
+                            data=base64.b64decode(content.data)
+                        )))
+
+                gemini_contents.append(genai_types.Content(role="user", parts=parts))
+
+            elif isinstance(message, AssistantMessage):
+                parts = []
+
+                # Add text content
+                if message.content:
+                    for content in message.content:
+                        if isinstance(content, TextContent):
+                            parts.append(genai_types.Part(text=content.text))
+
+                # Add tool calls as function calls
+                if message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        parts.append(genai_types.Part(
+                            function_call=genai_types.FunctionCall(
+                                name=tool_call.name,
+                                args=tool_call.arguments
+                            )
+                        ))
+
+                gemini_contents.append(genai_types.Content(role="model", parts=parts))
+
+            elif isinstance(message, ToolResultMessage):
+                parts = []
+
+                for result in message.results:
+                    # Build function response parts
+                    response_parts = []
+                    for content in result.content:
+                        if isinstance(content, TextContent):
+                            response_parts.append(genai_types.Part(text=content.text))
+                        elif isinstance(content, ImageContent):
+                            response_parts.append(genai_types.Part(inline_data=genai_types.Blob(
+                                mime_type=content.mime_type,
+                                data=base64.b64decode(content.data)
+                            )))
+
+                    # Gemini uses function name for matching (no IDs)
+                    parts.append(genai_types.Part(
+                        function_response=genai_types.FunctionResponse(
+                            name=result.name,
+                            response={"result": "success"},  # Simplified for now
+                            parts=response_parts if response_parts else None
+                        )
+                    ))
+
+                gemini_contents.append(genai_types.Content(role="user", parts=parts))
+
+        return gemini_contents
+
+    def _convert_tools_to_gemini(self, tools: List["Tool"]) -> genai_types.Tool:
+        """Convert our Tool types to Gemini function declarations."""
+        function_declarations = []
+
+        for tool in tools:
+            # Get Pydantic schema from tool.Params
+            params_schema = tool.Params.model_json_schema()
+            properties = params_schema.get("properties", {})
+            required = params_schema.get("required", [])
+
+            # Convert to Gemini format
+            function_declarations.append(genai_types.FunctionDeclaration(
+                name=tool.name,
+                description=tool.description,
+                parameters=genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        key: genai_types.Schema(
+                            type=self._json_type_to_gemini_type(prop.get("type")),
+                            description=prop.get("description", "")
+                        )
+                        for key, prop in properties.items()
+                    },
+                    required=required
+                )
+            ))
+
+        return genai_types.Tool(function_declarations=function_declarations)
+
+    def _convert_response_to_assistant_message(self, response) -> AssistantMessage:
+        """Convert Gemini response to AssistantMessage."""
+        if not response.candidates:
+            raise ValueError("Empty response from Gemini")
+
+        candidate = response.candidates[0]
+        content_parts = []
+        tool_calls = []
+
+        if candidate.content and candidate.content.parts:
+            for part in candidate.content.parts:
+                if part.text:
+                    content_parts.append(TextContent(text=part.text))
+                elif part.function_call:
+                    tool_calls.append(ToolCall(
+                        id=None,  # Gemini doesn't provide IDs
+                        name=part.function_call.name,
+                        arguments=dict(part.function_call.args)
+                    ))
+
+        return AssistantMessage(
+            content=content_parts if content_parts else None,
+            tool_calls=tool_calls if tool_calls else None
+        )
+
+    def _base64_to_pil(self, data: str) -> PILImage.Image:
+        """Convert base64 string to PIL Image."""
+        image_bytes = base64.b64decode(data)
+        return PILImage.open(io.BytesIO(image_bytes))
+
+    def _json_type_to_gemini_type(self, json_type: str) -> genai_types.Type:
+        """Convert JSON schema type to Gemini type."""
+        mapping = {
+            "string": genai_types.Type.STRING,
+            "integer": genai_types.Type.INTEGER,
+            "number": genai_types.Type.NUMBER,
+            "boolean": genai_types.Type.BOOLEAN,
+            "array": genai_types.Type.ARRAY,
+            "object": genai_types.Type.OBJECT,
+        }
+        return mapping.get(json_type, genai_types.Type.STRING)

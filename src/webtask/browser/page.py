@@ -164,3 +164,100 @@ class Page(ABC):
 
         cdp_snapshot = await self.get_cdp_snapshot()
         return DomSnapshot.from_cdp(cdp_snapshot, url=self.url)
+
+    # Pixel-based interaction methods for Computer Use
+
+    @abstractmethod
+    async def click_at(self, x: int, y: int) -> None:
+        """
+        Click at specific pixel coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def hover_at(self, x: int, y: int) -> None:
+        """
+        Hover at specific pixel coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def scroll(self, direction: str) -> None:
+        """
+        Scroll the entire page.
+
+        Args:
+            direction: Direction to scroll ("up", "down", "left", "right")
+        """
+        pass
+
+    @abstractmethod
+    async def scroll_at(self, x: int, y: int, direction: str, amount: int) -> None:
+        """
+        Scroll at specific coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+            direction: Direction to scroll ("up", "down", "left", "right")
+            amount: Scroll distance in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def keyboard_press(self, key: str) -> None:
+        """
+        Press a keyboard key.
+
+        Args:
+            key: Key to press (e.g., "Enter", "Escape", "Control", "Meta")
+        """
+        pass
+
+    @abstractmethod
+    async def keyboard_down(self, key: str) -> None:
+        """
+        Press and hold a keyboard key.
+
+        Args:
+            key: Key to hold down (e.g., "Control", "Shift", "Meta")
+        """
+        pass
+
+    @abstractmethod
+    async def keyboard_up(self, key: str) -> None:
+        """
+        Release a keyboard key.
+
+        Args:
+            key: Key to release
+        """
+        pass
+
+    @abstractmethod
+    async def get_viewport_size(self) -> Dict[str, int]:
+        """
+        Get viewport dimensions.
+
+        Returns:
+            Dictionary with "width" and "height" keys
+        """
+        pass
+
+    @abstractmethod
+    async def goto(self, url: str) -> None:
+        """
+        Navigate to a URL (alias for navigate).
+
+        Args:
+            url: URL to navigate to
+        """
+        pass
