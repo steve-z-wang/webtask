@@ -12,6 +12,7 @@ from webtask.llm import (
     TextContent,
     ImageContent,
     ImageMimeType,
+    ToolCall,
     ToolResult,
     ToolResultStatus,
 )
@@ -50,9 +51,9 @@ class Verifier:
         self._tool_registry.register(AbortTaskTool())
         self._tool_registry.register(WaitTool())
 
-    def _format_worker_actions(self, worker_session: Optional[WorkerSession]) -> str:
+    def _format_worker_actions(self, worker_session: WorkerSession) -> str:
         """Format worker actions as text for verifier context."""
-        if not worker_session or not worker_session.messages:
+        if not worker_session.messages:
             return "No worker actions yet."
 
         lines = ["Worker Actions Summary:"]
@@ -96,7 +97,7 @@ class Verifier:
 
         return "\n".join(lines)
 
-    async def _execute_tool_calls(self, tool_calls: List["ToolCall"]) -> dict:
+    async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
         """Execute all tool calls and return results."""
         results = []
 
@@ -134,7 +135,7 @@ class Verifier:
         self,
         task_description: str,
         max_steps: int,
-        worker_session: Optional[WorkerSession] = None,
+        worker_session: WorkerSession,
     ) -> VerifierSession:
         """Execute verification using conversation-based LLM."""
         start_time = datetime.now()
