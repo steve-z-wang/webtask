@@ -65,7 +65,12 @@ class WorkerSession:
 
                 # Parse tool calls - only keep actions (skip observe, think, complete_work, abort_work)
                 for tc in msg.tool_calls:
-                    if tc.name not in ["observe", "think", "complete_work", "abort_work"]:
+                    if tc.name not in [
+                        "observe",
+                        "think",
+                        "complete_work",
+                        "abort_work",
+                    ]:
                         # Action tool - get description
                         description = tc.arguments.get("description", tc.name)
 
@@ -95,7 +100,9 @@ class WorkerSession:
         lines.append(f"Steps: {self.steps_used}/{self.max_steps}")
         lines.append(f"End Reason: {self.end_reason}")
         duration = (self.end_time - self.start_time).total_seconds()
-        lines.append(f"Duration: {duration:.2f}s ({self.start_time.strftime('%Y-%m-%d %H:%M:%S')} - {self.end_time.strftime('%H:%M:%S')})")
+        lines.append(
+            f"Duration: {duration:.2f}s ({self.start_time.strftime('%Y-%m-%d %H:%M:%S')} - {self.end_time.strftime('%H:%M:%S')})"
+        )
         lines.append("")
 
         # Show each message with full details
@@ -122,7 +129,9 @@ class WorkerSession:
                             text = text[:300] + "..."
                         lines.append(f"  [{j}] Text: {text}")
                     elif isinstance(part, ImageContent):
-                        lines.append(f"  [{j}] Image: {part.mime_type.value}, {len(part.data)} bytes")
+                        lines.append(
+                            f"  [{j}] Image: {part.mime_type.value}, {len(part.data)} bytes"
+                        )
 
             elif isinstance(msg, AssistantMessage):
                 # Show content if present
@@ -166,12 +175,16 @@ class WorkerSession:
 
                 lines.append("Page State:")
                 if text_parts:
-                    lines.append(f"  DOM Snapshot: {len(text_parts)} text part(s) (hidden for brevity)")
+                    lines.append(
+                        f"  DOM Snapshot: {len(text_parts)} text part(s) (hidden for brevity)"
+                    )
 
                 if image_parts:
                     lines.append(f"  Screenshots: {len(image_parts)} image(s)")
                     for j, part in enumerate(image_parts, 1):
-                        lines.append(f"    [{j}] {part.mime_type.value}, {len(part.data)} bytes")
+                        lines.append(
+                            f"    [{j}] {part.mime_type.value}, {len(part.data)} bytes"
+                        )
 
             lines.append("")
 

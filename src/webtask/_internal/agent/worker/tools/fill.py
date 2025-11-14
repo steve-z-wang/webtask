@@ -19,7 +19,9 @@ class FillTool(Tool):
 
         element_id: str = Field(description="ID of the element to fill")
         value: str = Field(description="Value to fill into the element")
-        description: str = Field(description="Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')")
+        description: str = Field(
+            description="Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')"
+        )
 
     def __init__(self, worker_browser: "WorkerBrowser"):
         """Initialize fill tool with worker browser."""

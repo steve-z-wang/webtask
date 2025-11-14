@@ -19,7 +19,9 @@ def build_verifier_prompt() -> str:
         .add_heading("How to Verify")
         .add_numbered("Review worker actions and correction history")
         .add_numbered("Observe current page state")
-        .add_numbered("Check if task succeeded, needs correction, or cannot be completed")
+        .add_numbered(
+            "Check if task succeeded, needs correction, or cannot be completed"
+        )
         .add_numbered(
             "Make decision (complete_task, request_correction, or abort_task)"
         )
@@ -61,9 +63,7 @@ def build_verifier_prompt() -> str:
         .add_bullet(
             "**wait**: Wait for page to update (use when page is still loading or updating)"
         )
-        .add_bullet(
-            "**complete_task**: Signal that task was successfully completed"
-        )
+        .add_bullet("**complete_task**: Signal that task was successfully completed")
         .add_bullet(
             "**request_correction**: Request Worker to fix issues (for small, fixable mistakes)"
         )

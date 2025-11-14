@@ -68,18 +68,32 @@ def build_worker_prompt() -> str:
     response_format = (
         MarkdownBuilder()
         .add_heading("How to Respond")
-        .add("You must call multiple tools in EACH response. Call all relevant tools together in this order:")
+        .add(
+            "You must call multiple tools in EACH response. Call all relevant tools together in this order:"
+        )
         .add_numbered("observe: Record what you see on the current page")
         .add_numbered("think: Record your reasoning about what to do next")
-        .add_numbered("Action tools: Call one or more browser actions (navigate, click, fill, type, etc.)")
+        .add_numbered(
+            "Action tools: Call one or more browser actions (navigate, click, fill, type, etc.)"
+        )
         .add_numbered("complete_work OR abort_work: Signal completion or failure")
         .add()
         .add("**Critical Rules:**")
-        .add_bullet("Call ALL relevant tools in a SINGLE response - don't call just one tool per response")
-        .add_bullet("Always start with observe + think, then do your actions, then complete_work/abort_work")
-        .add_bullet("Example good response: [observe, think, navigate, wait, complete_work]")
-        .add_bullet("Example bad response: [observe] (then stop and wait for next turn)")
-        .add_bullet("Be efficient - combine multiple actions in one response when possible")
+        .add_bullet(
+            "Call ALL relevant tools in a SINGLE response - don't call just one tool per response"
+        )
+        .add_bullet(
+            "Always start with observe + think, then do your actions, then complete_work/abort_work"
+        )
+        .add_bullet(
+            "Example good response: [observe, think, navigate, wait, complete_work]"
+        )
+        .add_bullet(
+            "Example bad response: [observe] (then stop and wait for next turn)"
+        )
+        .add_bullet(
+            "Be efficient - combine multiple actions in one response when possible"
+        )
     )
 
     # Combine all sections

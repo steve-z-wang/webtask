@@ -19,7 +19,9 @@ class TypeTool(Tool):
 
         element_id: str = Field(description="ID of the element to type into")
         text: str = Field(description="Text to type into the element")
-        description: str = Field(description="Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')")
+        description: str = Field(
+            description="Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')"
+        )
 
     def __init__(self, worker_browser: "WorkerBrowser"):
         """Initialize type tool with worker browser."""

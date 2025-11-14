@@ -1,0 +1,11 @@
+{
+  "class": "page",
+  "instance_id": "5c2b2a59-2995-4a8e-8788-fdf7e2188381",
+  "method": "select_one",
+  "args": {
+    "selector": "/html/body/app-root/div/app-checkout/aw-wizard/div/aw-wizard-step[1]/app-cart/div/div/button[2]"
+  },
+  "result": {
+    "element_instance_id": "a187acbc-adc7-4728-83f7-b6b47c5c8a32"
+  }
+}

@@ -11,7 +11,7 @@ class MessagePurger:
         self,
         purge_tags: List[str],
         message_types: Optional[List[Type[Message]]] = None,
-        keep_last_messages: int = 2
+        keep_last_messages: int = 2,
     ):
         """
         Args:
@@ -32,7 +32,9 @@ class MessagePurger:
         tagged_message_indices = []
         for i, msg in enumerate(messages):
             if self.message_types is not None:
-                if not any(isinstance(msg, msg_type) for msg_type in self.message_types):
+                if not any(
+                    isinstance(msg, msg_type) for msg_type in self.message_types
+                ):
                     continue
 
             if self._has_tagged_content(msg):
@@ -71,4 +73,6 @@ class MessagePurger:
             if content_item.tag not in self.purge_tags
         ]
 
-        return msg.model_copy(update={"content": filtered_content if filtered_content else None})
+        return msg.model_copy(
+            update={"content": filtered_content if filtered_content else None}
+        )

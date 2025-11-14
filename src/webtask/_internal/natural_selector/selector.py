@@ -41,9 +41,13 @@ class NaturalSelector:
         messages = [
             SystemMessage(content=[TextContent(text=system)]),
             UserMessage(content=[TextContent(text=page_context)]),
-            UserMessage(content=[TextContent(
-                text=f'\nWhich element_id matches this description: "{description}"?'
-            )]),
+            UserMessage(
+                content=[
+                    TextContent(
+                        text=f'\nWhich element_id matches this description: "{description}"?'
+                    )
+                ]
+            ),
         ]
 
         # Generate and validate response with automatic retry
@@ -52,7 +56,9 @@ class NaturalSelector:
 
         for attempt in range(max_retries):
             try:
-                selector_response = await self._llm.generate_response(messages, SelectorResponse)
+                selector_response = await self._llm.generate_response(
+                    messages, SelectorResponse
+                )
                 break
 
             except (ValueError, json.JSONDecodeError, ValidationError) as e:

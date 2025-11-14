@@ -1,0 +1,9 @@
+{
+  "class": "page",
+  "instance_id": "5c2b2a59-2995-4a8e-8788-fdf7e2188381",
+  "method": "wait_for_idle",
+  "args": {
+    "timeout": 30000
+  },
+  "result": null
+}

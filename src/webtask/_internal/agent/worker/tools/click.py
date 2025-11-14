@@ -18,7 +18,9 @@ class ClickTool(Tool):
         """Parameters for click tool."""
 
         element_id: str = Field(description="ID of the element to click")
-        description: str = Field(description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')")
+        description: str = Field(
+            description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')"
+        )
 
     def __init__(self, worker_browser: "WorkerBrowser"):
         """Initialize click tool with worker browser."""

@@ -13,9 +13,7 @@ class ThinkTool(Tool):
     class Params(BaseModel):
         """Parameters for think tool."""
 
-        text: str = Field(
-            description="Your reasoning about the next steps"
-        )
+        text: str = Field(description="Your reasoning about the next steps")
 
     async def execute(self, params: Params) -> str:
         """Record reasoning and return acknowledgment."""

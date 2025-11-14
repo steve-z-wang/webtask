@@ -1,0 +1,102 @@
+{
+  "method": "call_tools",
+  "request": {
+    "messages": [
+      {
+        "timestamp": "2025-11-13T23:31:19.493234",
+        "content": [
+          {
+            "tag": null
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-11-13T23:31:19.493390",
+        "content": [
+          {
+            "tag": null
+          },
+          {
+            "tag": "observation"
+          },
+          {
+            "tag": "observation"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "navigate",
+        "description": "Navigate to a URL"
+      },
+      {
+        "name": "click",
+        "description": "Click an element on the page"
+      },
+      {
+        "name": "fill",
+        "description": "Fill a form element with a value (fast, direct value setting)"
+      },
+      {
+        "name": "type",
+        "description": "Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)"
+      },
+      {
+        "name": "wait",
+        "description": "Wait for specified seconds (useful after actions that trigger page changes, modals, or dynamic content loading)"
+      },
+      {
+        "name": "observe",
+        "description": "Record what you observe on the page (UI state, messages, errors). Use this when you need to note important observations."
+      },
+      {
+        "name": "think",
+        "description": "Record your reasoning about what to do next and why. Use this when you need to explain your thought process."
+      },
+      {
+        "name": "complete_work",
+        "description": "Signal that you have successfully completed the subtask"
+      },
+      {
+        "name": "abort_work",
+        "description": "Signal that you cannot proceed further with this subtask (stuck, blocked, error, or impossible to complete)"
+      }
+    ]
+  },
+  "response": {
+    "timestamp": "2025-11-13T23:31:23.022475",
+    "content": null,
+    "tool_calls": [
+      {
+        "id": null,
+        "name": "observe",
+        "arguments": {
+          "text": "I need to filter by 'Fasteners' first to find the screws."
+        }
+      },
+      {
+        "id": null,
+        "name": "think",
+        "arguments": {
+          "text": "I will click on the 'Fasteners' checkbox to filter the products. The element ID for 'Fasteners' is input-19."
+        }
+      },
+      {
+        "id": null,
+        "name": "click",
+        "arguments": {
+          "description": "Fasteners checkbox",
+          "element_id": "input-19"
+        }
+      },
+      {
+        "id": null,
+        "name": "wait",
+        "arguments": {
+          "seconds": 2.0
+        }
+      }
+    ]
+  }
+}

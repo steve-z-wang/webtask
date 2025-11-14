@@ -1,10 +1,10 @@
 """TaskExecution - execution history for one task."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import List, Union, Optional, TYPE_CHECKING
+from typing import List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .worker.worker_session import WorkerSession
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 class TaskResult(str, Enum):
     """Task execution result."""
+
     COMPLETE = "complete_task"
     ABORTED = "abort_task"
 
@@ -39,7 +40,9 @@ class TaskExecution:
         lines.append(f"Feedback: {self.feedback}")
 
         duration = (self.completed_at - self.created_at).total_seconds()
-        lines.append(f"Duration: {duration:.2f}s ({self.created_at.strftime('%Y-%m-%d %H:%M:%S')} - {self.completed_at.strftime('%H:%M:%S')})")
+        lines.append(
+            f"Duration: {duration:.2f}s ({self.created_at.strftime('%Y-%m-%d %H:%M:%S')} - {self.completed_at.strftime('%H:%M:%S')})"
+        )
         lines.append(f"Total Sessions: {len(self.sessions)}")
         lines.append("")
 

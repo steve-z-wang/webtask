@@ -9,7 +9,7 @@ from .message import Message, AssistantMessage
 if TYPE_CHECKING:
     from webtask.agent.tool import Tool
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar("T", bound=BaseModel)
 
 
 class LLM(ABC):

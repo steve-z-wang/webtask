@@ -1,26 +1,21 @@
 """Verifier role - checks if subtask succeeded using conversation-based LLM."""
 
 from datetime import datetime
-from pathlib import Path
-from typing import List, Optional, Text, Tuple, TYPE_CHECKING, Union
+from typing import List, Optional, TYPE_CHECKING
 from webtask.llm import (
-    Content, 
+    Content,
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
     ToolResultMessage,
     TextContent,
     ImageContent,
     ImageMimeType,
     ToolCall,
-    ToolResult,
     ToolResultStatus,
 )
-from webtask.agent.tool import Tool
 from webtask._internal.llm import MessagePurger
 from ..tool import ToolRegistry
-from webtask._internal.config import Config
 from ...prompts.verifier_prompt import build_verifier_prompt
 from webtask._internal.utils.wait import wait
 from .verifier_session import VerifierSession, VerifierDecision
@@ -58,7 +53,7 @@ class Verifier:
         self._message_purger = MessagePurger(
             purge_tags=["observation"],
             message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=1  # Verifier only needs most recent observation
+            keep_last_messages=1,  # Verifier only needs most recent observation
         )
 
     async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
@@ -127,7 +122,13 @@ class Verifier:
             if final_dom:
                 user_content.append(TextContent(text=final_dom, tag="observation"))
             if final_screenshot:
-                user_content.append(ImageContent(data=final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
+                user_content.append(
+                    ImageContent(
+                        data=final_screenshot,
+                        mime_type=ImageMimeType.PNG,
+                        tag="observation",
+                    )
+                )
 
             messages.append(UserMessage(content=user_content))
 
@@ -144,7 +145,13 @@ class Verifier:
             if final_dom:
                 user_content.append(TextContent(text=final_dom, tag="observation"))
             if final_screenshot:
-                user_content.append(ImageContent(data=final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
+                user_content.append(
+                    ImageContent(
+                        data=final_screenshot,
+                        mime_type=ImageMimeType.PNG,
+                        tag="observation",
+                    )
+                )
 
             # Initialize conversation
             messages: List[Message] = [
@@ -190,14 +197,20 @@ class Verifier:
             await wait(self.ACTION_DELAY)
 
             # Check if observe tool was called - if so, capture fresh observations
-            observe_called = any(tc.name == "observe" for tc in assistant_msg.tool_calls)
+            observe_called = any(
+                tc.name == "observe" for tc in assistant_msg.tool_calls
+            )
             content = []
             if observe_called:
                 dom_snapshot = await self.verifier_browser.get_dom_snapshot()
                 screenshot_b64 = await self.verifier_browser.get_screenshot()
                 content = [
                     TextContent(text=dom_snapshot, tag="observation"),
-                    ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
+                    ImageContent(
+                        data=screenshot_b64,
+                        mime_type=ImageMimeType.PNG,
+                        tag="observation",
+                    ),
                 ]
 
             # Create tool result message

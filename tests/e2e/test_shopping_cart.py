@@ -115,16 +115,16 @@ async def test_shopping_cart_automation():
         assert result is not None
 
         # The task should have completed (not aborted)
-        print(f"\nTask Status: {result.status}")
-        print(f"Number of manager/subtask sessions: {len(result.history)}")
-        print(f"Subtask queue history: {len(result.subtask_queue.history)}")
+        print(f"\nTask Result: {result.result}")
+        print(f"Number of sessions: {len(result.sessions)}")
+        print(f"Feedback: {result.feedback}")
 
-        # Verify task completed (not in progress or aborted)
-        from webtask._internal.agent.task import TaskStatus
+        # Verify task completed (not aborted)
+        from webtask._internal.agent.task_execution import TaskResult
 
         assert (
-            result.status == TaskStatus.COMPLETED
-        ), f"Task should have completed successfully, but status is {result.status}"
+            result.result == TaskResult.COMPLETE
+        ), f"Task should have completed successfully, but result is {result.result}"
 
     finally:
         # Cleanup

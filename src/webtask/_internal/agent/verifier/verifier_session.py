@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -18,6 +18,7 @@ from webtask.llm import (
 
 class VerifierDecision(str, Enum):
     """Verifier decision about task completion."""
+
     COMPLETE_TASK = "complete_task"
     REQUEST_CORRECTION = "request_correction"
     ABORT_TASK = "abort_task"
@@ -47,7 +48,9 @@ class VerifierSession:
         lines.append(f"Decision: {self.decision}")
         lines.append(f"Feedback: {self.feedback}")
         duration = (self.end_time - self.start_time).total_seconds()
-        lines.append(f"Duration: {duration:.2f}s ({self.start_time.strftime('%Y-%m-%d %H:%M:%S')} - {self.end_time.strftime('%H:%M:%S')})")
+        lines.append(
+            f"Duration: {duration:.2f}s ({self.start_time.strftime('%Y-%m-%d %H:%M:%S')} - {self.end_time.strftime('%H:%M:%S')})"
+        )
         lines.append("")
 
         # Show each message with full details
@@ -73,7 +76,9 @@ class VerifierSession:
                             text = text[:300] + "..."
                         lines.append(f"  [{j}] Text: {text}")
                     elif isinstance(part, ImageContent):
-                        lines.append(f"  [{j}] Image: {part.mime_type.value}, {len(part.data)} bytes")
+                        lines.append(
+                            f"  [{j}] Image: {part.mime_type.value}, {len(part.data)} bytes"
+                        )
 
             elif isinstance(msg, AssistantMessage):
                 # Show tool calls
@@ -107,7 +112,9 @@ class VerifierSession:
 
                 lines.append("Page State:")
                 if text_parts:
-                    lines.append(f"  DOM Snapshot: {len(text_parts)} text part(s) (hidden for brevity)")
+                    lines.append(
+                        f"  DOM Snapshot: {len(text_parts)} text part(s) (hidden for brevity)"
+                    )
                 if image_parts:
                     lines.append(f"  Screenshots: {len(image_parts)} image(s)")
 

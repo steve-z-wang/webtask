@@ -13,9 +13,7 @@ class ObserveTool(Tool):
     class Params(BaseModel):
         """Parameters for observe tool."""
 
-        text: str = Field(
-            description="Your observation of the current page state"
-        )
+        text: str = Field(description="Your observation of the current page state")
 
     async def execute(self, params: Params) -> str:
         """Record observation and return acknowledgment."""

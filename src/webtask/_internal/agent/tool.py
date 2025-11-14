@@ -1,8 +1,8 @@
 """Tool registry for agent tools."""
 
-import json
-from typing import Dict, Any, List, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING
 from webtask.agent.tool import Tool
+from webtask.llm import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
     from .tool_call import ProposedToolCall, ToolCall
@@ -63,8 +63,6 @@ class ToolRegistry:
         Returns:
             ToolResult with success or error status
         """
-        from webtask.llm import ToolResult, ToolResultStatus
-
         try:
             # Get tool and validate parameters
             tool = self.get(tool_call.name)

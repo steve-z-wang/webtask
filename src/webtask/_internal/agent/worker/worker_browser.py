@@ -3,7 +3,6 @@
 from typing import Dict
 from webtask._internal.dom.domnode import DomNode
 from ..agent_browser import AgentBrowser
-from ...page_context import PageContextBuilder
 from ...page_context.dom_context_builder import DomContextBuilder
 
 

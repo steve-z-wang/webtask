@@ -1,6 +1,6 @@
 """Message types for conversational LLM history with tool calling support."""
 
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -25,7 +25,9 @@ class ToolResultStatus(str, Enum):
 class Content(BaseModel):
     """Base class for message content parts."""
 
-    tag: Optional[str] = None  # Tag for processing/filtering (e.g., "observation", "dom", "screenshot")
+    tag: Optional[str] = (
+        None  # Tag for processing/filtering (e.g., "observation", "dom", "screenshot")
+    )
 
 
 class TextContent(Content):
@@ -107,7 +109,9 @@ class UserMessage(Message):
     """User message with text/images."""
 
     def __str__(self) -> str:
-        text_parts = [part.text for part in self.content if isinstance(part, TextContent)]
+        text_parts = [
+            part.text for part in self.content if isinstance(part, TextContent)
+        ]
         image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
 
         text_str = " ".join(text_parts)
@@ -129,8 +133,12 @@ class AssistantMessage(Message):
 
         # Add content summary
         if self.content:
-            text_parts = [part.text for part in self.content if isinstance(part, TextContent)]
-            image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
+            text_parts = [
+                part.text for part in self.content if isinstance(part, TextContent)
+            ]
+            image_count = sum(
+                1 for part in self.content if isinstance(part, ImageContent)
+            )
 
             if text_parts:
                 text_str = " ".join(text_parts)

@@ -1,13 +1,11 @@
 """Worker role - executes one subtask with conversation-based LLM."""
 
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from webtask.llm import (
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
     ToolResultMessage,
     TextContent,
     ImageContent,
@@ -16,10 +14,8 @@ from webtask.llm import (
     ToolResultStatus,
 )
 from webtask._internal.llm import MessagePurger
-from webtask.agent.tool import Tool
 from webtask.llm.message import ToolCall
 from ..tool import ToolRegistry
-from webtask._internal.config import Config
 from ...prompts.worker_prompt import build_worker_prompt
 from webtask._internal.utils.wait import wait
 from .worker_browser import WorkerBrowser
@@ -34,7 +30,6 @@ from .tools.complete_work import CompleteWorkTool
 from .tools.abort_work import AbortWorkTool
 from .tools.observe import ObserveTool
 from .tools.think import ThinkTool
-from webtask._internal.agent.worker import worker_browser
 
 if TYPE_CHECKING:
     from ..agent_browser import AgentBrowser
@@ -68,7 +63,7 @@ class Worker:
         self._message_purger = MessagePurger(
             purge_tags=["observation"],
             message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=2
+            keep_last_messages=2,
         )
         self._tool_registry.register(ThinkTool())
         self._tool_registry.register(CompleteWorkTool())
@@ -124,13 +119,18 @@ class Worker:
             # Continue from previous session with verifier feedback
             messages = previous_session.messages.copy()
             if verifier_feedback:
-                messages.append(UserMessage(content=[TextContent(
-                    text=f"Verifier feedback: {verifier_feedback}")]))
+                messages.append(
+                    UserMessage(
+                        content=[
+                            TextContent(text=f"Verifier feedback: {verifier_feedback}")
+                        ]
+                    )
+                )
             return await self._run(
                 previous_session.task_description,
                 max_steps,
                 resources=None,  # Resources already registered in first run()
-                messages=messages
+                messages=messages,
             )
         else:
             # Start fresh
@@ -140,11 +140,17 @@ class Worker:
 
             messages = [
                 SystemMessage(content=[TextContent(text=build_worker_prompt())]),
-                UserMessage(content=[
-                    TextContent(text=f"Task: {task_description}"),
-                    TextContent(text=dom_snapshot, tag="observation"),
-                    ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
-                ]),
+                UserMessage(
+                    content=[
+                        TextContent(text=f"Task: {task_description}"),
+                        TextContent(text=dom_snapshot, tag="observation"),
+                        ImageContent(
+                            data=screenshot_b64,
+                            mime_type=ImageMimeType.PNG,
+                            tag="observation",
+                        ),
+                    ]
+                ),
             ]
             return await self._run(task_description, max_steps, resources, messages)
 
@@ -179,7 +185,9 @@ class Worker:
                 raise ValueError("LLM did not return any tool calls")
 
             # Execute all tool calls and collect results
-            tool_results, end_reason = await self._execute_tool_calls(assistant_msg.tool_calls)
+            tool_results, end_reason = await self._execute_tool_calls(
+                assistant_msg.tool_calls
+            )
 
             # Wait after all actions complete
             await wait(self.ACTION_DELAY)
@@ -191,7 +199,9 @@ class Worker:
             # Create tool result message with acknowledgments + observation content
             content = [
                 TextContent(text=dom_snapshot, tag="observation"),
-                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
+                ImageContent(
+                    data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"
+                ),
             ]
 
             result_message = ToolResultMessage(

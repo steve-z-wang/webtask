@@ -2,7 +2,6 @@
 
 from typing import Optional, List, Dict, Any, Type, TypeVar, TYPE_CHECKING
 import json
-import logging
 from PIL import Image as PILImage
 import io
 import base64
@@ -22,13 +21,12 @@ from webtask.llm.message import (
     TextContent,
     ImageContent,
     ToolCall,
-    ImageMimeType,
 )
 
 if TYPE_CHECKING:
     from webtask.agent.tool import Tool
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar("T", bound=BaseModel)
 
 
 class GeminiLLM(LLM):
@@ -98,7 +96,16 @@ class GeminiLLM(LLM):
         unsupported fields like title, maximum, minimum, maxLength, etc.
         """
         # Fields that Gemini supports
-        allowed_fields = {"type", "description", "enum", "items", "properties", "required", "nullable", "format"}
+        allowed_fields = {
+            "type",
+            "description",
+            "enum",
+            "items",
+            "properties",
+            "required",
+            "nullable",
+            "format",
+        }
 
         # Create cleaned schema
         cleaned = {}
@@ -303,7 +310,9 @@ class GeminiLLM(LLM):
             )
 
         # Debug: Log response structure
-        self.logger.debug(f"Response candidates: {len(response.candidates) if response.candidates else 0}")
+        self.logger.debug(
+            f"Response candidates: {len(response.candidates) if response.candidates else 0}"
+        )
         if response.candidates and len(response.candidates) > 0:
             candidate = response.candidates[0]
             self.logger.debug(f"Candidate content: {candidate.content}")
@@ -314,7 +323,9 @@ class GeminiLLM(LLM):
                     if hasattr(part, "function_call"):
                         self.logger.debug(f"  Has function_call: {part.function_call}")
                     if hasattr(part, "text"):
-                        self.logger.debug(f"  Has text: {part.text[:200] if part.text else None}")
+                        self.logger.debug(
+                            f"  Has text: {part.text[:200] if part.text else None}"
+                        )
 
         # Extract tool calls from response
         tool_calls = []

@@ -8,7 +8,6 @@ from webtask.llm import LLM
 from webtask.browser import Page, Session
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.natural_selector import NaturalSelector
-from webtask._internal.agent.task import Task
 from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
 from webtask._internal.agent.worker.worker import Worker
@@ -60,8 +59,7 @@ class Agent:
 
         # Create selector for low-level imperative mode
         self._selector = NaturalSelector(
-            llm=selector_llm or llm,
-            agent_browser=self.agent_browser
+            llm=selector_llm or llm, agent_browser=self.agent_browser
         )
 
     async def execute(

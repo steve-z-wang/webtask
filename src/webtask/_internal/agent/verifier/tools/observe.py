@@ -6,6 +6,7 @@ from webtask.agent.tool import Tool
 
 class ObserveParams(BaseModel):
     """Parameters for observe tool."""
+
     pass
 
 
