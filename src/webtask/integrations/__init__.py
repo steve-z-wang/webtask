@@ -8,7 +8,6 @@ from .browser import (
 )
 
 from .llm import (
-    OpenAILLM,
     GeminiLLM,
 )
 
@@ -19,6 +18,5 @@ __all__ = [
     "PlaywrightPage",
     "PlaywrightElement",
     # LLM
-    "OpenAILLM",
     "GeminiLLM",
 ]

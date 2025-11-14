@@ -3,9 +3,15 @@
 import json
 import uuid
 from pathlib import Path
-from typing import List, Optional
-from webtask.llm import LLM, Content, Text, Image
+from typing import List, Optional, Type, TypeVar, TYPE_CHECKING
+from pydantic import BaseModel
+from webtask.llm import LLM, Message, AssistantMessage
 from webtask._internal.config import Config
+
+if TYPE_CHECKING:
+    from webtask.agent.tool import Tool
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class RecordingLLM(LLM):
@@ -78,26 +84,6 @@ class RecordingLLM(LLM):
         if self._is_replaying:
             self._load_fixture_count()
 
-    def _serialize_content(self, content: List[Content]) -> List[dict]:
-        """Serialize Content list to JSON-compatible dicts."""
-        result = []
-        for item in content:
-            if isinstance(item, Text):
-                result.append({"type": "text", "data": item.model_dump()})
-            elif isinstance(item, Image):
-                result.append({"type": "image", "data": item.model_dump()})
-        return result
-
-    def _deserialize_content(self, data: List[dict]) -> List[Content]:
-        """Deserialize JSON dicts to Content list."""
-        result = []
-        for item in data:
-            if item["type"] == "text":
-                result.append(Text.model_validate(item["data"]))
-            elif item["type"] == "image":
-                result.append(Image.model_validate(item["data"]))
-        return result
-
     def _load_fixture_count(self):
         """Count how many fixture files exist for this instance."""
         instance_dir = self._fixture_path / f"llm_{self._instance_id}"
@@ -146,20 +132,12 @@ class RecordingLLM(LLM):
         with open(call_path, "r") as f:
             return json.load(f)
 
-    async def generate(
-        self, system: str, content: List[Content], use_json: bool = False
-    ) -> str:
-        """
-        Generate text response (recording/replaying based on mode).
-
-        Args:
-            system: System prompt
-            content: Content list
-            use_json: Whether to use JSON mode
-
-        Returns:
-            Generated text response
-        """
+    async def call_tools(
+        self,
+        messages: List[Message],
+        tools: List["Tool"],
+    ) -> AssistantMessage:
+        """Call tools with recording/replay support."""
         if self._is_replaying:
             # Replay mode: load and return saved response
             if self._call_index >= self._total_calls:
@@ -171,29 +149,76 @@ class RecordingLLM(LLM):
             self._call_index += 1
 
             self.logger.info(
-                f"Replaying LLM call {self._call_index}/{self._total_calls}"
+                f"Replaying LLM call_tools {self._call_index}/{self._total_calls}"
             )
-            return call["response"]
+            return AssistantMessage.model_validate(call["response"])
 
         elif self._is_recording:
             # Record mode: call real LLM and save immediately
-            response = await self._llm.generate(system, content, use_json)
+            response = await self._llm.call_tools(messages, tools)
 
             call_data = {
+                "method": "call_tools",
                 "request": {
-                    "system": system,
-                    "content": self._serialize_content(content),
-                    "use_json": use_json,
+                    "messages": [msg.model_dump(mode="json") for msg in messages],
+                    "tools": [
+                        {"name": tool.name, "description": tool.description}
+                        for tool in tools
+                    ],
                 },
-                "response": response,
+                "response": response.model_dump(mode="json"),
             }
 
             self._save_call(call_data)
             self._call_index += 1
 
-            self.logger.info(f"Recorded LLM call {self._call_index}")
+            self.logger.info(f"Recorded LLM call_tools {self._call_index}")
             return response
 
         else:
             # Live mode: just delegate
-            return await self._llm.generate(system, content, use_json)
+            return await self._llm.call_tools(messages, tools)
+
+    async def generate_response(
+        self,
+        messages: List[Message],
+        response_model: Type[T],
+    ) -> T:
+        """Generate structured response with recording/replay support."""
+        if self._is_replaying:
+            # Replay mode: load and return saved response
+            if self._call_index >= self._total_calls:
+                raise RuntimeError(
+                    f"Replay error: Expected {self._call_index + 1} calls but only {self._total_calls} recorded"
+                )
+
+            call = self._load_call(self._call_index)
+            self._call_index += 1
+
+            self.logger.info(
+                f"Replaying LLM generate_response {self._call_index}/{self._total_calls}"
+            )
+            return response_model.model_validate(call["response"])
+
+        elif self._is_recording:
+            # Record mode: call real LLM and save immediately
+            response = await self._llm.generate_response(messages, response_model)
+
+            call_data = {
+                "method": "generate_response",
+                "request": {
+                    "messages": [msg.model_dump(mode="json") for msg in messages],
+                    "response_model": response_model.__name__,
+                },
+                "response": response.model_dump(mode="json"),
+            }
+
+            self._save_call(call_data)
+            self._call_index += 1
+
+            self.logger.info(f"Recorded LLM generate_response {self._call_index}")
+            return response
+
+        else:
+            # Live mode: just delegate
+            return await self._llm.generate_response(messages, response_model)

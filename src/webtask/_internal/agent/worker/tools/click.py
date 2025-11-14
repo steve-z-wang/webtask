@@ -1,7 +1,11 @@
 """Click tool for clicking elements."""
 
+from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
-from ...tool import Tool
+from webtask.agent.tool import Tool
+
+if TYPE_CHECKING:
+    from ..worker_browser import WorkerBrowser
 
 
 class ClickTool(Tool):
@@ -14,13 +18,14 @@ class ClickTool(Tool):
         """Parameters for click tool."""
 
         element_id: str = Field(description="ID of the element to click")
+        description: str = Field(
+            description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')"
+        )
 
-    async def execute(self, params: Params, **kwargs) -> None:
-        """Execute click on element.
+    def __init__(self, worker_browser: "WorkerBrowser"):
+        """Initialize click tool with worker browser."""
+        self.worker_browser = worker_browser
 
-        Args:
-            params: Validated parameters
-            **kwargs: worker_browser injected by ToolRegistry
-        """
-        worker_browser = kwargs.get("worker_browser")
-        await worker_browser.click(params.element_id)
+    async def execute(self, params: Params) -> None:
+        """Execute click on element."""
+        await self.worker_browser.click(params.element_id)

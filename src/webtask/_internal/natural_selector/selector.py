@@ -3,7 +3,7 @@
 import json
 from typing import TYPE_CHECKING, Dict
 from pydantic import ValidationError
-from ..llm import Context, Block, TypedLLM
+from webtask.llm import LLM, SystemMessage, UserMessage, TextContent
 from ..prompts import build_selector_prompt
 from webtask.browser import Element
 from ..page_context import PageContextBuilder
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 class NaturalSelector:
     """Selects elements using natural language descriptions."""
 
-    def __init__(self, typed_llm: TypedLLM, agent_browser: "AgentBrowser"):
-        self._llm = typed_llm
+    def __init__(self, llm: LLM, agent_browser: "AgentBrowser"):
+        self._llm = llm
         self._agent_browser = agent_browser
         self._element_map: Dict = {}
 
@@ -37,13 +37,18 @@ class NaturalSelector:
 
         system = build_selector_prompt()
 
-        context = (
-            Context(system=system)
-            .with_block(page_context)
-            .with_block(
-                f'\nWhich element_id matches this description: "{description}"?'
-            )
-        )
+        # Build messages for LLM
+        messages = [
+            SystemMessage(content=[TextContent(text=system)]),
+            UserMessage(content=[TextContent(text=page_context)]),
+            UserMessage(
+                content=[
+                    TextContent(
+                        text=f'\nWhich element_id matches this description: "{description}"?'
+                    )
+                ]
+            ),
+        ]
 
         # Generate and validate response with automatic retry
         max_retries = 3
@@ -51,7 +56,9 @@ class NaturalSelector:
 
         for attempt in range(max_retries):
             try:
-                selector_response = await self._llm.generate(context, SelectorResponse)
+                selector_response = await self._llm.generate_response(
+                    messages, SelectorResponse
+                )
                 break
 
             except (ValueError, json.JSONDecodeError, ValidationError) as e:
@@ -68,7 +75,7 @@ class NaturalSelector:
                         f"Error details: {error_msg}\n\n"
                         f"Please provide a valid JSON response that matches the required schema."
                     )
-                    context.with_block(Block(feedback))
+                    messages.append(UserMessage(content=[TextContent(text=feedback)]))
                 else:
                     # Last attempt failed, raise error
                     raise ValueError(

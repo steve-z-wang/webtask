@@ -19,9 +19,11 @@ def build_verifier_prompt() -> str:
         .add_heading("How to Verify")
         .add_numbered("Review worker actions and correction history")
         .add_numbered("Observe current page state")
-        .add_numbered("Check if subtask succeeded or needs correction/reschedule")
         .add_numbered(
-            "Make decision (complete_subtask, request_correction, or request_reschedule)"
+            "Check if task succeeded, needs correction, or cannot be completed"
+        )
+        .add_numbered(
+            "Make decision (complete_task, request_correction, or abort_task)"
         )
     )
 
@@ -36,41 +38,55 @@ def build_verifier_prompt() -> str:
         .add()
         .add("**What should you do if the page appears incomplete or still loading?**")
         .add(
-            "Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't request reschedule just because the page is still loading - only request reschedule if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur."
+            "Use the 'wait' tool (1-2 seconds) and verify in the next iteration. Don't abort just because the page is still loading - only abort if the Worker did wrong actions, there's an error message, or after waiting the expected outcome still didn't occur."
         )
         .add()
-        .add("**When should you use complete_subtask?**")
-        .add("Use complete_subtask when the subtask goal was fully achieved.")
+        .add("**When should you use complete_task?**")
+        .add("Use complete_task when the task goal was fully achieved.")
         .add()
         .add("**When should you use request_correction?**")
         .add(
-            "Use request_correction for small, fixable issues (wrong element clicked, typo, minor mistake). Worker will see your feedback and try again. Max 3 correction attempts allowed."
+            "Use request_correction for small, fixable issues (wrong element clicked, typo, minor mistake). Worker will see your feedback and try again."
         )
         .add()
-        .add("**When should you use request_reschedule?**")
+        .add("**When should you use abort_task?**")
         .add(
-            "Use request_reschedule when: (1) fundamental approach is wrong, (2) exceeded 3 correction attempts, or (3) there's a blocker requiring Manager to replan."
+            "Use abort_task when the task cannot be completed due to unfixable blockers (bot challenge, fundamental approach is wrong, impossible requirement, permanent error). This signals that the task has failed."
         )
     )
 
     # Response Format section
     response_format = (
         MarkdownBuilder()
-        .add_heading("Response Format")
-        .add("Respond with JSON containing three parts:")
+        .add_heading("How to Respond")
+        .add("You must use tools to make your decision. Available tools:")
         .add_bullet(
-            "observation: ONLY what you see (UI state, messages, errors). Do NOT include your decision or reasoning."
+            "**wait**: Wait for page to update (use when page is still loading or updating)"
+        )
+        .add_bullet("**complete_task**: Signal that task was successfully completed")
+        .add_bullet(
+            "**request_correction**: Request Worker to fix issues (for small, fixable mistakes)"
         )
         .add_bullet(
-            "thinking: Your reasoning and decision - analyze if subtask succeeded or failed"
-        )
-        .add_bullet(
-            "tool_calls: Actions to take (each has description, tool, parameters)"
+            "**abort_task**: Signal that task cannot be completed (for unfixable blockers)"
         )
         .add()
-        .add(
-            'Example: {"observation": "Cart shows 2 items", "thinking": "Worker successfully added items", "tool_calls": [{"description": "Subtask completed successfully", "tool": "complete_subtask", "parameters": {"feedback": "Successfully added 2 items to cart"}}]}'
+        .add("**Critical Rules:**")
+        .add_bullet(
+            "You MUST call one decision tool (complete_task, request_correction, or abort_task) in your response"
         )
+        .add_bullet(
+            "If the page is still loading, call wait first, then make your decision in the next turn"
+        )
+        .add_bullet(
+            "Do NOT call multiple decision tools - choose only one based on the outcome"
+        )
+        .add()
+        .add("**Example Responses:**")
+        .add("- Task succeeded: [complete_task]")
+        .add("- Page still loading: [wait]")
+        .add("- Small error to fix: [request_correction]")
+        .add("- Unfixable blocker: [abort_task]")
     )
 
     # Combine all sections

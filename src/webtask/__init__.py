@@ -1,7 +1,7 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
 from .webtask import Webtask
-from .agent import Agent
+from .agent import Agent, Tool
 
 from .browser import (
     Browser,
@@ -12,28 +12,45 @@ from .browser import (
 
 from .llm import (
     LLM,
-    Text,
-    Content,
+    Message,
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    TextContent,
+    ImageContent,
+    ToolCall,
+    ToolResult,
+    ToolResultStatus,
 )
 
-from ._internal.agent.task import TaskExecution, TaskStatus
+from ._internal.agent.task_execution import TaskExecution, TaskResult
 
-__version__ = "0.11.0"
+__version__ = "0.13.0"
 
 __all__ = [
     # Manager
     "Webtask",
     # Agent
     "Agent",
+    "Tool",
     "TaskExecution",
-    "TaskStatus",
+    "TaskResult",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Session",
     "Page",
     "Element",
-    # LLM
+    # LLM interface
     "LLM",
-    "Text",
-    "Content",
+    "Message",
+    "SystemMessage",
+    "UserMessage",
+    "AssistantMessage",
+    "ToolResultMessage",
+    "TextContent",
+    "ImageContent",
+    "ToolCall",
+    "ToolResult",
+    "ToolResultStatus",
 ]

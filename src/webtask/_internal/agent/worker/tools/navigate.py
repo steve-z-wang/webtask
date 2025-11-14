@@ -1,7 +1,11 @@
 """Navigate browser tool."""
 
+from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
-from ...tool import Tool
+from webtask.agent.tool import Tool
+
+if TYPE_CHECKING:
+    from ..worker_browser import WorkerBrowser
 
 
 class NavigateTool(Tool):
@@ -15,12 +19,10 @@ class NavigateTool(Tool):
 
         url: str = Field(description="URL to navigate to")
 
-    async def execute(self, params: Params, **kwargs) -> None:
-        """Execute navigation.
+    def __init__(self, worker_browser: "WorkerBrowser"):
+        """Initialize navigate tool with worker browser."""
+        self.worker_browser = worker_browser
 
-        Args:
-            params: Validated parameters
-            **kwargs: worker_browser injected by ToolRegistry
-        """
-        worker_browser = kwargs.get("worker_browser")
-        await worker_browser.navigate(params.url)
+    async def execute(self, params: Params) -> None:
+        """Execute navigation."""
+        await self.worker_browser.navigate(params.url)

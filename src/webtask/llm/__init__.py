@@ -1,12 +1,33 @@
-"""LLM module - LLM base class and content types."""
+"""LLM module - LLM base class and message types."""
 
 from .llm import LLM
-from .content import Text, Image, Content, ImageType
+from .message import (
+    Message,
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    Content,
+    TextContent,
+    ImageContent,
+    ImageMimeType,
+    ToolCall,
+    ToolResult,
+    ToolResultStatus,
+)
 
 __all__ = [
     "LLM",
-    "Text",
-    "Image",
+    "Message",
+    "SystemMessage",
+    "UserMessage",
+    "AssistantMessage",
+    "ToolResultMessage",
     "Content",
-    "ImageType",
+    "TextContent",
+    "ImageContent",
+    "ImageMimeType",
+    "ToolCall",
+    "ToolResult",
+    "ToolResultStatus",
 ]
