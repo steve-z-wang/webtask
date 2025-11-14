@@ -157,7 +157,7 @@ class Verifier:
         # Main execution loop
         for step in range(max_steps):
             # Call LLM with conversation history and tools
-            assistant_msg = await self._llm.generate(
+            assistant_msg = await self._llm.call_tools(
                 messages=messages,
                 tools=self._tool_registry.get_all(),
             )

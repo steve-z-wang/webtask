@@ -22,7 +22,13 @@ class ToolResultStatus(str, Enum):
     ERROR = "error"
 
 
-class TextContent(BaseModel):
+class Content(BaseModel):
+    """Base class for message content parts."""
+
+    tag: Optional[str] = None  # Tag for processing/filtering (e.g., "observation", "dom", "screenshot")
+
+
+class TextContent(Content):
     """Text content part."""
 
     text: str
@@ -34,7 +40,7 @@ class TextContent(BaseModel):
         return f"TextContent({self.text})"
 
 
-class ImageContent(BaseModel):
+class ImageContent(Content):
     """Image content part (base64-encoded)."""
 
     data: str  # base64-encoded
@@ -83,12 +89,11 @@ class Message(BaseModel):
     """Base message with automatic timestamp."""
 
     timestamp: datetime = Field(default_factory=datetime.now)
+    content: Optional[List[Content]] = None
 
 
 class SystemMessage(Message):
     """System instruction message."""
-
-    content: List[TextContent]
 
     def __str__(self) -> str:
         texts = [part.text for part in self.content]
@@ -100,8 +105,6 @@ class SystemMessage(Message):
 
 class UserMessage(Message):
     """User message with text/images."""
-
-    content: List[Union[TextContent, ImageContent]]
 
     def __str__(self) -> str:
         text_parts = [part.text for part in self.content if isinstance(part, TextContent)]
@@ -119,7 +122,6 @@ class UserMessage(Message):
 class AssistantMessage(Message):
     """Assistant response with optional tool calls."""
 
-    content: Optional[List[Union[TextContent, ImageContent]]] = None
     tool_calls: Optional[List[ToolCall]] = None
 
     def __str__(self) -> str:
@@ -153,7 +155,6 @@ class ToolResultMessage(Message):
     """Tool execution results with observation content."""
 
     results: List[ToolResult]  # Acknowledgment for each tool call
-    content: List[Union[TextContent, ImageContent]]  # Observation after all tools execute
 
     def __str__(self) -> str:
         # Summary of results

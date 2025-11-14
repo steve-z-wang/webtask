@@ -1,13 +1,13 @@
-"""LLM module - LLM base class, message types, and content types."""
+"""LLM module - LLM base class and message types."""
 
 from .llm import LLM
-from .content import Text, Image, Content, ImageType
 from .message import (
     Message,
     SystemMessage,
     UserMessage,
     AssistantMessage,
     ToolResultMessage,
+    Content,
     TextContent,
     ImageContent,
     ImageMimeType,
@@ -17,18 +17,13 @@ from .message import (
 )
 
 __all__ = [
-    # Old interface (backward compatibility)
     "LLM",
-    "Text",
-    "Image",
-    "Content",
-    "ImageType",
-    # New message-based interface
     "Message",
     "SystemMessage",
     "UserMessage",
     "AssistantMessage",
     "ToolResultMessage",
+    "Content",
     "TextContent",
     "ImageContent",
     "ImageMimeType",

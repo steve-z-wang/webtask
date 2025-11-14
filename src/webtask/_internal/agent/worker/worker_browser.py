@@ -2,7 +2,6 @@
 
 from typing import Dict
 from webtask._internal.dom.domnode import DomNode
-from webtask._internal.llm import Block
 from ..agent_browser import AgentBrowser
 from ...page_context import PageContextBuilder
 from ...page_context.dom_context_builder import DomContextBuilder
@@ -24,33 +23,6 @@ class WorkerBrowser:
         """
         self._agent_browser = agent_browser
         self._element_map: Dict[str, DomNode] = {}
-
-    async def get_context(
-        self,
-        include_element_ids: bool = True,
-        with_bounding_boxes: bool = True,
-        full_page: bool = False,
-    ) -> Block:
-        page = self._agent_browser.get_current_page()
-        if page is None:
-            self._element_map = {}
-            return Block(
-                heading="Current Page",
-                content="ERROR: No page opened yet.\nPlease use the navigate tool to navigate to a URL.",
-            )
-
-        # Wait for page to be idle before capturing context (max 5s)
-        await page.wait_for_idle(timeout=5000)
-
-        block, element_map = await PageContextBuilder.build(
-            page=page,
-            include_element_ids=include_element_ids,
-            with_bounding_boxes=with_bounding_boxes,
-            full_page_screenshot=full_page,
-        )
-
-        self._element_map = element_map if element_map else {}
-        return block
 
     def _get_xpath(self, element_id: str):
         """Get XPath for element by ID."""

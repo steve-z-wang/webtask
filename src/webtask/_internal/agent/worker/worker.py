@@ -15,6 +15,7 @@ from webtask.llm import (
     ToolResult,
     ToolResultStatus,
 )
+from webtask._internal.llm import MessagePurger
 from webtask.agent.tool import Tool
 from ..tool import ToolRegistry
 from webtask._internal.config import Config
@@ -61,6 +62,13 @@ class Worker:
         self._tool_registry.register(TypeTool(self.worker_browser))
         self._tool_registry.register(WaitTool())
         self._tool_registry.register(ObserveTool())
+
+        # Create message purger to keep context bounded
+        self._message_purger = MessagePurger(
+            purge_tags=["observation"],
+            message_types=[ToolResultMessage, UserMessage],
+            keep_last_messages=2
+        )
         self._tool_registry.register(ThinkTool())
         self._tool_registry.register(CompleteWorkTool())
         self._tool_registry.register(AbortWorkTool())
@@ -101,9 +109,17 @@ class Worker:
         resources: Optional[Dict[str, str]] = None,
     ) -> WorkerSession:
         """Execute task from scratch."""
+        # Capture initial page state
+        dom_snapshot = await self.worker_browser.get_dom_snapshot()
+        screenshot_b64 = await self.worker_browser.get_screenshot()
+
         messages = [
             SystemMessage(content=[TextContent(text=build_worker_prompt())]),
-            UserMessage(content=[TextContent(text=f"Task: {task_description}")]),
+            UserMessage(content=[
+                TextContent(text=f"Task: {task_description}"),
+                TextContent(text=dom_snapshot, tag="observation"),
+                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
+            ]),
         ]
         return await self._run(task_description, max_steps, resources, messages)
 
@@ -140,8 +156,11 @@ class Worker:
 
         # Main execution loop
         for step in range(max_steps):
+            # Purge old observations from message history
+            messages = self._message_purger.purge(messages)
+
             # Call LLM with conversation history and tools
-            assistant_msg = await self._llm.generate(
+            assistant_msg = await self._llm.call_tools(
                 messages=messages,
                 tools=self._tool_registry.get_all(),
             )
@@ -163,8 +182,8 @@ class Worker:
 
             # Create tool result message with acknowledgments + observation content
             content = [
-                TextContent(text=dom_snapshot),
-                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG),
+                TextContent(text=dom_snapshot, tag="observation"),
+                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
             ]
 
             result_message = ToolResultMessage(

@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 from webtask.llm import LLM
-from webtask._internal.llm import TypedLLM
 from webtask.browser import Page, Session
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.natural_selector import NaturalSelector
@@ -50,9 +49,6 @@ class Agent:
         self.use_screenshot = use_screenshot
         self.logger = logging.getLogger(__name__)
 
-        self.typed_llm = TypedLLM(llm)
-        self.typed_selector_llm = TypedLLM(selector_llm or llm)
-
         # Create shared browser (used by Worker for interactions, Verifier for screenshots)
         self.agent_browser = AgentBrowser(
             session=session, use_screenshot=use_screenshot
@@ -61,6 +57,12 @@ class Agent:
         # Create roles (reused across tasks)
         self.worker = Worker(llm=llm, agent_browser=self.agent_browser)
         self.verifier = Verifier(llm=llm, agent_browser=self.agent_browser)
+
+        # Create selector for low-level imperative mode
+        self._selector = NaturalSelector(
+            llm=selector_llm or llm,
+            agent_browser=self.agent_browser
+        )
 
     async def execute(
         self,
@@ -182,8 +184,7 @@ class Agent:
             RuntimeError: If no page is opened
             ValueError: If LLM fails to find a matching element
         """
-        selector = NaturalSelector(self.typed_selector_llm, self.agent_browser)
-        return await selector.select(description)
+        return await self._selector.select(description)
 
     async def wait_for_idle(self, timeout: int = 30000):
         """

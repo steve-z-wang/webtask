@@ -12,9 +12,6 @@ from .browser import (
 
 from .llm import (
     LLM,
-    Text,
-    Content,
-    # New message-based interface
     Message,
     SystemMessage,
     UserMessage,
@@ -24,6 +21,7 @@ from .llm import (
     ImageContent,
     ToolCall,
     ToolResult,
+    ToolResultStatus,
 )
 
 from ._internal.agent.task_execution import TaskExecution, TaskResult
@@ -43,11 +41,8 @@ __all__ = [
     "Session",
     "Page",
     "Element",
-    # LLM - old interface (backward compatibility)
+    # LLM interface
     "LLM",
-    "Text",
-    "Content",
-    # LLM - new message-based interface
     "Message",
     "SystemMessage",
     "UserMessage",
@@ -57,4 +52,5 @@ __all__ = [
     "ImageContent",
     "ToolCall",
     "ToolResult",
+    "ToolResultStatus",
 ]

@@ -1,8 +1,6 @@
-"""PageContextBuilder - builds page context blocks with text and image."""
+"""PageContextBuilder - builds page context string with DOM text."""
 
 from typing import Dict, Optional, Tuple
-from webtask._internal.llm import Block
-from webtask._internal.media import Image
 from webtask.browser import Page
 from .dom_context_builder import DomContextBuilder
 
@@ -15,17 +13,14 @@ class PageContextBuilder:
         include_element_ids: bool = False,
         with_bounding_boxes: bool = False,
         full_page_screenshot: bool = False,
-    ) -> Tuple[Block, Optional[Dict]]:
-        """Build page context block with text and screenshot.
+    ) -> Tuple[str, Optional[Dict]]:
+        """Build page context string with DOM text.
 
         Returns:
-            Tuple of (Block with text+image, optional element_map if include_element_ids=True)
+            Tuple of (context_string, optional element_map if include_element_ids=True)
         """
         if page is None:
-            block = Block(
-                heading="Current Page", content="ERROR: No page is currently open."
-            )
-            return block, None
+            return "ERROR: No page is currently open.", None
 
         url = page.url
         context_str, element_map = await DomContextBuilder.build_context(
@@ -47,21 +42,4 @@ class PageContextBuilder:
         else:
             lines.append(context_str)
 
-        screenshot_bytes = await page.screenshot(full_page=full_page_screenshot)
-
-        if with_bounding_boxes and element_map:
-            from .bounding_box_renderer import BoundingBoxRenderer
-            from ..dom_processing.knowledge import is_interactive
-
-            # Filter to only interactive elements for bounding boxes
-            interactive_map = {
-                elem_id: node
-                for elem_id, node in element_map.items()
-                if is_interactive(node)
-            }
-            screenshot_bytes = await BoundingBoxRenderer.render(page, interactive_map)
-
-        image = Image(screenshot_bytes)
-        block = Block(heading="Current Page", content="\n".join(lines), image=image)
-
-        return block, element_map if include_element_ids else None
+        return "\n".join(lines), element_map if include_element_ids else None
