@@ -35,6 +35,8 @@ class WorkerSession:
     steps_used: int = 0
     end_reason: Optional[WorkerEndReason] = None
     messages: List[Message] = field(default_factory=list)
+    final_dom: Optional[str] = None  # Final DOM snapshot for Verifier
+    final_screenshot: Optional[str] = None  # Final screenshot for Verifier
 
     @property
     def summary(self) -> str:

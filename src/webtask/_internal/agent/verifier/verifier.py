@@ -17,6 +17,7 @@ from webtask.llm import (
     ToolResultStatus,
 )
 from webtask.agent.tool import Tool
+from webtask._internal.llm import MessagePurger
 from ..tool import ToolRegistry
 from webtask._internal.config import Config
 from ...prompts.verifier_prompt import build_verifier_prompt
@@ -26,6 +27,7 @@ from .verifier_session import VerifierSession, VerifierDecision
 from .tools.complete_task import CompleteTaskTool
 from .tools.abort_task import AbortTaskTool
 from .tools.request_correction import RequestCorrectionTool
+from .tools.observe import ObserveTool
 from ..worker.tools.wait import WaitTool
 from ..verifier_browser import VerifierBrowser
 
@@ -45,11 +47,19 @@ class Verifier:
         self.verifier_browser = VerifierBrowser(agent_browser)
         self._tool_registry = ToolRegistry()
 
-        # Register all tools (no dependencies needed for verifier tools)
+        # Register all tools
+        self._tool_registry.register(ObserveTool(self.verifier_browser))
+        self._tool_registry.register(WaitTool())
         self._tool_registry.register(CompleteTaskTool())
         self._tool_registry.register(RequestCorrectionTool())
         self._tool_registry.register(AbortTaskTool())
-        self._tool_registry.register(WaitTool())
+
+        # Create message purger to keep context bounded
+        self._message_purger = MessagePurger(
+            purge_tags=["observation"],
+            message_types=[ToolResultMessage, UserMessage],
+            keep_last_messages=1  # Verifier only needs most recent observation
+        )
 
     def _format_worker_actions(self, worker_session: WorkerSession) -> str:
         """Format worker actions as text for verifier context."""
@@ -146,16 +156,28 @@ class Verifier:
 
 {worker_summary}"""
 
+        # Build user content with worker summary + final observations
+        user_content = [TextContent(text=initial_text)]
+
+        # Add worker's final observations
+        if worker_session.final_dom:
+            user_content.append(TextContent(text=worker_session.final_dom, tag="observation"))
+        if worker_session.final_screenshot:
+            user_content.append(ImageContent(data=worker_session.final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
+
         # Initialize conversation
         messages: List[Message] = [
             SystemMessage(content=[TextContent(text=build_verifier_prompt())]),
-            UserMessage(content=[TextContent(text=initial_text)]),
+            UserMessage(content=user_content),
         ]
 
         decision = None
 
         # Main execution loop
         for step in range(max_steps):
+            # Purge old observations from message history
+            messages = self._message_purger.purge(messages)
+
             # Call LLM with conversation history and tools
             assistant_msg = await self._llm.call_tools(
                 messages=messages,
@@ -176,16 +198,18 @@ class Verifier:
             # Wait after all actions complete
             await wait(self.ACTION_DELAY)
 
-            # Capture page state once after all tool executions
-            dom_snapshot = await self.verifier_browser.get_dom_snapshot()
-            screenshot_b64 = await self.verifier_browser.get_screenshot()
+            # Check if observe tool was called - if so, capture fresh observations
+            observe_called = any(tc.name == "observe" for tc in assistant_msg.tool_calls)
+            content = []
+            if observe_called:
+                dom_snapshot = await self.verifier_browser.get_dom_snapshot()
+                screenshot_b64 = await self.verifier_browser.get_screenshot()
+                content = [
+                    TextContent(text=dom_snapshot, tag="observation"),
+                    ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
+                ]
 
-            # Create tool result message with acknowledgments + observation content
-            content = [
-                TextContent(text=dom_snapshot),
-                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG),
-            ]
-
+            # Create tool result message
             result_message = ToolResultMessage(
                 results=tool_results,
                 content=content,

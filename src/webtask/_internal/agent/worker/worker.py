@@ -202,9 +202,14 @@ class Worker:
                     steps_used=step + 1,
                     end_reason=end_reason,
                     messages=messages,
+                    final_dom=dom_snapshot,
+                    final_screenshot=screenshot_b64,
                 )
 
-        # Create session at the end with all messages (max_steps reached)
+        # Max steps reached - capture final state
+        final_dom = await self.worker_browser.get_dom_snapshot()
+        final_screenshot = await self.worker_browser.get_screenshot()
+
         return WorkerSession(
             task_description=task_description,
             start_time=start_time,
@@ -213,4 +218,6 @@ class Worker:
             steps_used=max_steps,
             end_reason=WorkerEndReason.MAX_STEPS,
             messages=messages,
+            final_dom=final_dom,
+            final_screenshot=final_screenshot,
         )
