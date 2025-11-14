@@ -17,6 +17,7 @@ from webtask.llm import (
 )
 from webtask._internal.llm import MessagePurger
 from webtask.agent.tool import Tool
+from webtask.llm.message import ToolCall
 from ..tool import ToolRegistry
 from webtask._internal.config import Config
 from ...prompts.worker_prompt import build_worker_prompt
@@ -37,7 +38,7 @@ from webtask._internal.agent.worker import worker_browser
 
 if TYPE_CHECKING:
     from ..agent_browser import AgentBrowser
-    from webtask.llm.llm_v2 import LLM
+    from webtask.llm.llm import LLM
 
 
 class Worker:
@@ -74,7 +75,7 @@ class Worker:
         self._tool_registry.register(AbortWorkTool())
 
     async def _execute_tool_calls(
-        self, tool_calls: List["ToolCall"]
+        self, tool_calls: List[ToolCall]
     ) -> Tuple[List[ToolResult], Optional[WorkerEndReason]]:
         """Execute all tool calls and return results.
 
@@ -107,38 +108,45 @@ class Worker:
         task_description: str,
         max_steps: int,
         resources: Optional[Dict[str, str]] = None,
+        previous_session: Optional[WorkerSession] = None,
+        verifier_feedback: Optional[str] = None,
     ) -> WorkerSession:
-        """Execute task from scratch."""
-        # Capture initial page state
-        dom_snapshot = await self.worker_browser.get_dom_snapshot()
-        screenshot_b64 = await self.worker_browser.get_screenshot()
+        """Execute task with optional continuation from previous session.
 
-        messages = [
-            SystemMessage(content=[TextContent(text=build_worker_prompt())]),
-            UserMessage(content=[
-                TextContent(text=f"Task: {task_description}"),
-                TextContent(text=dom_snapshot, tag="observation"),
-                ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
-            ]),
-        ]
-        return await self._run(task_description, max_steps, resources, messages)
+        Args:
+            task_description: Task to execute
+            max_steps: Maximum number of steps
+            resources: Optional file resources for upload
+            previous_session: Previous worker session to continue from
+            verifier_feedback: Feedback from verifier (requires previous_session)
+        """
+        if previous_session is not None:
+            # Continue from previous session with verifier feedback
+            messages = previous_session.messages.copy()
+            if verifier_feedback:
+                messages.append(UserMessage(content=[TextContent(
+                    text=f"Verifier feedback: {verifier_feedback}")]))
+            return await self._run(
+                previous_session.task_description,
+                max_steps,
+                resources=None,  # Resources already registered in first run()
+                messages=messages
+            )
+        else:
+            # Start fresh
+            # Capture initial page state
+            dom_snapshot = await self.worker_browser.get_dom_snapshot()
+            screenshot_b64 = await self.worker_browser.get_screenshot()
 
-    async def run_with_correction(
-        self,
-        previous_worker_session: WorkerSession,
-        max_steps: int,
-        verifier_feedback: str,
-    ) -> WorkerSession:
-        """Continue task after verifier correction."""
-        messages = previous_worker_session.messages.copy()
-        messages.append(UserMessage(content=[TextContent(
-            text=f"Verifier feedback: {verifier_feedback}")]))
-        return await self._run(
-            previous_worker_session.task_description,
-            max_steps,
-            resources=None,  # Resources already registered in first run()
-            messages=messages
-        )
+            messages = [
+                SystemMessage(content=[TextContent(text=build_worker_prompt())]),
+                UserMessage(content=[
+                    TextContent(text=f"Task: {task_description}"),
+                    TextContent(text=dom_snapshot, tag="observation"),
+                    ImageContent(data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="observation"),
+                ]),
+            ]
+            return await self._run(task_description, max_steps, resources, messages)
 
     async def _run(
         self,

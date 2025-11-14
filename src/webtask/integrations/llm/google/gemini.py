@@ -155,7 +155,8 @@ class GeminiLLM(LLM):
         for msg in messages:
             if isinstance(msg, SystemMessage):
                 # Extract system text (to be prepended to first user message)
-                system_text = "\n\n".join([part.text for part in msg.content])
+                if msg.content:
+                    system_text = "\n\n".join([part.text for part in msg.content])
 
             elif isinstance(msg, UserMessage):
                 # Build parts list (text and images)
@@ -166,14 +167,15 @@ class GeminiLLM(LLM):
                     parts.append(system_text)
                     system_text = None  # Only add once
 
-                for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
-                        parts.append(content_part.text)
-                    elif isinstance(content_part, ImageContent):
-                        # Convert base64 to PIL Image
-                        image_bytes = base64.b64decode(content_part.data)
-                        pil_image = PILImage.open(io.BytesIO(image_bytes))
-                        parts.append(pil_image)
+                if msg.content:
+                    for content_part in msg.content:
+                        if isinstance(content_part, TextContent):
+                            parts.append(content_part.text)
+                        elif isinstance(content_part, ImageContent):
+                            # Convert base64 to PIL Image
+                            image_bytes = base64.b64decode(content_part.data)
+                            pil_image = PILImage.open(io.BytesIO(image_bytes))
+                            parts.append(pil_image)
 
                 gemini_messages.append({"role": "user", "parts": parts})
 
@@ -229,13 +231,14 @@ class GeminiLLM(LLM):
                     parts.append(function_response)
 
                 # Add observation content (DOM + screenshot)
-                for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
-                        parts.append(content_part.text)
-                    elif isinstance(content_part, ImageContent):
-                        image_bytes = base64.b64decode(content_part.data)
-                        pil_image = PILImage.open(io.BytesIO(image_bytes))
-                        parts.append(pil_image)
+                if msg.content:
+                    for content_part in msg.content:
+                        if isinstance(content_part, TextContent):
+                            parts.append(content_part.text)
+                        elif isinstance(content_part, ImageContent):
+                            image_bytes = base64.b64decode(content_part.data)
+                            pil_image = PILImage.open(io.BytesIO(image_bytes))
+                            parts.append(pil_image)
 
                 gemini_messages.append({"role": "user", "parts": parts})
 

@@ -27,12 +27,13 @@ class TaskExecutor:
         resources: Optional[Dict[str, str]] = None,
     ) -> TaskExecution:
         """Execute task with Worker/Verifier loop and correction retry logic."""
-        
+
         start_time = datetime.now()
         correction_count = 0
         verifier_result = None
         verifier_feedback = None
 
+        # First worker attempt
         worker_session = await self._worker.run(
             task_description=task_description,
             max_steps=20,
@@ -40,36 +41,45 @@ class TaskExecutor:
         )
         sessions: List[Union["WorkerSession", "VerifierSession"]] = [worker_session]
 
+        # Track previous verifier session for context continuity
+        previous_verifier_session = None
+
         while True:
-            # Verifier checks task
+            # Verifier checks task (with previous context if available)
             verifier_session = await self._verifier.run(
                 task_description=task_description,
                 max_steps=5,
-                worker_session=worker_session,
+                worker_summary=worker_session.action_summary,
+                final_dom=worker_session.final_dom,
+                final_screenshot=worker_session.final_screenshot,
+                previous_session=previous_verifier_session,
             )
             sessions.append(verifier_session)
+            previous_verifier_session = verifier_session
 
             # Handle verifier decision
             if verifier_session.decision == VerifierDecision.COMPLETE_TASK:
                 verifier_result = TaskResult.COMPLETE
                 verifier_feedback = verifier_session.feedback
                 break
-            
+
             elif verifier_session.decision == VerifierDecision.ABORT_TASK:
                 verifier_result = TaskResult.ABORTED
                 verifier_feedback = verifier_session.feedback
                 break
-            
+
             elif verifier_session.decision == VerifierDecision.REQUEST_CORRECTION:
-                
+
                 if correction_count >= max_correction_attempts:
                     verifier_result = TaskResult.ABORTED
                     verifier_feedback = f"Exceeded {max_correction_attempts} correction attempts. Last feedback: {verifier_session.feedback}"
                     break
-                
-                worker_session = await self._worker.run_with_correction(
+
+                # Worker attempts correction with previous context
+                worker_session = await self._worker.run(
+                    task_description=task_description,
                     max_steps=20,
-                    previous_worker_session=worker_session,
+                    previous_session=worker_session,
                     verifier_feedback=verifier_session.feedback,
                 )
                 sessions.append(worker_session)

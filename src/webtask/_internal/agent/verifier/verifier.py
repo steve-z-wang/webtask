@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Text, Tuple, TYPE_CHECKING, Union
 from webtask.llm import (
+    Content, 
     Message,
     SystemMessage,
     UserMessage,
@@ -22,7 +23,6 @@ from ..tool import ToolRegistry
 from webtask._internal.config import Config
 from ...prompts.verifier_prompt import build_verifier_prompt
 from webtask._internal.utils.wait import wait
-from ..worker.worker_session import WorkerSession
 from .verifier_session import VerifierSession, VerifierDecision
 from .tools.complete_task import CompleteTaskTool
 from .tools.abort_task import AbortTaskTool
@@ -33,7 +33,7 @@ from ..verifier_browser import VerifierBrowser
 
 if TYPE_CHECKING:
     from ..agent_browser import AgentBrowser
-    from webtask.llm.llm_v2 import LLM
+    from webtask.llm.llm import LLM
 
 
 class Verifier:
@@ -60,52 +60,6 @@ class Verifier:
             message_types=[ToolResultMessage, UserMessage],
             keep_last_messages=1  # Verifier only needs most recent observation
         )
-
-    def _format_worker_actions(self, worker_session: WorkerSession) -> str:
-        """Format worker actions as text for verifier context."""
-        if not worker_session.messages:
-            return "No worker actions yet."
-
-        lines = ["Worker Actions Summary:"]
-        lines.append(f"Steps used: {worker_session.steps_used}/{worker_session.max_steps}")
-        lines.append(f"End reason: {worker_session.end_reason}")
-        lines.append("")
-
-        # Extract actions from assistant messages with their results
-        step_num = 1
-        for i, msg in enumerate(worker_session.messages):
-            if isinstance(msg, AssistantMessage) and msg.tool_calls:
-                actions = []
-
-                # Get the next message (should be ToolResultMessage)
-                tool_results = {}
-                if i + 1 < len(worker_session.messages):
-                    next_msg = worker_session.messages[i + 1]
-                    if isinstance(next_msg, ToolResultMessage):
-                        for result in next_msg.results:
-                            tool_results[result.tool_call_id] = result
-
-                # Parse tool calls - only keep actions (skip observe, think, complete_work, abort_work)
-                for tc in msg.tool_calls:
-                    if tc.name not in ["observe", "think", "complete_work", "abort_work"]:
-                        # Action tool - get description
-                        description = tc.arguments.get("description", tc.name)
-
-                        # Check if action succeeded or failed
-                        result = tool_results.get(tc.id)
-                        if result and result.status.value == "error":
-                            actions.append(f"{description} (ERROR: {result.error})")
-                        else:
-                            actions.append(description)
-
-                # Only add step if there are actions
-                if actions:
-                    lines.append(f"Step {step_num}:")
-                    for action in actions:
-                        lines.append(f"  - {action}")
-                    step_num += 1
-
-        return "\n".join(lines)
 
     async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
         """Execute all tool calls and return results."""
@@ -145,32 +99,69 @@ class Verifier:
         self,
         task_description: str,
         max_steps: int,
-        worker_session: WorkerSession,
+        worker_summary: str,
+        final_dom: Optional[str],
+        final_screenshot: Optional[str],
+        previous_session: Optional[VerifierSession] = None,
     ) -> VerifierSession:
-        """Execute verification using conversation-based LLM."""
+        """Execute verification with optional continuation from previous session.
+
+        Args:
+            task_description: Task to verify
+            max_steps: Maximum number of steps
+            worker_summary: Summary of worker actions
+            final_dom: Final DOM state after worker actions
+            final_screenshot: Final screenshot after worker actions
+            previous_session: Previous verifier session to continue from
+        """
+        if previous_session is not None:
+            # Continue from previous conversation
+            messages = previous_session.messages.copy()
+
+            # Add new worker result as user message
+            user_text = f"Worker has made corrections. Here is the updated result:\n\n{worker_summary}"
+
+            user_content: List[Content] = [TextContent(text=user_text)]
+
+            # Add worker's final observations
+            if final_dom:
+                user_content.append(TextContent(text=final_dom, tag="observation"))
+            if final_screenshot:
+                user_content.append(ImageContent(data=final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
+
+            messages.append(UserMessage(content=user_content))
+
+            return await self._run(task_description, max_steps, messages)
+        else:
+            # Start fresh
+            # Build user content with worker summary + final observations
+            initial_text = f"Task: {task_description}\n\n{worker_summary}"
+
+            # Explicit type annotation to allow both TextContent and ImageContent
+            user_content: List[Content] = [TextContent(text=initial_text)]
+
+            # Add worker's final observations
+            if final_dom:
+                user_content.append(TextContent(text=final_dom, tag="observation"))
+            if final_screenshot:
+                user_content.append(ImageContent(data=final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
+
+            # Initialize conversation
+            messages: List[Message] = [
+                SystemMessage(content=[TextContent(text=build_verifier_prompt())]),
+                UserMessage(content=user_content),
+            ]
+
+            return await self._run(task_description, max_steps, messages)
+
+    async def _run(
+        self,
+        task_description: str,
+        max_steps: int,
+        messages: List[Message],
+    ) -> VerifierSession:
+        """Shared implementation for verification."""
         start_time = datetime.now()
-
-        # Build initial user message with context
-        worker_summary = self._format_worker_actions(worker_session)
-        initial_text = f"""Task: {task_description}
-
-{worker_summary}"""
-
-        # Build user content with worker summary + final observations
-        user_content = [TextContent(text=initial_text)]
-
-        # Add worker's final observations
-        if worker_session.final_dom:
-            user_content.append(TextContent(text=worker_session.final_dom, tag="observation"))
-        if worker_session.final_screenshot:
-            user_content.append(ImageContent(data=worker_session.final_screenshot, mime_type=ImageMimeType.PNG, tag="observation"))
-
-        # Initialize conversation
-        messages: List[Message] = [
-            SystemMessage(content=[TextContent(text=build_verifier_prompt())]),
-            UserMessage(content=user_content),
-        ]
-
         decision = None
 
         # Main execution loop
@@ -219,7 +210,6 @@ class Verifier:
             # Decision was made, return immediately
             return VerifierSession(
                 task_description=task_description,
-                worker_session=worker_session,
                 decision=decision,
                 feedback=feedback,
                 start_time=start_time,

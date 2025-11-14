@@ -14,7 +14,6 @@ from webtask.llm import (
     TextContent,
     ImageContent,
 )
-from ..worker.worker_session import WorkerSession
 
 
 class VerifierDecision(str, Enum):
@@ -29,7 +28,6 @@ class VerifierSession:
     """Verifier session with conversation history."""
 
     task_description: str
-    worker_session: WorkerSession
     decision: VerifierDecision
     feedback: str
     start_time: datetime

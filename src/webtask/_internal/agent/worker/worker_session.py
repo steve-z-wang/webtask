@@ -39,6 +39,53 @@ class WorkerSession:
     final_screenshot: Optional[str] = None  # Final screenshot for Verifier
 
     @property
+    def action_summary(self) -> str:
+        """Generate concise summary of worker actions for verifier."""
+        if not self.messages:
+            return "No worker actions yet."
+
+        lines = ["Worker Actions Summary:"]
+        lines.append(f"Steps used: {self.steps_used}/{self.max_steps}")
+        lines.append(f"End reason: {self.end_reason}")
+        lines.append("")
+
+        # Extract actions from assistant messages with their results
+        step_num = 1
+        for i, msg in enumerate(self.messages):
+            if isinstance(msg, AssistantMessage) and msg.tool_calls:
+                actions = []
+
+                # Get the next message (should be ToolResultMessage)
+                tool_results = {}
+                if i + 1 < len(self.messages):
+                    next_msg = self.messages[i + 1]
+                    if isinstance(next_msg, ToolResultMessage):
+                        for result in next_msg.results:
+                            tool_results[result.tool_call_id] = result
+
+                # Parse tool calls - only keep actions (skip observe, think, complete_work, abort_work)
+                for tc in msg.tool_calls:
+                    if tc.name not in ["observe", "think", "complete_work", "abort_work"]:
+                        # Action tool - get description
+                        description = tc.arguments.get("description", tc.name)
+
+                        # Check if action succeeded or failed
+                        result = tool_results.get(tc.id)
+                        if result and result.status.value == "error":
+                            actions.append(f"{description} (ERROR: {result.error})")
+                        else:
+                            actions.append(description)
+
+                # Only add step if there are actions
+                if actions:
+                    lines.append(f"Step {step_num}:")
+                    for action in actions:
+                        lines.append(f"  - {action}")
+                    step_num += 1
+
+        return "\n".join(lines)
+
+    @property
     def summary(self) -> str:
         """Generate comprehensive summary showing all conversation details recursively."""
         lines = ["=" * 80]
