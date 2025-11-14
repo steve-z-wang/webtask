@@ -3,7 +3,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Literal, Optional
+from enum import Enum
+from typing import List, Optional
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -15,6 +16,14 @@ from webtask.llm import (
 )
 
 
+class WorkerEndReason(str, Enum):
+    """Worker execution end reason."""
+
+    COMPLETE_WORK = "complete_work"
+    ABORT_WORK = "abort_work"
+    MAX_STEPS = "max_steps"
+
+
 @dataclass
 class WorkerSession:
     """Worker session with conversation history."""
@@ -24,7 +33,7 @@ class WorkerSession:
     end_time: datetime
     max_steps: int = 20
     steps_used: int = 0
-    end_reason: Optional[Literal["complete_work", "abort_work", "max_steps"]] = None
+    end_reason: Optional[WorkerEndReason] = None
     messages: List[Message] = field(default_factory=list)
 
     @property

@@ -21,7 +21,7 @@ from webtask._internal.config import Config
 from ...prompts.worker_prompt import build_worker_prompt
 from webtask._internal.utils.wait import wait
 from .worker_browser import WorkerBrowser
-from .worker_session import WorkerSession
+from .worker_session import WorkerSession, WorkerEndReason
 from .tools.navigate import NavigateTool
 from .tools.click import ClickTool
 from .tools.fill import FillTool
@@ -67,7 +67,7 @@ class Worker:
 
     async def _execute_tool_calls(
         self, tool_calls: List["ToolCall"]
-    ) -> Tuple[List[ToolResult], Optional[str]]:
+    ) -> Tuple[List[ToolResult], Optional[WorkerEndReason]]:
         """Execute all tool calls and return results.
 
         Args:
@@ -75,7 +75,7 @@ class Worker:
 
         Returns:
             Tuple of (tool_results, end_reason)
-            - end_reason is "complete_work", "abort_work", or None if not finished
+            - end_reason is WorkerEndReason enum or None if not finished
         """
         results = []
 
@@ -88,9 +88,9 @@ class Worker:
             if tool_result.status == ToolResultStatus.SUCCESS:
                 tool = self._tool_registry.get(tool_call.name)
                 if isinstance(tool, CompleteWorkTool):
-                    return results, "complete_work"
+                    return results, WorkerEndReason.COMPLETE_WORK
                 elif isinstance(tool, AbortWorkTool):
-                    return results, "abort_work"
+                    return results, WorkerEndReason.ABORT_WORK
 
         return results, None
 
@@ -100,19 +100,43 @@ class Worker:
         max_steps: int,
         resources: Optional[Dict[str, str]] = None,
     ) -> WorkerSession:
-        """Execute task using conversation-based LLM."""
+        """Execute task from scratch."""
+        messages = [
+            SystemMessage(content=[TextContent(text=build_worker_prompt())]),
+            UserMessage(content=[TextContent(text=f"Task: {task_description}")]),
+        ]
+        return await self._run(task_description, max_steps, resources, messages)
+
+    async def run_with_correction(
+        self,
+        previous_worker_session: WorkerSession,
+        max_steps: int,
+        verifier_feedback: str,
+    ) -> WorkerSession:
+        """Continue task after verifier correction."""
+        messages = previous_worker_session.messages.copy()
+        messages.append(UserMessage(content=[TextContent(
+            text=f"Verifier feedback: {verifier_feedback}")]))
+        return await self._run(
+            previous_worker_session.task_description,
+            max_steps,
+            resources=None,  # Resources already registered in first run()
+            messages=messages
+        )
+
+    async def _run(
+        self,
+        task_description: str,
+        max_steps: int,
+        resources: Optional[Dict[str, str]],
+        messages: List[Message],
+    ) -> WorkerSession:
+        """Shared implementation for both run methods."""
         start_time = datetime.now()
 
         # Register upload tool with resources for this task
         if resources:
             self._tool_registry.register(UploadTool(self.worker_browser, resources))
-
-        # Initialize conversation with system message and initial user message
-        messages: List[Message] = [
-            SystemMessage(content=[TextContent(text=build_worker_prompt())]),
-            UserMessage(content=[TextContent(
-                text=f"Task: {task_description}")]),
-        ]
 
         # Main execution loop
         for step in range(max_steps):
@@ -168,6 +192,6 @@ class Worker:
             end_time=datetime.now(),
             max_steps=max_steps,
             steps_used=max_steps,
-            end_reason="max_steps",
+            end_reason=WorkerEndReason.MAX_STEPS,
             messages=messages,
         )
