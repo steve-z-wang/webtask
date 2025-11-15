@@ -2,7 +2,7 @@
 
 import base64
 import json
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Optional
 from pydantic import ValidationError
 from webtask.llm import LLM, SystemMessage, UserMessage, TextContent, ImageContent
 from ..prompts import build_selector_prompt
@@ -11,7 +11,7 @@ from ..context import LLMDomContext
 from .schema import SelectorResponse
 
 if TYPE_CHECKING:
-    from ..agent.agent_browser import AgentBrowser
+    from ..agent.session_browser import SessionBrowser
 
 
 class NaturalSelector:
@@ -20,19 +20,19 @@ class NaturalSelector:
     def __init__(
         self,
         llm: LLM,
-        agent_browser: "AgentBrowser",
+        session_browser: "SessionBrowser",
         max_retries: int = 3,
         include_screenshot: bool = True,
     ):
         self._llm = llm
-        self._agent_browser = agent_browser
+        self._session_browser = session_browser
         self._max_retries = max_retries
         self._include_screenshot = include_screenshot
         self._dom_context: Optional[LLMDomContext] = None
 
     async def select(self, description: str) -> Element:
         """Select element by natural language description."""
-        page = self._agent_browser.get_current_page()
+        page = self._session_browser.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
 

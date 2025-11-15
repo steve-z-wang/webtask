@@ -25,7 +25,7 @@ class Webtask:
         if self.browser is None:
             from .integrations.browser.playwright import PlaywrightBrowser
 
-            self.browser = await PlaywrightBrowser.create_browser(
+            self.browser = await PlaywrightBrowser.create(
                 headless=self.headless, browser_type=self.browser_type
             )
 

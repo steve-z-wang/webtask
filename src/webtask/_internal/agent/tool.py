@@ -40,7 +40,6 @@ class ToolRegistry:
         self, proposed_calls: List["ProposedToolCall"]
     ) -> List["ToolCall"]:
         """Validate proposed tools upfront, return ToolCall objects."""
-        from .tool_call import ToolCall
 
         tool_calls = []
         for proposed in proposed_calls:

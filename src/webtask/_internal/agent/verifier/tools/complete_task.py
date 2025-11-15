@@ -19,6 +19,11 @@ class CompleteTaskTool(Tool):
             description="What was accomplished and how requirements were met"
         )
 
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of complete_task action."""
+        return "Task completed"
+
     async def execute(self, params: Params) -> None:
         """Verification signal - no action needed."""
         pass

@@ -26,6 +26,7 @@ def filter_duplicate_names(root: AXNode) -> Optional[AXNode]:
             [button-3] "MENSWEAR"
               └─ [generic-10]
     """
+
     def has_duplicate_name(node: AXNode) -> bool:
         """Check if node's name is contained in nearest ancestor's name."""
         node_name = node.name.value if node.name and node.name.value else None
@@ -35,7 +36,9 @@ def filter_duplicate_names(root: AXNode) -> Optional[AXNode]:
         # Walk up parent chain to find nearest ancestor with a name
         current = node.parent
         while current is not None:
-            ancestor_name = current.name.value if current.name and current.name.value else None
+            ancestor_name = (
+                current.name.value if current.name and current.name.value else None
+            )
             if ancestor_name:
                 # Found nearest ancestor with name - check if child text is in parent text
                 return node_name in ancestor_name

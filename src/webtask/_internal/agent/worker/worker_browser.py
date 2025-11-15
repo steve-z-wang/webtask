@@ -2,37 +2,33 @@
 
 import asyncio
 from typing import Optional
-from ..agent_browser import AgentBrowser
+from ..session_browser import SessionBrowser
 from ...context import LLMDomContext
 
 
 class WorkerBrowser:
     """Worker-specific browser with interactive element mapping."""
 
-    def __init__(self, agent_browser: AgentBrowser, action_delay: float = 0.1):
-        self._agent_browser = agent_browser
+    def __init__(self, session_browser: SessionBrowser, action_delay: float = 0.1):
+        self._session_browser = session_browser
         self._dom_context: Optional[LLMDomContext] = None
         self._action_delay = action_delay
 
     def get_current_url(self) -> str:
         """Get current page URL."""
-        page = self._agent_browser.get_current_page()
+        page = self._session_browser.get_current_page()
         return page.url if page else "about:blank"
-    
+
     async def get_screenshot(self, full_page: bool = False) -> str:
         """Get screenshot as base64 string."""
         import base64
 
-        page = self._agent_browser.get_current_page()
-        if page is None:
-            return ""
-
-        screenshot_bytes = await page.screenshot(full_page=full_page)
+        screenshot_bytes = await self._session_browser.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
     async def get_dom_snapshot(self) -> str:
         """Get DOM snapshot with interactive elements."""
-        page = self._agent_browser.get_current_page()
+        page = self._session_browser.get_current_page()
         if page is None:
             return "ERROR: No page opened yet."
 
@@ -58,7 +54,7 @@ class WorkerBrowser:
 
     async def _select(self, interactive_id: str):
         """Select element by interactive ID."""
-        page = self._agent_browser.get_current_page()
+        page = self._session_browser.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
 
@@ -98,10 +94,10 @@ class WorkerBrowser:
 
     async def navigate(self, url: str) -> None:
         """Navigate to URL and clear context."""
-        await self._agent_browser.navigate(url)
+        await self._session_browser.navigate(url)
         self._dom_context = None
         await asyncio.sleep(self._action_delay)
 
     async def wait_for_idle(self, timeout: int = 30000) -> None:
         """Wait for page to be idle."""
-        await self._agent_browser.wait_for_idle(timeout=timeout)
+        await self._session_browser.wait_for_idle(timeout=timeout)

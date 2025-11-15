@@ -3,7 +3,7 @@
 Parses raw Chrome DevTools Protocol accessibility tree data into AXNode IR.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from ..axnode import AXNode, AXValue, AXProperty
 
 
@@ -79,9 +79,7 @@ def parse_cdp_accessibility(cdp_data: Dict[str, Any]) -> AXNode:
             name=_parse_ax_value(node_data.get("name")),
             description=_parse_ax_value(node_data.get("description")),
             value=_parse_ax_value(node_data.get("value")),
-            properties=[
-                _parse_ax_property(p) for p in node_data.get("properties", [])
-            ],
+            properties=[_parse_ax_property(p) for p in node_data.get("properties", [])],
             frame_id=node_data.get("frameId"),
         )
 
@@ -114,6 +112,8 @@ def parse_cdp_accessibility(cdp_data: Dict[str, Any]) -> AXNode:
 
     # Final fallback
     if root_node is None:
-        root_node = AXNode(node_id="root", role=AXValue(type="role", value="RootWebArea"))
+        root_node = AXNode(
+            node_id="root", role=AXValue(type="role", value="RootWebArea")
+        )
 
     return root_node

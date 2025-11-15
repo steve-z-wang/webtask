@@ -27,6 +27,7 @@ def filter_none_nodes(root: AXNode) -> AXNode:
             [button-0] "Click me"
               └─ [StaticText-0] "Click me"
     """
+
     def is_none(node: AXNode) -> bool:
         role = str(node.role.value) if node.role and node.role.value else "unknown"
         return role == "none"

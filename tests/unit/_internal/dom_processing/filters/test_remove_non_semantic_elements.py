@@ -1,10 +1,10 @@
 """Tests for _remove_non_semantic_elements filter."""
 
 import pytest
-from webtask._internal.dom_processing.filters.filter_non_semantic import (
+from webtask._internal.cdp.dom.filters.filter_non_semantic import (
     _remove_non_semantic_elements,
 )
-from webtask._internal.dom.domnode import DomNode, Text
+from webtask._internal.cdp.dom.domnode import DomNode, Text
 
 
 @pytest.mark.unit

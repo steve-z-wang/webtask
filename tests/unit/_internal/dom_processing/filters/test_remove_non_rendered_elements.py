@@ -1,10 +1,10 @@
 """Tests for not rendered filter."""
 
 import pytest
-from webtask._internal.dom_processing.filters.filter_non_rendered import (
+from webtask._internal.cdp.dom.filters.filter_non_rendered import (
     _remove_non_rendered_elements,
 )
-from webtask._internal.dom.domnode import DomNode, Text, BoundingBox
+from webtask._internal.cdp.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.mark.unit

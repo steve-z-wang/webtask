@@ -28,7 +28,11 @@ class ObserveTool(Tool):
     def Params(self):
         return ObserveParams
 
-    async def execute(self, params: ObserveParams) -> str:
-        # Observations will be captured automatically after this tool executes
-        # Just return a confirmation
-        return "Page observation captured"
+    @staticmethod
+    def describe(params: ObserveParams) -> str:
+        """Generate description of observe action."""
+        return "Captured page observation"
+
+    async def execute(self, params: ObserveParams) -> None:
+        """Observations will be captured automatically after this tool executes."""
+        pass

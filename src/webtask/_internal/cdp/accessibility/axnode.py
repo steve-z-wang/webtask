@@ -17,6 +17,7 @@ from enum import Enum
 
 class AXValueType(str, Enum):
     """Types of values in accessibility tree properties."""
+
     BOOLEAN = "boolean"
     STRING = "string"
     NUMBER = "number"
@@ -32,6 +33,7 @@ class AXValueType(str, Enum):
 @dataclass
 class AXValue:
     """Value in accessibility tree (role, name, property, etc.)."""
+
     type: str  # AXValueType
     value: Any = None
     sources: List[Dict[str, Any]] = field(default_factory=list)
@@ -49,6 +51,7 @@ class AXValue:
 @dataclass
 class AXProperty:
     """Property of an accessibility node."""
+
     name: str
     value: AXValue
 

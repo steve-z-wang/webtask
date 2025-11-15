@@ -22,6 +22,7 @@ from webtask.llm.message import (
     ImageContent,
     ToolCall,
 )
+from webtask._internal.utils.debug import LLMDebugger
 
 if TYPE_CHECKING:
     from webtask.agent.tool import Tool
@@ -55,6 +56,7 @@ class GeminiLLM(LLM):
         self.model_name = model_name
         self.temperature = temperature
         self.model = model
+        self._debugger = LLMDebugger()
 
     @classmethod
     def create(
@@ -224,8 +226,6 @@ class GeminiLLM(LLM):
                     response_data = {
                         "status": result.status.value,
                     }
-                    if result.output is not None:
-                        response_data["output"] = result.output
                     if result.error:
                         response_data["error"] = result.error
 
@@ -268,12 +268,6 @@ class GeminiLLM(LLM):
         Returns:
             AssistantMessage with tool_calls
         """
-        self.logger.debug(
-            f"Calling Gemini API - model: {self.model_name}, "
-            f"temperature: {self.temperature}, "
-            f"messages: {len(messages)}, tools: {len(tools)}"
-        )
-
         # Convert messages to Gemini format
         gemini_content = self._messages_to_gemini_content(messages)
 
@@ -300,33 +294,6 @@ class GeminiLLM(LLM):
             tool_config=tool_config,
         )
 
-        # Log token usage
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
-            self.logger.debug(
-                f"Gemini API response - "
-                f"prompt_tokens: {response.usage_metadata.prompt_token_count}, "
-                f"completion_tokens: {response.usage_metadata.candidates_token_count}, "
-                f"total_tokens: {response.usage_metadata.total_token_count}"
-            )
-
-        # Debug: Log response structure
-        self.logger.debug(
-            f"Response candidates: {len(response.candidates) if response.candidates else 0}"
-        )
-        if response.candidates and len(response.candidates) > 0:
-            candidate = response.candidates[0]
-            self.logger.debug(f"Candidate content: {candidate.content}")
-            if candidate.content and candidate.content.parts:
-                self.logger.debug(f"Parts count: {len(candidate.content.parts)}")
-                for i, part in enumerate(candidate.content.parts):
-                    self.logger.debug(f"Part {i}: {type(part).__name__}")
-                    if hasattr(part, "function_call"):
-                        self.logger.debug(f"  Has function_call: {part.function_call}")
-                    if hasattr(part, "text"):
-                        self.logger.debug(
-                            f"  Has text: {part.text[:200] if part.text else None}"
-                        )
-
         # Extract tool calls from response
         tool_calls = []
         if response.candidates and len(response.candidates) > 0:
@@ -344,9 +311,14 @@ class GeminiLLM(LLM):
                         )
 
         # Create AssistantMessage
-        return AssistantMessage(
+        assistant_msg = AssistantMessage(
             tool_calls=tool_calls if tool_calls else None,
         )
+
+        # Save debug info if enabled
+        self._debugger.save_call(messages, assistant_msg)
+
+        return assistant_msg
 
     async def generate_response(
         self,
@@ -365,12 +337,6 @@ class GeminiLLM(LLM):
         Returns:
             Instance of response_model with parsed LLM response
         """
-        self.logger.debug(
-            f"Calling Gemini API (JSON mode) - model: {self.model_name}, "
-            f"temperature: {self.temperature}, "
-            f"messages: {len(messages)}, response_model: {response_model.__name__}"
-        )
-
         # Convert messages to Gemini format
         gemini_content = self._messages_to_gemini_content(messages)
 
@@ -393,15 +359,6 @@ class GeminiLLM(LLM):
             generation_config=generation_config,
         )
 
-        # Log token usage
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
-            self.logger.debug(
-                f"Gemini API response - "
-                f"prompt_tokens: {response.usage_metadata.prompt_token_count}, "
-                f"completion_tokens: {response.usage_metadata.candidates_token_count}, "
-                f"total_tokens: {response.usage_metadata.total_token_count}"
-            )
-
         # Extract text response
         if not response.candidates or len(response.candidates) == 0:
             raise ValueError("No response candidates from Gemini")
@@ -416,7 +373,13 @@ class GeminiLLM(LLM):
         # Parse JSON and validate against response_model
         try:
             response_dict = json.loads(text_response)
-            return response_model.model_validate(response_dict)
+            result = response_model.model_validate(response_dict)
+
+            # Save debug info if enabled (wrap text response in AssistantMessage)
+            debug_response = AssistantMessage(content=[TextContent(text=text_response)])
+            self._debugger.save_call(messages, debug_response)
+
+            return result
         except (json.JSONDecodeError, ValidationError) as e:
             raise ValueError(
                 f"Failed to parse Gemini response as {response_model.__name__}: {e}"

@@ -1,7 +1,7 @@
 """Page base class for browser page management."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 from .element import Element
 
@@ -159,4 +159,3 @@ class Page(ABC):
             Current URL of the page
         """
         pass
-

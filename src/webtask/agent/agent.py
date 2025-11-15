@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from webtask.llm import LLM
 from webtask.browser import Page, Session
-from webtask._internal.agent.agent_browser import AgentBrowser
+from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
 from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
@@ -50,19 +50,19 @@ class Agent:
         self.logger = logging.getLogger(__name__)
 
         # Create shared browser (used by Worker for interactions, Verifier for screenshots)
-        self.agent_browser = AgentBrowser(
+        self.session_browser = SessionBrowser(
             session=session, use_screenshot=use_screenshot
         )
 
         # Create roles (reused across tasks)
         self.worker = Worker(
-            llm=llm, agent_browser=self.agent_browser, action_delay=action_delay
+            llm=llm, session_browser=self.session_browser, action_delay=action_delay
         )
-        self.verifier = Verifier(llm=llm, agent_browser=self.agent_browser)
+        self.verifier = Verifier(llm=llm, session_browser=self.session_browser)
 
         # Create selector for low-level imperative mode
         self._selector = NaturalSelector(
-            llm=selector_llm or llm, agent_browser=self.agent_browser
+            llm=selector_llm or llm, session_browser=self.session_browser
         )
 
     async def execute(
@@ -87,7 +87,7 @@ class Agent:
         Raises:
             RuntimeError: If no session is available
         """
-        if not self.agent_browser.get_current_page():
+        if not self.session_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
 
         # Handle backward compatibility with max_cycles
@@ -131,7 +131,7 @@ class Agent:
         Raises:
             RuntimeError: If no session is available
         """
-        return await self.agent_browser.create_page(url)
+        return await self.session_browser.create_page(url)
 
     async def close_page(self, page: Optional[Page] = None) -> None:
         """
@@ -140,11 +140,11 @@ class Agent:
         Args:
             page: Page to close (defaults to current page)
         """
-        await self.agent_browser.close_page(page)
+        await self.session_browser.close_page(page)
 
     def get_current_page(self) -> Optional[Page]:
         """Get the current active page."""
-        return self.agent_browser.get_current_page()
+        return self.session_browser.get_current_page()
 
     def get_pages(self) -> List[Page]:
         """
@@ -153,12 +153,12 @@ class Agent:
         Returns:
             List of Page instances
         """
-        return self.agent_browser.get_pages()
+        return self.session_browser.get_pages()
 
     @property
     def page_count(self) -> int:
         """Number of open pages."""
-        return self.agent_browser.page_count
+        return self.session_browser.page_count
 
     async def navigate(self, url: str):
         """
@@ -169,7 +169,7 @@ class Agent:
         Args:
             url: URL to navigate to
         """
-        await self.agent_browser.navigate(url)
+        await self.session_browser.navigate(url)
 
     async def select(self, description: str):
         """
@@ -198,7 +198,7 @@ class Agent:
             RuntimeError: If no page is opened
             TimeoutError: If page doesn't become idle within timeout
         """
-        await self.agent_browser.wait_for_idle(timeout=timeout)
+        await self.session_browser.wait_for_idle(timeout=timeout)
 
     async def wait(self, seconds: float):
         """
@@ -225,7 +225,7 @@ class Agent:
         Raises:
             RuntimeError: If no page is opened
         """
-        return await self.agent_browser.screenshot(path=path, full_page=full_page)
+        return await self.session_browser.screenshot(path=path, full_page=full_page)
 
     def set_page(self, page: Page) -> None:
         """
@@ -236,7 +236,7 @@ class Agent:
         Args:
             page: Page instance to set as current
         """
-        self.agent_browser.set_page(page)
+        self.session_browser.set_page(page)
 
     def set_session(self, session: Session) -> None:
         """
@@ -248,11 +248,11 @@ class Agent:
             session: Session instance for creating pages
         """
         self.session = session
-        self.agent_browser.set_session(session)
+        self.session_browser.set_session(session)
 
     async def close(self) -> None:
         """Close the agent and cleanup all resources."""
-        await self.agent_browser.close()
+        await self.session_browser.close()
 
         if self.session:
             await self.session.close()

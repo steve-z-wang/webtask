@@ -5,8 +5,7 @@ from ..axnode import AXNode
 
 
 def filter_by_predicate(
-    root: AXNode,
-    should_remove: Callable[[AXNode], bool]
+    root: AXNode, should_remove: Callable[[AXNode], bool]
 ) -> Optional[AXNode]:
     """
     Filter accessibility tree nodes based on a predicate function.
