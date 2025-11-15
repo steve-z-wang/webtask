@@ -109,15 +109,6 @@ class Agent:
             resources=resources,
         )
 
-        # Save debug summary if enabled
-        if Config().is_debug_enabled():
-            debug_dir = Path(Config().get_debug_dir())
-            debug_dir.mkdir(parents=True, exist_ok=True)
-            summary_path = debug_dir / "summary.txt"
-            with open(summary_path, "w") as f:
-                f.write(str(result))
-            logging.info(f"Debug summary saved to: {summary_path}")
-
         return result
 
     async def open_page(self, url: Optional[str] = None) -> Page:
