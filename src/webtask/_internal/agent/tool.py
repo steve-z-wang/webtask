@@ -29,8 +29,8 @@ class ToolRegistry:
         return self._tools[name]
 
     def get_all(self) -> List[Tool]:
-        """Get all registered tools."""
-        return list(self._tools.values())
+        """Get all enabled tools."""
+        return [tool for tool in self._tools.values() if tool.is_enabled()]
 
     def clear(self) -> None:
         """Clear all registered tools from the registry."""
