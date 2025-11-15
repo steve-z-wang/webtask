@@ -25,6 +25,7 @@ class DomNodeData:
     attrib: Dict[str, str] = field(default_factory=dict)
     styles: Dict[str, str] = field(default_factory=dict)
     bounds: Optional[BoundingBox] = None
+    backend_dom_node_id: Optional[int] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def copy(self) -> "DomNodeData":
@@ -33,6 +34,7 @@ class DomNodeData:
             attrib=self.attrib.copy(),
             styles=self.styles.copy(),
             bounds=self.bounds,
+            backend_dom_node_id=self.backend_dom_node_id,
             metadata=self.metadata.copy(),
         )
 
@@ -51,6 +53,7 @@ class DomNode:
         attrib: Dict[str, str] = None,
         styles: Dict[str, str] = None,
         bounds: Optional[BoundingBox] = None,
+        backend_dom_node_id: Optional[int] = None,
         metadata: Dict[str, Any] = None,
         data: DomNodeData = None,
     ):
@@ -62,6 +65,7 @@ class DomNode:
                 attrib=attrib or {},
                 styles=styles or {},
                 bounds=bounds,
+                backend_dom_node_id=backend_dom_node_id,
                 metadata=metadata or {},
             )
         self.children = []
@@ -90,6 +94,10 @@ class DomNode:
     @property
     def metadata(self) -> Dict[str, Any]:
         return self.data.metadata
+
+    @property
+    def backend_dom_node_id(self) -> Optional[int]:
+        return self.data.backend_dom_node_id
 
     def add_child(self, child: Union["DomNode", "Text"]):
         self.children.append(child)
@@ -121,6 +129,21 @@ class DomNode:
         """Get all text content."""
         parts = [node.content for node in self.traverse() if isinstance(node, Text)]
         return separator.join(parts)
+
+    @classmethod
+    def from_cdp(cls, cdp_data: Dict[str, Any]) -> "DomNode":
+        """
+        Create DomNode tree from CDP DOM snapshot data.
+
+        Args:
+            cdp_data: Raw data from DOMSnapshot.captureSnapshot CDP command
+
+        Returns:
+            Root DomNode of the parsed tree
+        """
+        from .parsers.cdp import parse_cdp
+
+        return parse_cdp(cdp_data)
 
     def get_x_path(self) -> "XPath":
         """Get XPath to this element."""

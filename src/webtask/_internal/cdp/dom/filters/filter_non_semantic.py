@@ -1,7 +1,7 @@
 """Filter non-semantic elements and attributes."""
 
 from typing import Optional
-from webtask._internal.dom.domnode import DomNode, Text
+from ..domnode import DomNode, Text
 from ..knowledge import has_semantic_value, is_semantic_attribute
 
 

@@ -44,15 +44,27 @@ class RecordingPage(Page):
 
         return result
 
-    async def get_cdp_snapshot(self) -> Dict[str, Any]:
-        """Get CDP snapshot."""
+    async def get_cdp_dom_snapshot(self) -> Dict[str, Any]:
+        """Get CDP DOM snapshot."""
         if self._session._browser._is_replaying:
-            return self._get_next_result("get_cdp_snapshot")
+            return self._get_next_result("get_cdp_dom_snapshot")
 
-        result = await self._page.get_cdp_snapshot()
+        result = await self._page.get_cdp_dom_snapshot()
 
         if self._session._browser._is_recording:
-            self._record_call("get_cdp_snapshot", {}, result)
+            self._record_call("get_cdp_dom_snapshot", {}, result)
+
+        return result
+
+    async def get_cdp_accessibility_tree(self) -> Dict[str, Any]:
+        """Get CDP accessibility tree."""
+        if self._session._browser._is_replaying:
+            return self._get_next_result("get_cdp_accessibility_tree")
+
+        result = await self._page.get_cdp_accessibility_tree()
+
+        if self._session._browser._is_recording:
+            self._record_call("get_cdp_accessibility_tree", {}, result)
 
         return result
 
@@ -94,7 +106,7 @@ class RecordingPage(Page):
     async def select(self, selector) -> List[Element]:
         """Select elements."""
         from .element import RecordingElement
-        from webtask._internal.dom.selector import XPath
+        from webtask._internal.cdp.dom.selector import XPath
 
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)
@@ -129,7 +141,7 @@ class RecordingPage(Page):
     async def select_one(self, selector) -> Element:
         """Select single element."""
         from .element import RecordingElement
-        from webtask._internal.dom.selector import XPath
+        from webtask._internal.cdp.dom.selector import XPath
 
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)

@@ -1,6 +1,6 @@
 """Knowledge: Determine if elements are rendered."""
 
-from webtask._internal.dom.domnode import DomNode
+from ..domnode import DomNode
 
 
 def is_not_rendered(node: DomNode) -> bool:

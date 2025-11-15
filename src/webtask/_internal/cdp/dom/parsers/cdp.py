@@ -72,6 +72,7 @@ def _create_element_nodes(
     node_types = nodes_data.get("nodeType", [])
     node_names = nodes_data.get("nodeName", [])
     attributes_arrays = nodes_data.get("attributes", [])
+    backend_node_ids = nodes_data.get("backendNodeId", [])
 
     num_nodes = len(node_types)
     nodes: List[Optional[DomNode]] = [None] * num_nodes
@@ -105,13 +106,17 @@ def _create_element_nodes(
         # Note: (None, {}) means CDP did not include this node in the render tree
         bounds, styles = layout_map.get(i, (None, {}))
 
+        # Get backend node ID from CDP
+        backend_node_id = backend_node_ids[i] if i < len(backend_node_ids) else None
+
         # Create node
         node = DomNode(
             tag=tag_name,
             attrib=node_attrs,
             styles=styles,
             bounds=bounds,
-            metadata={"backend_node_id": i, "cdp_index": i},
+            backend_dom_node_id=backend_node_id,
+            metadata={"cdp_index": i},
         )
 
         nodes[i] = node

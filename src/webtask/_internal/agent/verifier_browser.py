@@ -1,7 +1,7 @@
 """VerifierBrowser - simplified browser wrapper for verification without element interaction."""
 
 from .agent_browser import AgentBrowser
-from ..page_context.dom_context_builder import DomContextBuilder
+from ..context import LLMDomContext
 
 
 class VerifierBrowser:
@@ -34,10 +34,11 @@ class VerifierBrowser:
         # Wait for page to be idle before capturing context (max 5s)
         await page.wait_for_idle(timeout=5000)
 
-        # Build DOM context without element IDs
-        context_str, _ = await DomContextBuilder.build_context(
-            page=page, include_element_ids=False
+        # Build LLMDomContext without interactive IDs
+        dom_context = await LLMDomContext.from_page(
+            page, include_interactive_ids=False
         )
+        context_str = dom_context.get_context()
 
         # Format with URL
         url = page.url
@@ -46,7 +47,7 @@ class VerifierBrowser:
             lines.append(f"  URL: {url}")
         lines.append("")
 
-        if context_str is None:
+        if not context_str:
             lines.append("ERROR: No visible content found on this page.")
             lines.append("")
             lines.append("Possible causes:")

@@ -46,6 +46,7 @@ class Agent:
         """
         self.session = session
         self.use_screenshot = use_screenshot
+        self.action_delay = action_delay
         self.logger = logging.getLogger(__name__)
 
         # Create shared browser (used by Worker for interactions, Verifier for screenshots)
@@ -54,7 +55,9 @@ class Agent:
         )
 
         # Create roles (reused across tasks)
-        self.worker = Worker(llm=llm, agent_browser=self.agent_browser)
+        self.worker = Worker(
+            llm=llm, agent_browser=self.agent_browser, action_delay=action_delay
+        )
         self.verifier = Verifier(llm=llm, agent_browser=self.agent_browser)
 
         # Create selector for low-level imperative mode

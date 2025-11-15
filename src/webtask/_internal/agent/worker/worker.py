@@ -17,7 +17,6 @@ from webtask._internal.llm import MessagePurger
 from webtask.llm.message import ToolCall
 from ..tool import ToolRegistry
 from ...prompts.worker_prompt import build_worker_prompt
-from webtask._internal.utils.wait import wait
 from .worker_browser import WorkerBrowser
 from .worker_session import WorkerSession, WorkerEndReason
 from .tools.navigate import NavigateTool
@@ -39,16 +38,14 @@ if TYPE_CHECKING:
 class Worker:
     """Worker role - executes one subtask with conversation-based LLM."""
 
-    # Small delay after each action to prevent race conditions
-    ACTION_DELAY = 0.1
-
     def __init__(
         self,
         llm: "LLM",
         agent_browser: "AgentBrowser",
+        action_delay: float = 0.1,
     ):
         self._llm = llm
-        self.worker_browser = WorkerBrowser(agent_browser)
+        self.worker_browser = WorkerBrowser(agent_browser, action_delay=action_delay)
         self._tool_registry = ToolRegistry()
 
         # Register all tools with dependencies (except upload which needs resources)
@@ -188,9 +185,6 @@ class Worker:
             tool_results, end_reason = await self._execute_tool_calls(
                 assistant_msg.tool_calls
             )
-
-            # Wait after all actions complete
-            await wait(self.ACTION_DELAY)
 
             # Capture page state once after all tool executions
             dom_snapshot = await self.worker_browser.get_dom_snapshot()
