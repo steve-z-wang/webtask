@@ -21,7 +21,7 @@ class Browser(ABC):
 
     @classmethod
     @abstractmethod
-    async def create_browser(cls, **kwargs):
+    async def create(cls, **kwargs):
         """
         Create and launch the browser instance (async factory method).
 

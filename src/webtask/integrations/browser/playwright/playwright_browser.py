@@ -27,7 +27,7 @@ class PlaywrightBrowser(Browser):
         self._browser = browser
 
     @classmethod
-    async def create_browser(
+    async def create(
         cls, headless: bool = False, browser_type: str = "chromium"
     ) -> "PlaywrightBrowser":
         """
