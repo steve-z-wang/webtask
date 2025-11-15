@@ -90,7 +90,7 @@ Create agent with existing browser.
 from webtask.integrations.browser.playwright import PlaywrightBrowser
 
 # Create your own browser instance
-browser = await PlaywrightBrowser.create_browser(headless=False)
+browser = await PlaywrightBrowser.create(headless=False)
 
 # Create agent with it
 agent = await wt.create_agent_with_browser(llm=llm, browser=browser)

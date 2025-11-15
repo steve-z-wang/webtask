@@ -100,7 +100,7 @@ async def test_example():
         fixture_path="tests/e2e/fixtures/llm/example.json"
     )
     browser = RecordingBrowser(
-        browser=await PlaywrightBrowser.create_browser(...),
+        browser=await PlaywrightBrowser.create(...),
         fixture_path="tests/e2e/fixtures/browser/example.json"
     )
 

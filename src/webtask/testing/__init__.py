@@ -12,7 +12,7 @@ Example:
     base_llm = GeminiLLM.create(...)
     llm = RecordingLLM(llm=base_llm, fixture_path="fixtures/llm/test/")
 
-    base_browser = await PlaywrightBrowser.create_browser(...)
+    base_browser = await PlaywrightBrowser.create(...)
     browser = RecordingBrowser(browser=base_browser, fixture_path="fixtures/browser/test/")
 
     # Replay mode (WEBTASK_TEST_MODE=replay)

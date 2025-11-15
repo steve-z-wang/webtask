@@ -29,7 +29,7 @@ class Browser(ABC):
             Browser instance
 
         Example:
-            >>> browser = await PlaywrightBrowser.create_browser(headless=True)
+            >>> browser = await PlaywrightBrowser.create(headless=True)
         """
         pass
 
@@ -42,7 +42,7 @@ class Browser(ABC):
             Session instance
 
         Example:
-            >>> browser = await PlaywrightBrowser.create_browser()
+            >>> browser = await PlaywrightBrowser.create()
             >>> session = await browser.create_session()
         """
         pass
