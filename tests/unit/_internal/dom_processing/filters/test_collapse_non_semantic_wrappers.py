@@ -1,10 +1,10 @@
 """Tests for wrapper collapse filter."""
 
 import pytest
-from webtask._internal.dom_processing.filters.filter_non_semantic import (
+from webtask._internal.cdp.dom.filters.filter_non_semantic import (
     _collapse_non_semantic_wrappers,
 )
-from webtask._internal.dom.domnode import DomNode, Text
+from webtask._internal.cdp.dom.domnode import DomNode, Text
 
 
 @pytest.mark.unit

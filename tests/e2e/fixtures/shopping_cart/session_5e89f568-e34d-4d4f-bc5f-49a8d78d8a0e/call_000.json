@@ -1,9 +1,0 @@
-{
-  "class": "session",
-  "instance_id": "5e89f568-e34d-4d4f-bc5f-49a8d78d8a0e",
-  "method": "create_page",
-  "args": {},
-  "result": {
-    "page_instance_id": "5c2b2a59-2995-4a8e-8788-fdf7e2188381"
-  }
-}

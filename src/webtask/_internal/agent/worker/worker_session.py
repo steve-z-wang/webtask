@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -35,13 +35,16 @@ class WorkerSession:
     steps_used: int = 0
     end_reason: Optional[WorkerEndReason] = None
     messages: List[Message] = field(default_factory=list)
+    actions: List[Dict[str, Any]] = field(
+        default_factory=list
+    )  # Action log with descriptions
     final_dom: Optional[str] = None  # Final DOM snapshot for Verifier
     final_screenshot: Optional[str] = None  # Final screenshot for Verifier
 
     @property
     def action_summary(self) -> str:
         """Generate concise summary of worker actions for verifier."""
-        if not self.messages:
+        if not self.actions:
             return "No worker actions yet."
 
         lines = ["Worker Actions Summary:"]
@@ -49,44 +52,16 @@ class WorkerSession:
         lines.append(f"End reason: {self.end_reason}")
         lines.append("")
 
-        # Extract actions from assistant messages with their results
-        step_num = 1
-        for i, msg in enumerate(self.messages):
-            if isinstance(msg, AssistantMessage) and msg.tool_calls:
-                actions = []
+        # Show actions from action log
+        for i, action in enumerate(self.actions, 1):
+            description = action["description"]
+            status = action["status"]
 
-                # Get the next message (should be ToolResultMessage)
-                tool_results = {}
-                if i + 1 < len(self.messages):
-                    next_msg = self.messages[i + 1]
-                    if isinstance(next_msg, ToolResultMessage):
-                        for result in next_msg.results:
-                            tool_results[result.tool_call_id] = result
-
-                # Parse tool calls - only keep actions (skip observe, think, complete_work, abort_work)
-                for tc in msg.tool_calls:
-                    if tc.name not in [
-                        "observe",
-                        "think",
-                        "complete_work",
-                        "abort_work",
-                    ]:
-                        # Action tool - get description
-                        description = tc.arguments.get("description", tc.name)
-
-                        # Check if action succeeded or failed
-                        result = tool_results.get(tc.id)
-                        if result and result.status.value == "error":
-                            actions.append(f"{description} (ERROR: {result.error})")
-                        else:
-                            actions.append(description)
-
-                # Only add step if there are actions
-                if actions:
-                    lines.append(f"Step {step_num}:")
-                    for action in actions:
-                        lines.append(f"  - {action}")
-                    step_num += 1
+            if status == "error":
+                error = action.get("error", "Unknown error")
+                lines.append(f"{i}. {description} (ERROR: {error})")
+            else:
+                lines.append(f"{i}. {description}")
 
         return "\n".join(lines)
 

@@ -1,5 +1,5 @@
 """Internal LLM utilities."""
 
-from .message_purger import MessagePurger
+from .message_purger import purge_messages_content
 
-__all__ = ["MessagePurger"]
+__all__ = ["purge_messages_content"]

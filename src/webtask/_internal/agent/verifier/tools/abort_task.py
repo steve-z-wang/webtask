@@ -17,6 +17,11 @@ class AbortTaskTool(Tool):
             description="Explanation of why task cannot be completed - what went wrong, what was tried, what blocked progress"
         )
 
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of abort_task action."""
+        return "Task aborted"
+
     async def execute(self, params: Params) -> None:
         """Verification signal - no action needed."""
         pass

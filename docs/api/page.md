@@ -116,7 +116,7 @@ cdp_data = await page.get_cdp_snapshot()
 from webtask.integrations.browser.playwright import PlaywrightBrowser
 
 # Create browser and page
-browser = await PlaywrightBrowser.create_browser(headless=False)
+browser = await PlaywrightBrowser.create(headless=False)
 session = await browser.create_session()
 page = await session.create_page()
 

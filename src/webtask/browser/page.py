@@ -1,12 +1,9 @@
 """Page base class for browser page management."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 from .element import Element
-
-if TYPE_CHECKING:
-    from webtask._internal.dom.snapshot import DomSnapshot
 
 
 class Page(ABC):
@@ -31,12 +28,22 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def get_cdp_snapshot(self) -> Dict[str, Any]:
+    async def get_cdp_dom_snapshot(self) -> Dict[str, Any]:
         """
-        Get a CDP (Chrome DevTools Protocol) snapshot of the current page.
+        Get a CDP (Chrome DevTools Protocol) DOM snapshot of the current page.
 
         Returns:
-            CDP snapshot data (raw dictionary from DOMSnapshot.captureSnapshot)
+            CDP DOM snapshot data (raw dictionary from DOMSnapshot.captureSnapshot)
+        """
+        pass
+
+    @abstractmethod
+    async def get_cdp_accessibility_tree(self) -> Dict[str, Any]:
+        """
+        Get a CDP accessibility tree of the current page.
+
+        Returns:
+            CDP accessibility tree data (raw dictionary from Accessibility.getFullAXTree)
         """
         pass
 
@@ -152,15 +159,3 @@ class Page(ABC):
             Current URL of the page
         """
         pass
-
-    async def get_snapshot(self) -> "DomSnapshot":
-        """
-        Get DOM snapshot of the current page.
-
-        Returns:
-            DomSnapshot with parsed DOM tree
-        """
-        from webtask._internal.dom import DomSnapshot
-
-        cdp_snapshot = await self.get_cdp_snapshot()
-        return DomSnapshot.from_cdp(cdp_snapshot, url=self.url)

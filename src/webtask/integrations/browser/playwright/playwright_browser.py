@@ -15,7 +15,7 @@ class PlaywrightBrowser(Browser):
         self, playwright, browser: PlaywrightBrowserType, headless: bool = False
     ):
         """
-        Initialize PlaywrightBrowser (use create_browser factory instead).
+        Initialize PlaywrightBrowser (use create factory instead).
 
         Args:
             playwright: Playwright instance
@@ -27,7 +27,7 @@ class PlaywrightBrowser(Browser):
         self._browser = browser
 
     @classmethod
-    async def create_browser(
+    async def create(
         cls, headless: bool = False, browser_type: str = "chromium"
     ) -> "PlaywrightBrowser":
         """
@@ -41,7 +41,7 @@ class PlaywrightBrowser(Browser):
             PlaywrightBrowser instance
 
         Example:
-            >>> browser = await PlaywrightBrowser.create_browser(headless=True)
+            >>> browser = await PlaywrightBrowser.create(headless=True)
             >>> await browser.close()
         """
         playwright = await async_playwright().start()
@@ -69,7 +69,7 @@ class PlaywrightBrowser(Browser):
             PlaywrightSession instance
 
         Example:
-            >>> browser = await PlaywrightBrowser.create_browser()
+            >>> browser = await PlaywrightBrowser.create()
             >>> session = await browser.create_session()
             >>> page = await session.create_page()
         """

@@ -142,7 +142,7 @@ class RecordingBrowser(Browser):
         return call["result"]
 
     @classmethod
-    async def create_browser(cls, **kwargs):
+    async def create(cls, **kwargs):
         """Create browser (not used with RecordingBrowser - use __init__ directly)."""
         raise NotImplementedError("Use RecordingBrowser(...) directly instead")
 

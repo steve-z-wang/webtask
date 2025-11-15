@@ -1,7 +1,7 @@
 """Tests for CDP snapshot parser."""
 
 import pytest
-from webtask._internal.dom.parsers.cdp import (
+from webtask._internal.cdp.dom.parsers.cdp import (
     _get_string_resolver,
     _parse_layout_data,
     _create_element_nodes,
@@ -9,7 +9,7 @@ from webtask._internal.dom.parsers.cdp import (
     _build_tree,
     parse_cdp,
 )
-from webtask._internal.dom.domnode import DomNode, Text, BoundingBox
+from webtask._internal.cdp.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.mark.unit
@@ -196,7 +196,7 @@ class TestCreateElementNodes:
         nodes = _create_element_nodes(nodes_data, layout_map, resolve)
 
         assert nodes[0].metadata["cdp_index"] == 0
-        assert nodes[0].metadata["backend_node_id"] == 0
+        assert nodes[0].backend_dom_node_id is None  # No backend_node_id provided
 
 
 @pytest.mark.unit
@@ -388,4 +388,4 @@ class TestParseCdp:
         for node in root.traverse():
             if isinstance(node, DomNode):
                 assert "cdp_index" in node.metadata
-                assert "backend_node_id" in node.metadata
+                assert hasattr(node, "backend_dom_node_id")

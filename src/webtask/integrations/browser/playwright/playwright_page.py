@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
 from ...._internal.utils.url import normalize_url
-from ...._internal.dom import XPath
+from ...._internal.cdp.dom import XPath
 
 if TYPE_CHECKING:
     from .playwright_element import PlaywrightElement
@@ -46,12 +46,12 @@ class PlaywrightPage(Page):
         url = normalize_url(url)
         await self._page.goto(url)
 
-    async def get_cdp_snapshot(self) -> Dict[str, Any]:
+    async def get_cdp_dom_snapshot(self) -> Dict[str, Any]:
         """
-        Get a CDP (Chrome DevTools Protocol) snapshot of the current page.
+        Get a CDP (Chrome DevTools Protocol) DOM snapshot of the current page.
 
         Returns:
-            CDP snapshot data (raw dictionary from DOMSnapshot.captureSnapshot)
+            CDP DOM snapshot data (raw dictionary from DOMSnapshot.captureSnapshot)
         """
         # Get CDP session
         cdp = await self._page.context.new_cdp_session(self._page)
@@ -67,6 +67,21 @@ class PlaywrightPage(Page):
         )
 
         return snapshot
+
+    async def get_cdp_accessibility_tree(self) -> Dict[str, Any]:
+        """
+        Get a CDP accessibility tree of the current page.
+
+        Returns:
+            CDP accessibility tree data (raw dictionary from Accessibility.getFullAXTree)
+        """
+        # Get CDP session
+        cdp = await self._page.context.new_cdp_session(self._page)
+
+        # Get full accessibility tree
+        ax_tree = await cdp.send("Accessibility.getFullAXTree")
+
+        return ax_tree
 
     async def select(self, selector: Union[str, XPath]) -> List["PlaywrightElement"]:
         """

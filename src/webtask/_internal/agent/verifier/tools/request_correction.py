@@ -17,6 +17,11 @@ class RequestCorrectionTool(Tool):
             description="What needs to be corrected and how to fix it"
         )
 
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of request_correction action."""
+        return "Requested correction"
+
     async def execute(self, params: Params) -> None:
         """Verification signal - no action needed."""
         pass

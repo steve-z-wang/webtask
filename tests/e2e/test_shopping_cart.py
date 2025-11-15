@@ -82,7 +82,7 @@ async def test_shopping_cart_automation():
 
     # Setup Browser with recording (same fixture path!)
     base_browser = (
-        await PlaywrightBrowser.create_browser(headless=headless)
+        await PlaywrightBrowser.create(headless=headless)
         if not config.is_replaying()
         else None
     )
