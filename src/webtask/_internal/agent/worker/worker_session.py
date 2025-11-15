@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -35,35 +35,9 @@ class WorkerSession:
     steps_used: int = 0
     end_reason: Optional[WorkerEndReason] = None
     messages: List[Message] = field(default_factory=list)
-    actions: List[Dict[str, Any]] = field(
-        default_factory=list
-    )  # Action log with descriptions
-    final_dom: Optional[str] = None  # Final DOM snapshot for Verifier
-    final_screenshot: Optional[str] = None  # Final screenshot for Verifier
-
-    @property
-    def action_summary(self) -> str:
-        """Generate concise summary of worker actions for verifier."""
-        if not self.actions:
-            return "No worker actions yet."
-
-        lines = ["Worker Actions Summary:"]
-        lines.append(f"Steps used: {self.steps_used}/{self.max_steps}")
-        lines.append(f"End reason: {self.end_reason}")
-        lines.append("")
-
-        # Show actions from action log
-        for i, action in enumerate(self.actions, 1):
-            description = action["description"]
-            status = action["status"]
-
-            if status == "error":
-                error = action.get("error", "Unknown error")
-                lines.append(f"{i}. {description} (ERROR: {error})")
-            else:
-                lines.append(f"{i}. {description}")
-
-        return "\n".join(lines)
+    action_summary: str = ""
+    final_dom: Optional[str] = None
+    final_screenshot: Optional[str] = None
 
     @property
     def summary(self) -> str:

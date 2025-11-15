@@ -34,6 +34,14 @@ class Tool:
     description: str
     Params: type[BaseModel]
 
+    def is_enabled(self) -> bool:
+        """Check if tool should be available to LLM.
+
+        Returns:
+            True if tool should be shown (default), False to hide
+        """
+        return True
+
     @staticmethod
     def describe(params: BaseModel) -> str:
         """Generate human-readable description of tool action.

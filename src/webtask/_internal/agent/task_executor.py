@@ -1,30 +1,42 @@
 """TaskExecutor - orchestrates Worker/Verifier loop for a single task."""
 
 from datetime import datetime
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Dict, Optional, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .worker.worker import Worker
-    from .verifier.verifier import Verifier
     from .worker.worker_session import WorkerSession
     from .verifier.verifier_session import VerifierSession
+    from webtask.llm import LLM
+    from .session_browser import SessionBrowser
 
 from .task_execution import TaskExecution, TaskResult
 from .verifier.verifier_session import VerifierDecision
+from .worker.worker import Worker
+from .verifier.verifier import Verifier
 
 
 class TaskExecutor:
     """Executes tasks with Worker/Verifier loop and correction retry logic."""
 
-    def __init__(self, worker: "Worker", verifier: "Verifier"):
-        self._worker = worker
-        self._verifier = verifier
+    def __init__(
+        self,
+        llm: "LLM",
+        session_browser: "SessionBrowser",
+        wait_after_action: float,
+        resources: Optional[Dict[str, str]] = None,
+    ):
+        self._worker = Worker(
+            llm=llm,
+            session_browser=session_browser,
+            wait_after_action=wait_after_action,
+            resources=resources,
+        )
+        self._verifier = Verifier(llm=llm, session_browser=session_browser)
 
     async def run(
         self,
         task_description: str,
         max_correction_attempts: int = 3,
-        resources: Optional[Dict[str, str]] = None,
     ) -> TaskExecution:
         """Execute task with Worker/Verifier loop and correction retry logic."""
 
@@ -37,13 +49,9 @@ class TaskExecutor:
 
         while True:
 
-            # Worker attempt (first time or correction retry)
             worker_session = await self._worker.run(
                 task_description=task_description,
                 max_steps=20,
-                resources=(
-                    resources if not sessions else None
-                ),  # Resources only on first run
                 previous_session=worker_session,
                 verifier_feedback=(
                     verifier_session.feedback if verifier_session else None

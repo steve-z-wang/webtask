@@ -1,7 +1,7 @@
 """Worker tools - all tools available to the worker."""
 
 import asyncio
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field
 from webtask.agent.tool import Tool
 
@@ -142,10 +142,18 @@ class UploadTool(Tool):
             description="Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')"
         )
 
-    def __init__(self, worker_browser: "WorkerBrowser", resources: Dict[str, str]):
+    def __init__(
+        self,
+        worker_browser: "WorkerBrowser",
+        resources: Optional[Dict[str, str]] = None,
+    ):
         """Initialize upload tool with worker browser and resources."""
         self.worker_browser = worker_browser
         self.resources = resources
+
+    def is_enabled(self) -> bool:
+        """Only enabled if resources are provided."""
+        return self.resources is not None
 
     @staticmethod
     def describe(params: Params) -> str:
