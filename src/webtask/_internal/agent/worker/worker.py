@@ -13,7 +13,7 @@ from webtask.llm import (
     ToolResult,
     ToolResultStatus,
 )
-from webtask._internal.llm import MessagePurger
+from webtask._internal.llm import purge_messages_content
 from webtask.llm.message import ToolCall
 from ..tool import ToolRegistry
 from ...prompts.worker_prompt import build_worker_prompt
@@ -29,7 +29,6 @@ from .tools import (
     WaitTool,
     CompleteWorkTool,
     AbortWorkTool,
-    NoteThoughtTool,
 )
 
 if TYPE_CHECKING:
@@ -44,27 +43,22 @@ class Worker:
         self,
         llm: "LLM",
         session_browser: "SessionBrowser",
-        action_delay: float = 0.1,
+        wait_after_action: float,
     ):
         self._llm = llm
-        self.worker_browser = WorkerBrowser(session_browser, action_delay=action_delay)
+        self.worker_browser = WorkerBrowser(
+            session_browser, wait_after_action=wait_after_action
+        )
         self._tool_registry = ToolRegistry()
         self._logger = get_logger(__name__)
 
         # Register all tools with dependencies (except upload which needs resources)
         self._tool_registry.register(WaitTool())
-        self._tool_registry.register(NoteThoughtTool())
         self._tool_registry.register(ClickTool(self.worker_browser))
         self._tool_registry.register(FillTool(self.worker_browser))
         self._tool_registry.register(TypeTool(self.worker_browser))
         self._tool_registry.register(NavigateTool(self.worker_browser))
 
-        # Create message purger to keep context bounded
-        self._message_purger = MessagePurger(
-            purge_tags=["observation"],
-            message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=2,
-        )
         self._tool_registry.register(CompleteWorkTool())
         self._tool_registry.register(AbortWorkTool())
 
@@ -138,8 +132,21 @@ class Worker:
         """
         self._logger.info(f"Step {step + 1} - Start")
 
-        # Purge old observations from message history
-        messages = self._message_purger.purge(messages)
+        # Purge old content from message history
+        # Keep only last 1 DOM snapshot (they're large and less critical)
+        messages = purge_messages_content(
+            messages,
+            by_tags=["dom_snapshot"],
+            message_types=[ToolResultMessage, UserMessage],
+            keep_last_messages=1,
+        )
+        # Keep last 2 screenshots (more valuable for visual context)
+        messages = purge_messages_content(
+            messages,
+            by_tags=["screenshot"],
+            message_types=[ToolResultMessage, UserMessage],
+            keep_last_messages=2,
+        )
 
         # Call LLM with conversation history and tools
         self._logger.debug("Sending LLM request...")
@@ -157,6 +164,12 @@ class Worker:
         tool_names = [tc.name for tc in assistant_msg.tool_calls]
         self._logger.info(f"Received LLM response - Tools: {tool_names}")
 
+        # Log reasoning if present
+        if assistant_msg.content:
+            for content in assistant_msg.content:
+                if hasattr(content, "text") and content.text:
+                    self._logger.info(f"Reasoning: {content.text}")
+
         # Execute all tool calls and collect results
         tool_results, end_reason, step_actions = await self._execute_tool_calls(
             assistant_msg.tool_calls
@@ -169,11 +182,11 @@ class Worker:
             ToolResultMessage(
                 results=tool_results,
                 content=[
-                    TextContent(text=dom_snapshot, tag="observation"),
+                    TextContent(text=dom_snapshot, tag="dom_snapshot"),
                     ImageContent(
                         data=screenshot_b64,
                         mime_type=ImageMimeType.PNG,
-                        tag="observation",
+                        tag="screenshot",
                     ),
                 ],
             )
@@ -281,11 +294,11 @@ class Worker:
                 UserMessage(
                     content=[
                         TextContent(text=f"Task: {task_description}"),
-                        TextContent(text=dom_snapshot, tag="observation"),
+                        TextContent(text=dom_snapshot, tag="dom_snapshot"),
                         ImageContent(
                             data=screenshot_b64,
                             mime_type=ImageMimeType.PNG,
-                            tag="observation",
+                            tag="screenshot",
                         ),
                     ]
                 ),

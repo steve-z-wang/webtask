@@ -30,7 +30,7 @@ class Agent:
         self,
         llm: LLM,
         session: Optional[Session] = None,
-        action_delay: float = 1.0,
+        wait_after_action: float = 0.2,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
     ):
@@ -40,13 +40,13 @@ class Agent:
         Args:
             llm: LLM instance for reasoning (task planning, completion checking)
             session: Optional session instance (can be set later with set_session())
-            action_delay: Delay in seconds after actions (default: 1.0)
+            wait_after_action: Wait time in seconds after each action (default: 0.2)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
         """
         self.session = session
         self.use_screenshot = use_screenshot
-        self.action_delay = action_delay
+        self.wait_after_action = wait_after_action
         self.logger = logging.getLogger(__name__)
 
         # Create shared browser (used by Worker for interactions, Verifier for screenshots)
@@ -56,7 +56,9 @@ class Agent:
 
         # Create roles (reused across tasks)
         self.worker = Worker(
-            llm=llm, session_browser=self.session_browser, action_delay=action_delay
+            llm=llm,
+            session_browser=self.session_browser,
+            wait_after_action=wait_after_action,
         )
         self.verifier = Verifier(llm=llm, session_browser=self.session_browser)
 

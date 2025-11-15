@@ -193,32 +193,6 @@ class WaitTool(Tool):
         await asyncio.sleep(params.seconds)
 
 
-# Meta tools
-
-
-class NoteThoughtTool(Tool):
-    """Record observation and reasoning about next action."""
-
-    name = "note_thought"
-    description = "Note your observation of the current page and your reasoning about the next action. Format: 'I see [observation]. I will [action] because [reasoning].'"
-
-    class Params(BaseModel):
-        """Parameters for note_thought tool."""
-
-        text: str = Field(
-            description="Your observation and reasoning (format: 'I see... I will... because...')"
-        )
-
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of note_thought action."""
-        return "Noted thought"
-
-    async def execute(self, params: Params) -> None:
-        """Record thought."""
-        pass
-
-
 # Control tools
 
 

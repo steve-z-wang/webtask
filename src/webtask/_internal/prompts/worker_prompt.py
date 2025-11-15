@@ -21,36 +21,39 @@ def build_worker_prompt() -> str:
         MarkdownBuilder()
         .add_heading("Standard Operating Procedure")
         .add()
-        .add_numbered("Observe the current page and previous actions taken")
-        .add_numbered("Reason about the next actions needed to achieve the task")
+        .add("Every turn, follow these steps:")
+        .add()
         .add_numbered(
-            "Note your observation and reasoning using the **note_thought** tool"
+            "**Think out loud** - Write text explaining what you see in the screenshot and what you plan to do next"
         )
-        .add_numbered("Propose the necessary browser actions to take")
-        .add_numbered("Call complete_work when the task is done")
-        .add_numbered("Call abort_work if you cannot proceed further")
+        .add_numbered(
+            "**Execute actions** - Call the necessary browser tools (click, type, fill, navigate, wait)"
+        )
+        .add_numbered(
+            "**Wait after navigation** - Always call wait for 2-3 seconds after navigate or clicking links"
+        )
+        .add_numbered(
+            "**Complete when done** - Call complete_work when task is accomplished, or abort_work if blocked"
+        )
         .build()
     )
 
     # Example section
     example = (
         MarkdownBuilder()
-        .add_heading("Example")
-        .add("**Correct** - Multiple tools in one response:")
+        .add_heading("Example Response")
+        .add("**Correct format** - Text reasoning followed by tool calls:")
         .add("```")
-        .add(
-            "note_thought: 'I see a login form with username and password fields. I will fill in the credentials and submit.'"
-        )
-        .add("fill: username field with 'user@example.com'")
-        .add("fill: password field with 'password123'")
-        .add("click: login button")
-        .add("wait: 2 seconds  // Wait only after action that triggers page load")
+        .add("TEXT: I see a login form with username and password fields.")
+        .add("I will fill in the credentials and click submit.")
+        .add()
+        .add("TOOLS:")
+        .add("- fill: username field with 'user@example.com'")
+        .add("- fill: password field with 'password123'")
+        .add("- click: login button")
+        .add("- wait: 2 seconds")
         .add("```")
         .add()
-        .add("**Wrong** - Only one tool per response:")
-        .add("```")
-        .add("click: login button  ❌ Missing note_thought")
-        .add("```")
         .build()
     )
 
@@ -59,14 +62,14 @@ def build_worker_prompt() -> str:
         MarkdownBuilder()
         .add_heading("Q&A")
         .add()
-        .add("Do I always need to use note_thought?")
-        .add(
-            "Yes, always use note_thought first to record your observations and reasoning before proposing other actions."
-        )
-        .add()
         .add("**What if page is still loading?**")
         .add(
-            "Use wait tool (1-3 seconds), especially after navigate or clicking links."
+            "Call the wait tool (2-3 seconds) and the next round will have the updated page state."
+        )
+        .add()
+        .add("**Can I call multiple tools in one response?**")
+        .add(
+            "Yes! You should call all necessary tools together (e.g., fill multiple fields, then click, then wait)."
         )
         .add()
         .add("**What if you see a bot challenge?**")

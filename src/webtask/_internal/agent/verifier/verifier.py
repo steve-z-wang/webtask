@@ -14,7 +14,7 @@ from webtask.llm import (
     ToolCall,
     ToolResultStatus,
 )
-from webtask._internal.llm import MessagePurger
+from webtask._internal.llm import purge_messages_content
 from ..tool import ToolRegistry
 from ...prompts.verifier_prompt import build_verifier_prompt
 from ...utils.logger import get_logger
@@ -23,7 +23,6 @@ from .verifier_session import VerifierSession, VerifierDecision
 from .tools.complete_task import CompleteTaskTool
 from .tools.abort_task import AbortTaskTool
 from .tools.request_correction import RequestCorrectionTool
-from .tools.observe import ObserveTool
 from ..worker.tools import WaitTool
 from .verifier_browser import VerifierBrowser
 
@@ -45,18 +44,10 @@ class Verifier:
         self._logger = get_logger(__name__)
 
         # Register all tools
-        self._tool_registry.register(ObserveTool(self.verifier_browser))
         self._tool_registry.register(WaitTool())
         self._tool_registry.register(CompleteTaskTool())
         self._tool_registry.register(RequestCorrectionTool())
         self._tool_registry.register(AbortTaskTool())
-
-        # Create message purger to keep context bounded
-        self._message_purger = MessagePurger(
-            purge_tags=["observation"],
-            message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=1,  # Verifier only needs most recent observation
-        )
 
     async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
         """Execute all tool calls and return results."""
@@ -134,13 +125,13 @@ class Verifier:
 
             # Add worker's final observations
             if final_dom:
-                user_content.append(TextContent(text=final_dom, tag="observation"))
+                user_content.append(TextContent(text=final_dom, tag="dom_snapshot"))
             if final_screenshot:
                 user_content.append(
                     ImageContent(
                         data=final_screenshot,
                         mime_type=ImageMimeType.PNG,
-                        tag="observation",
+                        tag="screenshot",
                     )
                 )
 
@@ -150,20 +141,21 @@ class Verifier:
         else:
             # Start fresh
             # Build user content with worker summary + final observations
-            initial_text = f"Task: {task_description}\n\n{worker_summary}"
-
             # Explicit type annotation to allow both TextContent and ImageContent
-            user_content: List[Content] = [TextContent(text=initial_text)]
+            user_content: List[Content] = [
+                TextContent(text=f"Task: {task_description}"),
+                TextContent(text=worker_summary, tag="action_summary"),
+            ]
 
             # Add worker's final observations
             if final_dom:
-                user_content.append(TextContent(text=final_dom, tag="observation"))
+                user_content.append(TextContent(text=final_dom, tag="dom_snapshot"))
             if final_screenshot:
                 user_content.append(
                     ImageContent(
                         data=final_screenshot,
                         mime_type=ImageMimeType.PNG,
-                        tag="observation",
+                        tag="screenshot",
                     )
                 )
 
@@ -191,8 +183,21 @@ class Verifier:
         for step in range(max_steps):
             self._logger.info(f"Step {step + 1} - Start")
 
-            # Purge old observations from message history
-            messages = self._message_purger.purge(messages)
+            # Purge old content from message history
+            # Keep only last 1 DOM snapshot (they're large and less critical)
+            messages = purge_messages_content(
+                messages,
+                by_tags=["dom_snapshot"],
+                message_types=[ToolResultMessage, UserMessage],
+                keep_last_messages=1,
+            )
+            # Keep last 2 screenshots (more valuable for visual context)
+            messages = purge_messages_content(
+                messages,
+                by_tags=["screenshot"],
+                message_types=[ToolResultMessage, UserMessage],
+                keep_last_messages=1,
+            )
 
             # Call LLM with conversation history and tools
             self._logger.debug("Sending LLM request...")
@@ -210,6 +215,12 @@ class Verifier:
             tool_names = [tc.name for tc in assistant_msg.tool_calls]
             self._logger.info(f"Received LLM response - Tools: {tool_names}")
 
+            # Log reasoning if present
+            if assistant_msg.content:
+                for content in assistant_msg.content:
+                    if hasattr(content, "text") and content.text:
+                        self._logger.info(f"Reasoning: {content.text}")
+
             # Execute all tool calls and collect results (will raise if no decision made)
             execution_result = await self._execute_tool_calls(assistant_msg.tool_calls)
             tool_results = execution_result["results"]
@@ -219,22 +230,17 @@ class Verifier:
             # Wait after all actions complete
             await wait(self.ACTION_DELAY)
 
-            # Check if observe tool was called - if so, capture fresh observations
-            observe_called = any(
-                tc.name == "observe" for tc in assistant_msg.tool_calls
-            )
-            content = []
-            if observe_called:
-                dom_snapshot = await self.verifier_browser.get_dom_snapshot()
-                screenshot_b64 = await self.verifier_browser.get_screenshot()
-                content = [
-                    TextContent(text=dom_snapshot, tag="observation"),
-                    ImageContent(
-                        data=screenshot_b64,
-                        mime_type=ImageMimeType.PNG,
-                        tag="observation",
-                    ),
-                ]
+            # Always capture fresh observations (like worker does)
+            dom_snapshot = await self.verifier_browser.get_dom_snapshot()
+            screenshot_b64 = await self.verifier_browser.get_screenshot()
+            content = [
+                TextContent(text=dom_snapshot, tag="dom_snapshot"),
+                ImageContent(
+                    data=screenshot_b64,
+                    mime_type=ImageMimeType.PNG,
+                    tag="screenshot",
+                ),
+            ]
 
             # Create tool result message
             result_message = ToolResultMessage(

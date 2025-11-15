@@ -279,10 +279,11 @@ class GeminiLLM(LLM):
             temperature=self.temperature,
         )
 
-        # Create tool config to force function calling using protos
+        # Create tool config to allow text reasoning + function calling using protos
+        # Mode.AUTO allows the model to decide whether to output text, call functions, or both
         tool_config = protos.ToolConfig(
             function_calling_config=protos.FunctionCallingConfig(
-                mode=protos.FunctionCallingConfig.Mode.ANY,
+                mode=protos.FunctionCallingConfig.Mode.AUTO,
             )
         )
 
@@ -294,15 +295,26 @@ class GeminiLLM(LLM):
             tool_config=tool_config,
         )
 
-        # Extract tool calls from response
+        # Extract both text content (thoughts/reasoning) and tool calls from response
         tool_calls = []
+        content_parts = []
+
         if response.candidates and len(response.candidates) > 0:
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
-                for part in candidate.content.parts:
-                    # Check if part has function_call
-                    if hasattr(part, "function_call") and part.function_call:
+                self.logger.debug(
+                    f"Gemini returned {len(candidate.content.parts)} parts"
+                )
+                for i, part in enumerate(candidate.content.parts):
+                    # Extract text content (thinking/reasoning)
+                    if hasattr(part, "text") and part.text:
+                        self.logger.debug(f"Part {i}: text ({len(part.text)} chars)")
+                        content_parts.append(TextContent(text=part.text))
+
+                    # Extract function calls
+                    elif hasattr(part, "function_call") and part.function_call:
                         fc = part.function_call
+                        self.logger.debug(f"Part {i}: function_call ({fc.name})")
                         tool_calls.append(
                             ToolCall(
                                 name=fc.name,
@@ -310,9 +322,16 @@ class GeminiLLM(LLM):
                             )
                         )
 
-        # Create AssistantMessage
+        # Create AssistantMessage with both content and tool_calls
         assistant_msg = AssistantMessage(
+            content=content_parts if content_parts else None,
             tool_calls=tool_calls if tool_calls else None,
+        )
+
+        # Log what we extracted
+        self.logger.debug(
+            f"Created AssistantMessage: content={len(content_parts)} parts, "
+            f"tool_calls={len(tool_calls)} calls"
         )
 
         # Save debug info if enabled
