@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional
 from webtask.llm import LLM
 from webtask.browser import Page, Session
@@ -12,7 +11,6 @@ from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
 from webtask._internal.agent.worker.worker import Worker
 from webtask._internal.agent.verifier.verifier import Verifier
-from webtask._internal.config import Config
 
 
 class Agent:
