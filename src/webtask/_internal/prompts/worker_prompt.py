@@ -30,7 +30,7 @@ def build_worker_prompt() -> str:
             "**Execute actions** - Call the necessary browser tools (click, type, fill, navigate, wait)"
         )
         .add_numbered(
-            "**Wait after navigation** - Always call wait for 2-3 seconds after navigate or clicking links"
+            "**Wait for page updates** - Always call wait for 2-3 seconds after navigate, clicking links, upload, or form submissions to let the page update"
         )
         .add_numbered(
             "**Complete when done** - Call complete_work when task is accomplished, or abort_work if blocked"

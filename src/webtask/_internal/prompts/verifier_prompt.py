@@ -54,9 +54,9 @@ def build_verifier_prompt() -> str:
         MarkdownBuilder()
         .add_heading("Q&A")
         .add()
-        .add("**What if page is still loading?**")
+        .add("**What if the page doesn't show the expected results?**")
         .add(
-            "Call wait (1-2 seconds) and verify in the next round. Don't abort just because page is loading."
+            "Web pages take time to update. If the worker performed the action correctly but the page state doesn't reflect it yet, trust the worker and call wait (2-3 seconds) to let the page update. Don't request correction or abort just because of a loading or stale page state."
         )
         .add()
         .add("**Can I call multiple decision tools?**")
