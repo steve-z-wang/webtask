@@ -10,7 +10,7 @@ from google.generativeai import protos
 from webtask.llm import LLM
 from webtask.llm.message import Message, AssistantMessage, TextContent
 from webtask._internal.utils.debug import LLMDebugger
-from .gemini_converter import (
+from .gemini_mapper import (
     messages_to_gemini_content,
     build_tool_declarations,
     gemini_response_to_assistant_message,
@@ -64,7 +64,9 @@ class GeminiLLM(LLM):
         gemini_content = messages_to_gemini_content(messages)
         gemini_tools = build_tool_declarations(tools)
 
-        generation_config = genai.GenerationConfig(temperature=self.temperature)
+        generation_config = genai.GenerationConfig(  # type: ignore[attr-defined]
+            temperature=self.temperature
+        )
 
         tool_config = protos.ToolConfig(
             function_calling_config=protos.FunctionCallingConfig(
@@ -91,7 +93,7 @@ class GeminiLLM(LLM):
         """Generate structured JSON response."""
         gemini_content = messages_to_gemini_content(messages)
 
-        generation_config = genai.GenerationConfig(
+        generation_config = genai.GenerationConfig(  # type: ignore[attr-defined]
             temperature=self.temperature,
             response_mime_type="application/json",
         )

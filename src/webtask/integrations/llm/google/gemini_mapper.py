@@ -1,4 +1,4 @@
-"""Converters for transforming between webtask and Gemini formats."""
+"""Mappers for transforming between webtask and Gemini formats."""
 
 import base64
 import io
