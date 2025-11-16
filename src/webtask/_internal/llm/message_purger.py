@@ -10,17 +10,7 @@ def purge_messages_content(
     message_types: Optional[List[Type[Message]]] = None,
     keep_last_messages: int = 2,
 ) -> List[Message]:
-    """Purge old tagged content from message history to keep context bounded.
-
-    Args:
-        messages: List of messages to purge
-        by_tags: Content tags to purge (e.g., ["observation"])
-        message_types: Message types to purge from (e.g., [ToolResultMessage]). If None, purges from all types.
-        keep_last_messages: Number of recent messages to keep with full tagged content
-
-    Returns:
-        List of messages with old tagged content removed
-    """
+    """Purge old tagged content from message history to keep context bounded."""
     if not messages:
         return messages
 

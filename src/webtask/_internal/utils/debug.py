@@ -21,15 +21,7 @@ class LLMDebugger:
         messages: List["Message"],
         response: "Message",
     ) -> None:
-        """Save LLM call (request + response) to a single JSON file.
-
-        Args:
-            messages: Messages sent to LLM
-            response: LLM response
-
-        Files saved:
-            - {debug_dir}/llm_call_{counter}.json: Complete call with request and response
-        """
+        """Save LLM call (request + response) to a single JSON file."""
         if not Config().is_debug_enabled():
             return
 
@@ -55,14 +47,7 @@ class LLMDebugger:
 
 
 def _message_to_dict(message: "Message") -> dict:
-    """Convert message to JSON-serializable dict.
-
-    Args:
-        message: Message to convert
-
-    Returns:
-        Dictionary representation of message
-    """
+    """Convert message to JSON-serializable dict."""
     from webtask.llm import (
         AssistantMessage,
         ToolResultMessage,

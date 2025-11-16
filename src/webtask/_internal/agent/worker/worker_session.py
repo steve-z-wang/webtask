@@ -1,19 +1,10 @@
 """WorkerSession - tracks one worker.run() execution with conversation history."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
-from webtask.llm import (
-    Message,
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
-)
+from typing import Optional
 
 
 class WorkerEndReason(str, Enum):
@@ -29,13 +20,13 @@ class WorkerSession:
     """Worker session with conversation history."""
 
     task_description: str
-   
+
     start_time: datetime
     end_time: datetime
     max_steps: int = 20
     steps_used: int = 0
     summary: str = ""
-    
+
     end_reason: Optional[WorkerEndReason] = None
     final_dom: Optional[str] = None
     final_screenshot: Optional[str] = None

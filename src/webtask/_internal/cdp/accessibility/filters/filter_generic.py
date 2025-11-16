@@ -10,22 +10,6 @@ def filter_generic_nodes(root: AXNode) -> AXNode:
 
     Generic nodes are non-semantic container elements (like <div> in HTML).
     They don't provide meaningful information for LLM context.
-
-    Args:
-        root: Root AXNode to filter
-
-    Returns:
-        New filtered tree with generic nodes removed
-
-    Example:
-        Before:
-            [button-0] "Click me"
-              └─ [generic-10]
-                  └─ [StaticText-0] "Click me"
-
-        After:
-            [button-0] "Click me"
-              └─ [StaticText-0] "Click me"
     """
 
     def is_generic(node: AXNode) -> bool:
