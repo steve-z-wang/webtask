@@ -26,7 +26,7 @@ from .llm import (
 
 from ._internal.agent.task_execution import TaskExecution, TaskResult
 
-__version__ = "0.15.2"
+__version__ = "0.15.3"
 
 __all__ = [
     # Manager
