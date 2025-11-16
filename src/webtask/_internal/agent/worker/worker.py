@@ -172,20 +172,24 @@ class Worker:
         )
 
         if not assistant_msg.tool_calls:
-            raise ValueError("LLM did not return any tool calls")
+            self._logger.warning(
+                "LLM did not return any tool calls - creating empty result"
+            )
+            tool_results = []
+            descriptions = []
+        else:
+            tool_names = [tc.name for tc in assistant_msg.tool_calls]
+            self._logger.info(f"Received LLM response - Tools: {tool_names}")
 
-        tool_names = [tc.name for tc in assistant_msg.tool_calls]
-        self._logger.info(f"Received LLM response - Tools: {tool_names}")
+            if assistant_msg.content:
+                for content in assistant_msg.content:
+                    if hasattr(content, "text") and content.text:
+                        self._logger.info(f"Reasoning: {content.text}")
 
-        if assistant_msg.content:
-            for content in assistant_msg.content:
-                if hasattr(content, "text") and content.text:
-                    self._logger.info(f"Reasoning: {content.text}")
-
-        # Execute tools using registry (control tools modify end_reason wrapper directly)
-        tool_results, descriptions = await self._tool_registry.execute_tool_calls(
-            assistant_msg.tool_calls
-        )
+            # Execute tools using registry (control tools modify end_reason wrapper directly)
+            tool_results, descriptions = await self._tool_registry.execute_tool_calls(
+                assistant_msg.tool_calls
+            )
 
         # Get current page state
         dom_snapshot = await self.worker_browser.get_dom_snapshot()

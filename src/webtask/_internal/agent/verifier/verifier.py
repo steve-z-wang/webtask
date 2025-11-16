@@ -138,24 +138,30 @@ class Verifier:
             )
             messages.append(assistant_msg)
 
-            # LLM must return tool calls
+            # Handle case when LLM doesn't return tool calls
             if not assistant_msg.tool_calls:
-                raise ValueError("LLM did not return any tool calls")
+                self._logger.warning(
+                    "LLM did not return any tool calls - creating empty result"
+                )
+                tool_results = []
+                descriptions = []
+            else:
+                # Log response
+                tool_names = [tc.name for tc in assistant_msg.tool_calls]
+                self._logger.info(f"Received LLM response - Tools: {tool_names}")
 
-            # Log response
-            tool_names = [tc.name for tc in assistant_msg.tool_calls]
-            self._logger.info(f"Received LLM response - Tools: {tool_names}")
+                # Log reasoning if present
+                if assistant_msg.content:
+                    for content in assistant_msg.content:
+                        if hasattr(content, "text") and content.text:
+                            self._logger.info(f"Reasoning: {content.text}")
 
-            # Log reasoning if present
-            if assistant_msg.content:
-                for content in assistant_msg.content:
-                    if hasattr(content, "text") and content.text:
-                        self._logger.info(f"Reasoning: {content.text}")
-
-            # Execute tools using registry (control tools modify verifier_result directly)
-            tool_results, descriptions = await self._tool_registry.execute_tool_calls(
-                assistant_msg.tool_calls
-            )
+                # Execute tools using registry (control tools modify verifier_result directly)
+                tool_results, descriptions = (
+                    await self._tool_registry.execute_tool_calls(
+                        assistant_msg.tool_calls
+                    )
+                )
 
             # Accumulate descriptions
             all_descriptions.extend(descriptions)
