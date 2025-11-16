@@ -57,9 +57,9 @@ class GeminiLLM(LLM):
     @classmethod
     def create(
         cls,
-        model: str = "gemini-2.0-flash-exp",
+        model: str = "gemini-2.5-flash",
         api_key: Optional[str] = None,
-        temperature: float = 0.7,
+        temperature: float = 0.5,
     ) -> "GeminiLLM":
         """
         Create a GeminiLLM instance.
@@ -79,38 +79,13 @@ class GeminiLLM(LLM):
         """
         # Configure API key
         if api_key:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
 
         # Create model (generation config set per request)
-        gemini_model = genai.GenerativeModel(model_name=model)
+        gemini_model = genai.GenerativeModel(
+            model_name=model)  # type: ignore[attr-defined]
 
-        instance = cls(gemini_model, model, temperature)
-
-        # Warm up model with dummy call to avoid cold start on first real use
-        instance.logger.info(f"Warming up {model}...")
-        import asyncio
-        try:
-            asyncio.create_task(instance._warm_up())
-        except Exception:
-            pass  # Ignore warm-up failures
-
-        return instance
-
-    async def _warm_up(self) -> None:
-        """Make a dummy API call to warm up the model and avoid cold start."""
-        try:
-            from webtask.llm import SystemMessage, TextContent
-            dummy_messages = [
-                SystemMessage(content=[TextContent(text="Hi")])
-            ]
-            gemini_content = messages_to_gemini_content(dummy_messages)
-            await self.model.generate_content_async(
-                gemini_content,
-                generation_config=genai.GenerationConfig(temperature=0),
-            )
-            self.logger.info(f"{self.model_name} warmed up successfully")
-        except Exception as e:
-            self.logger.warning(f"Model warm-up failed: {e}")
+        return cls(gemini_model, model, temperature)
 
     async def call_tools(
         self,
@@ -170,7 +145,8 @@ class GeminiLLM(LLM):
             self.logger.info(f"Gemini API responded in {elapsed:.2f}s")
         except Exception as e:
             elapsed = time.time() - start_time
-            self.logger.error(f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
+            self.logger.error(
+                f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
             raise
 
         # Extract both text content (thoughts/reasoning) and tool calls from response
@@ -186,13 +162,15 @@ class GeminiLLM(LLM):
                 for i, part in enumerate(candidate.content.parts):
                     # Extract text content (thinking/reasoning)
                     if hasattr(part, "text") and part.text:
-                        self.logger.debug(f"Part {i}: text ({len(part.text)} chars)")
+                        self.logger.debug(
+                            f"Part {i}: text ({len(part.text)} chars)")
                         content_parts.append(TextContent(text=part.text))
 
                     # Extract function calls
                     elif hasattr(part, "function_call") and part.function_call:
                         fc = part.function_call
-                        self.logger.debug(f"Part {i}: function_call ({fc.name})")
+                        self.logger.debug(
+                            f"Part {i}: function_call ({fc.name})")
                         tool_calls.append(
                             ToolCall(
                                 name=fc.name,
@@ -263,7 +241,8 @@ class GeminiLLM(LLM):
             self.logger.info(f"Gemini API responded in {elapsed:.2f}s")
         except Exception as e:
             elapsed = time.time() - start_time
-            self.logger.error(f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
+            self.logger.error(
+                f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
             raise
 
         # Extract text response
@@ -283,7 +262,8 @@ class GeminiLLM(LLM):
             result = response_model.model_validate(response_dict)
 
             # Save debug info if enabled (wrap text response in AssistantMessage)
-            debug_response = AssistantMessage(content=[TextContent(text=text_response)])
+            debug_response = AssistantMessage(
+                content=[TextContent(text=text_response)])
             self._debugger.save_call(messages, debug_response)
 
             return result
