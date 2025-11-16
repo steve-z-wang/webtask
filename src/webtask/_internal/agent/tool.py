@@ -1,11 +1,8 @@
 """Tool registry for agent tools."""
 
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import Dict, List, Tuple
 from webtask.agent.tool import Tool
 from webtask.llm import ToolResult, ToolResultStatus
-
-if TYPE_CHECKING:
-    from .tool_call import ProposedToolCall, ToolCall
 
 
 class ToolRegistry:
@@ -34,73 +31,60 @@ class ToolRegistry:
         """Clear all registered tools from the registry."""
         self._tools.clear()
 
-    def validate_proposed_tools(
-        self, proposed_calls: List["ProposedToolCall"]
-    ) -> List["ToolCall"]:
-        """Validate proposed tools upfront, return ToolCall objects."""
-
-        tool_calls = []
-        for proposed in proposed_calls:
-            tool_call = ToolCall.from_proposed(proposed)
-            try:
-                tool = self.get(tool_call.tool)
-                # Validate by instantiating Params
-                tool.Params(**tool_call.parameters)
-            except Exception as e:
-                tool_call.mark_failure(f"Validation error: {e}")
-            tool_calls.append(tool_call)
-        return tool_calls
-
-    async def execute_tool_call(self, tool_call) -> "ToolResult":
-        """Execute a tool call and return the result."""
-        try:
-            # Get tool and validate parameters
-            tool = self.get(tool_call.name)
-            params = tool.Params(**tool_call.arguments)
-
-            # Execute tool and capture output
-            output = await tool.execute(params)
-
-            return ToolResult(
-                tool_call_id=tool_call.id,
-                name=tool_call.name,
-                status=ToolResultStatus.SUCCESS,
-                output=output,
-            )
-
-        except Exception as e:
-            return ToolResult(
-                tool_call_id=tool_call.id,
-                name=tool_call.name,
-                status=ToolResultStatus.ERROR,
-                error=str(e),
-            )
-
     async def execute_tool_calls(
         self, tool_calls: List
     ) -> Tuple[List["ToolResult"], List[str]]:
-        """Execute multiple tool calls in batch, stopping early if terminal tool succeeds."""
+        """Execute multiple tool calls in batch, stopping early if any tool fails or terminal tool succeeds."""
         results = []
         descriptions = []
 
         for tool_call in tool_calls:
-            # Get tool and generate description
-            tool = self.get(tool_call.name)
-            params = tool.Params(**tool_call.arguments)
-            description = tool.describe(params)
+            try:
+                # Get tool and validate parameters
+                tool = self.get(tool_call.name)
+                params = tool.Params(**tool_call.arguments)
 
-            # Execute tool
-            result = await self.execute_tool_call(tool_call)
-            results.append(result)
+                # Execute tool and capture output
+                await tool.execute(params)
 
-            # Add error to description if failed
-            if result.status == ToolResultStatus.ERROR:
-                descriptions.append(f"{description} (ERROR: {result.error})")
-            else:
+                # Create success result
+                result = ToolResult(
+                    tool_call_id=tool_call.id,
+                    name=tool_call.name,
+                    status=ToolResultStatus.SUCCESS,
+                )
+                results.append(result)
+                
+                description = tool.describe(params)
                 descriptions.append(description)
 
-            # If terminal tool succeeded, stop execution
-            if result.status == ToolResultStatus.SUCCESS and tool.is_terminal:
-                break
+                # If terminal tool succeeded, stop execution
+                if tool.is_terminal:
+                    break
+
+            except KeyError as e:
+                # Tool not found in registry
+                error_msg = str(e)
+                result = ToolResult(
+                    tool_call_id=tool_call.id,
+                    name=tool_call.name,
+                    status=ToolResultStatus.ERROR,
+                    error=f"Tool not found: {error_msg}",
+                )
+                results.append(result)
+                descriptions.append(f"{tool_call.name} (ERROR: Tool not found)")
+                break  # Stop on tool not found
+
+            except Exception as e:
+                # Params validation or tool execution error
+                result = ToolResult(
+                    tool_call_id=tool_call.id,
+                    name=tool_call.name,
+                    status=ToolResultStatus.ERROR,
+                    error=str(e),
+                )
+                results.append(result)
+                descriptions.append(f"{tool_call.name} (ERROR: {str(e)})")
+                break  # Stop on any error
 
         return results, descriptions
