@@ -33,7 +33,7 @@ class WorkerBrowser:
 
         # Wait for page to be fully loaded before capturing (safety check)
         await self._session_browser.wait_for_load(timeout=10000)
-        
+
         page = self._session_browser.get_current_page()
         if page is None:
             return "ERROR: No page opened yet."

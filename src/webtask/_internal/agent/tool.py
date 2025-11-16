@@ -54,7 +54,7 @@ class ToolRegistry:
                     status=ToolResultStatus.SUCCESS,
                 )
                 results.append(result)
-                
+
                 description = tool.describe(params)
                 descriptions.append(description)
 
