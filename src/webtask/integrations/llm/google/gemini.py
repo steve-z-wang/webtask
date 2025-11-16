@@ -2,23 +2,18 @@
 
 from typing import Optional, List, Type, TypeVar, TYPE_CHECKING
 import json
-import time
 from pydantic import BaseModel, ValidationError
 
 import google.generativeai as genai
 from google.generativeai import protos
 
 from webtask.llm import LLM
-from webtask.llm.message import (
-    Message,
-    AssistantMessage,
-    TextContent,
-    ToolCall,
-)
+from webtask.llm.message import Message, AssistantMessage, TextContent
 from webtask._internal.utils.debug import LLMDebugger
 from .gemini_converter import (
     messages_to_gemini_content,
     build_tool_declarations,
+    gemini_response_to_assistant_message,
 )
 
 if TYPE_CHECKING:
@@ -77,47 +72,14 @@ class GeminiLLM(LLM):
             )
         )
 
-        num_messages = len(gemini_content)
-        total_parts = sum(len(msg.get("parts", [])) for msg in gemini_content)
-        self.logger.info(
-            f"Calling Gemini API - Messages: {num_messages}, Parts: {total_parts}, Tools: {len(tools)}"
+        response = await self.model.generate_content_async(
+            gemini_content,
+            generation_config=generation_config,
+            tools=[gemini_tools],
+            tool_config=tool_config,
         )
 
-        start_time = time.time()
-        try:
-            response = await self.model.generate_content_async(
-                gemini_content,
-                generation_config=generation_config,
-                tools=[gemini_tools],
-                tool_config=tool_config,
-            )
-            self.logger.info(f"Gemini API responded in {time.time() - start_time:.2f}s")
-        except Exception as e:
-            self.logger.error(
-                f"Gemini API error after {time.time() - start_time:.2f}s: {type(e).__name__}: {e}"
-            )
-            raise
-
-        tool_calls = []
-        content_parts = []
-
-        if response.candidates and response.candidates[0].content:
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, "text") and part.text:
-                    content_parts.append(TextContent(text=part.text))
-                elif hasattr(part, "function_call") and part.function_call:
-                    tool_calls.append(
-                        ToolCall(
-                            name=part.function_call.name,
-                            arguments=dict(part.function_call.args),
-                        )
-                    )
-
-        assistant_msg = AssistantMessage(
-            content=content_parts if content_parts else None,
-            tool_calls=tool_calls if tool_calls else None,
-        )
-
+        assistant_msg = gemini_response_to_assistant_message(response)
         self._debugger.save_call(messages, assistant_msg)
         return assistant_msg
 
@@ -134,24 +96,10 @@ class GeminiLLM(LLM):
             response_mime_type="application/json",
         )
 
-        num_messages = len(gemini_content)
-        total_parts = sum(len(msg.get("parts", [])) for msg in gemini_content)
-        self.logger.info(
-            f"Calling Gemini API - Messages: {num_messages}, Parts: {total_parts}"
+        response = await self.model.generate_content_async(
+            gemini_content,
+            generation_config=generation_config,
         )
-
-        start_time = time.time()
-        try:
-            response = await self.model.generate_content_async(
-                gemini_content,
-                generation_config=generation_config,
-            )
-            self.logger.info(f"Gemini API responded in {time.time() - start_time:.2f}s")
-        except Exception as e:
-            self.logger.error(
-                f"Gemini API error after {time.time() - start_time:.2f}s: {type(e).__name__}: {e}"
-            )
-            raise
 
         if not response.candidates or not response.candidates[0].content:
             raise ValueError("No response from Gemini")
