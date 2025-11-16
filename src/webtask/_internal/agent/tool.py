@@ -1,6 +1,6 @@
 """Tool registry for agent tools."""
 
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, Tuple, TYPE_CHECKING
 from webtask.agent.tool import Tool
 from webtask.llm import ToolResult, ToolResultStatus
 
@@ -15,11 +15,9 @@ class ToolRegistry:
         self._tools: Dict[str, Tool] = {}
 
     def register(self, tool: Tool) -> None:
-        """Register a tool in the registry."""
+        """Register a tool in the registry. Replaces existing tool if name already exists."""
         if not hasattr(tool, "name"):
             raise ValueError("Tool must have 'name' attribute")
-        if tool.name in self._tools:
-            raise ValueError(f"Tool '{tool.name}' is already registered")
         self._tools[tool.name] = tool
 
     def get(self, name: str) -> Tool:
@@ -54,14 +52,7 @@ class ToolRegistry:
         return tool_calls
 
     async def execute_tool_call(self, tool_call) -> "ToolResult":
-        """Execute a tool call and return the result.
-
-        Args:
-            tool_call: ToolCall from LLM (with name, arguments, id fields)
-
-        Returns:
-            ToolResult with success or error status
-        """
+        """Execute a tool call and return the result."""
         try:
             # Get tool and validate parameters
             tool = self.get(tool_call.name)
@@ -84,3 +75,32 @@ class ToolRegistry:
                 status=ToolResultStatus.ERROR,
                 error=str(e),
             )
+
+    async def execute_tool_calls(
+        self, tool_calls: List
+    ) -> Tuple[List["ToolResult"], List[str]]:
+        """Execute multiple tool calls in batch, stopping early if terminal tool succeeds."""
+        results = []
+        descriptions = []
+
+        for tool_call in tool_calls:
+            # Get tool and generate description
+            tool = self.get(tool_call.name)
+            params = tool.Params(**tool_call.arguments)
+            description = tool.describe(params)
+
+            # Execute tool
+            result = await self.execute_tool_call(tool_call)
+            results.append(result)
+
+            # Add error to description if failed
+            if result.status == ToolResultStatus.ERROR:
+                descriptions.append(f"{description} (ERROR: {result.error})")
+            else:
+                descriptions.append(description)
+
+            # If terminal tool succeeded, stop execution
+            if result.status == ToolResultStatus.SUCCESS and tool.is_terminal:
+                break
+
+        return results, descriptions

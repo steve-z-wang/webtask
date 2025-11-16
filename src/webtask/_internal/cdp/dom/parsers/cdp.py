@@ -207,12 +207,6 @@ def _build_tree(
 def parse_cdp(snapshot_data: Dict[str, Any]) -> DomNode:
     """
     Parse CDP snapshot into DomNode tree.
-
-    Args:
-        snapshot_data: CDP snapshot data with documents, strings, and layout info
-
-    Returns:
-        Root DomNode of the parsed tree
     """
     documents_data = snapshot_data.get("documents", [])
     strings = snapshot_data.get("strings", [])

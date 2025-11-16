@@ -40,35 +40,23 @@ class Config:
     def is_debug_enabled(self) -> bool:
         """
         Check if debug mode is enabled.
-
-        Returns:
-            True if WEBTASK_DEBUG is set to a truthy value
         """
         return self._debug
 
     def get_debug_dir(self) -> str:
         """
         Get the debug output directory.
-
-        Returns:
-            Path to debug directory (default: "debug")
         """
         return self._debug_dir
 
     def is_recording(self) -> bool:
         """
         Check if test recording mode is enabled.
-
-        Returns:
-            True if WEBTASK_TEST_MODE is set to "record"
         """
         return self._test_mode == "record"
 
     def is_replaying(self) -> bool:
         """
         Check if test replay mode is enabled.
-
-        Returns:
-            True if WEBTASK_TEST_MODE is set to "replay"
         """
         return self._test_mode == "replay"

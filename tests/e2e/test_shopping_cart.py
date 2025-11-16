@@ -108,7 +108,6 @@ async def test_shopping_cart_automation():
         # Execute the shopping cart task
         result = await agent.execute(
             "add 2 Flat-Head Wood Screws and 5 cross-head screws to the cart, and proceed to the cart",
-            max_cycles=10,
         )
 
         # Verify task completed successfully

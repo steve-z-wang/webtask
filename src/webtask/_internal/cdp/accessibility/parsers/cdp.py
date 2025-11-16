@@ -30,28 +30,6 @@ def _parse_ax_property(prop_data: Dict[str, Any]) -> AXProperty:
 def parse_cdp_accessibility(cdp_data: Dict[str, Any]) -> AXNode:
     """
     Parse CDP accessibility tree into AXNode tree.
-
-    Args:
-        cdp_data: Raw data from Accessibility.getFullAXTree CDP command
-
-    Returns:
-        Root AXNode of the parsed tree
-
-    The CDP data structure:
-    {
-      "nodes": [
-        {
-          "nodeId": "1",
-          "ignored": false,
-          "role": {"type": "role", "value": "button"},
-          "name": {"type": "computedString", "value": "Submit"},
-          "properties": [{"name": "focusable", "value": {"type": "boolean", "value": true}}],
-          "childIds": ["2", "3"],
-          "backendDOMNodeId": 123
-        },
-        ...
-      ]
-    }
     """
     nodes_data = cdp_data.get("nodes", [])
 

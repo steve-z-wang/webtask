@@ -33,6 +33,31 @@ class TaskExecutor:
         )
         self._verifier = Verifier(llm=llm, session_browser=session_browser)
 
+    def _build_previous_history(
+        self, sessions: List[Union["WorkerSession", "VerifierSession"]]
+    ) -> Optional[str]:
+        """Build previous history summary from all sessions except the last."""
+        if len(sessions) <= 1:
+            return None
+
+        lines = []
+        for session in sessions[:-1]:  # Exclude last session
+            # Import here to avoid circular dependency
+            from .worker.worker_session import WorkerSession
+            from .verifier.verifier_session import VerifierSession
+
+            if isinstance(session, WorkerSession):
+                lines.append("Worker attempt:")
+                lines.append(session.summary)
+            elif isinstance(session, VerifierSession):
+                lines.append(f"Verifier decision: {session.decision.value}")
+                if session.feedback:
+                    lines.append(f"Feedback: {session.feedback}")
+                lines.append(f"Actions: {session.summary}")
+            lines.append("")  # Blank line between sessions
+
+        return "\n".join(lines)
+
     async def run(
         self,
         task_description: str,
@@ -52,7 +77,7 @@ class TaskExecutor:
             worker_session = await self._worker.run(
                 task_description=task_description,
                 max_steps=20,
-                previous_session=worker_session,
+                previous_history=self._build_previous_history(sessions),
                 verifier_feedback=(
                     verifier_session.feedback if verifier_session else None
                 ),
@@ -63,10 +88,10 @@ class TaskExecutor:
             verifier_session = await self._verifier.run(
                 task_description=task_description,
                 max_steps=5,
-                worker_summary=worker_session.action_summary,
+                worker_actions=worker_session.summary,
                 final_dom=worker_session.final_dom,
                 final_screenshot=worker_session.final_screenshot,
-                previous_session=verifier_session,
+                previous_history=self._build_previous_history(sessions),
             )
             sessions.append(verifier_session)
 

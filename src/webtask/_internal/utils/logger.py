@@ -44,19 +44,6 @@ def _configure_logging():
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger instance.
-
-    Args:
-        name: Logger name (typically __name__)
-
-    Returns:
-        Configured logger instance
-
-    Usage:
-        from webtask._internal.utils.logger import get_logger
-
-        logger = get_logger(__name__)
-        logger.info("Info message")
-        logger.debug("Debug message")
     """
     # Configure root logger once
     _configure_logging()

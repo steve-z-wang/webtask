@@ -33,6 +33,7 @@ class Tool:
     name: str
     description: str
     Params: type[BaseModel]
+    is_terminal: bool = False  # True for control tools that end execution
 
     def is_enabled(self) -> bool:
         """Check if tool should be available to LLM.

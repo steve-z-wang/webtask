@@ -134,12 +134,6 @@ class DomNode:
     def from_cdp(cls, cdp_data: Dict[str, Any]) -> "DomNode":
         """
         Create DomNode tree from CDP DOM snapshot data.
-
-        Args:
-            cdp_data: Raw data from DOMSnapshot.captureSnapshot CDP command
-
-        Returns:
-            Root DomNode of the parsed tree
         """
         from .parsers.cdp import parse_cdp
 

@@ -17,20 +17,6 @@ def filter_by_predicate(
        - One child → promote that child
        - Multiple children → keep wrapper (return node with children)
     3. If current node doesn't match → keep with filtered children
-
-    Args:
-        root: Root AXNode to filter
-        should_remove: Predicate function returning True if node should be removed
-
-    Returns:
-        Filtered tree or None if root should be deleted
-
-    Example:
-        # Remove all generic nodes
-        filter_by_predicate(root, lambda n: n.role.value == "generic")
-
-        # Remove all ignored nodes
-        filter_by_predicate(root, lambda n: n.ignored)
     """
     # Bottom-up: recursively filter ALL children first
     filtered_children = []

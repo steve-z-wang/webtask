@@ -8,23 +8,6 @@ from .filter_by_predicate import filter_by_predicate
 def filter_duplicate_names(root: AXNode) -> Optional[AXNode]:
     """
     Filter accessibility tree to remove nodes whose name duplicates an ancestor's name.
-
-    Args:
-        root: Root AXNode to filter
-
-    Returns:
-        New filtered tree with duplicate name nodes removed
-
-    Example:
-        Before:
-            [button-3] "MENSWEAR"
-              └─ [generic-10] (no name)
-                  └─ [StaticText-2] "MENSWEAR"
-                      └─ [InlineTextBox-2] "MENSWEAR"
-
-        After:
-            [button-3] "MENSWEAR"
-              └─ [generic-10]
     """
 
     def has_duplicate_name(node: AXNode) -> bool:
