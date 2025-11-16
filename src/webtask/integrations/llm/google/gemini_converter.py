@@ -179,22 +179,24 @@ def build_tool_declarations(tools: List["Tool"]) -> types.Tool:
     return types.Tool(function_declarations=function_declarations)
 
 
-def tool_calls_from_gemini_response(candidate) -> List[ToolCall]:
-    """Extract tool calls from Gemini response candidate."""
+def gemini_response_to_assistant_message(response) -> "AssistantMessage":
+    """Convert Gemini response to AssistantMessage."""
     tool_calls = []
+    content_parts = []
 
-    if candidate.content and candidate.content.parts:
-        for part in candidate.content.parts:
-            # Check if this part contains a function call
-            if part.function_call:
-                fc = part.function_call
-                # Convert Gemini function call to our ToolCall format
+    if response.candidates and response.candidates[0].content:
+        for part in response.candidates[0].content.parts:
+            if hasattr(part, "text") and part.text:
+                content_parts.append(TextContent(text=part.text))
+            elif hasattr(part, "function_call") and part.function_call:
                 tool_calls.append(
                     ToolCall(
-                        id=fc.name,  # Gemini doesn't provide IDs, use name
-                        name=fc.name,
-                        arguments=dict(fc.args),
+                        name=part.function_call.name,
+                        arguments=dict(part.function_call.args),
                     )
                 )
 
-    return tool_calls
+    return AssistantMessage(
+        content=content_parts if content_parts else None,
+        tool_calls=tool_calls if tool_calls else None,
+    )
