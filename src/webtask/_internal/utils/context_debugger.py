@@ -1,4 +1,4 @@
-"""Debug utilities for saving LLM calls to disk."""
+"""LLM context debugger for saving LLM calls to disk."""
 
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from webtask.llm import Message
 
 
-class LLMDebugger:
+class LLMContextDebugger:
     """Saves LLM calls (request + response) to disk with internal counter."""
 
     def __init__(self):
