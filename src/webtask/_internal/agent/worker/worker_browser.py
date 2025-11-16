@@ -1,9 +1,9 @@
 """WorkerBrowser - browser interface for Worker with LLMDomContext."""
 
-import asyncio
 from typing import Optional
 from ..session_browser import SessionBrowser
 from ...context import LLMDomContext
+from ...utils.wait import wait
 
 
 class WorkerBrowser:
@@ -72,31 +72,31 @@ class WorkerBrowser:
         """Click element by interactive ID."""
         element = await self._select(interactive_id)
         await element.click()
-        await asyncio.sleep(self._wait_after_action)
+        await wait(self._wait_after_action)
 
     async def fill(self, interactive_id: str, value: str) -> None:
         """Fill element by interactive ID."""
         element = await self._select(interactive_id)
         await element.fill(value)
-        await asyncio.sleep(self._wait_after_action)
+        await wait(self._wait_after_action)
 
     async def type(self, interactive_id: str, text: str) -> None:
         """Type into element by interactive ID."""
         element = await self._select(interactive_id)
         await element.type(text)
-        await asyncio.sleep(self._wait_after_action)
+        await wait(self._wait_after_action)
 
     async def upload(self, interactive_id: str, file_path: str) -> None:
         """Upload file to element by interactive ID."""
         element = await self._select(interactive_id)
         await element.upload_file(file_path)
-        await asyncio.sleep(self._wait_after_action)
+        await wait(self._wait_after_action)
 
     async def navigate(self, url: str) -> None:
         """Navigate to URL and clear context."""
         await self._session_browser.navigate(url)
         self._dom_context = None
-        await asyncio.sleep(self._wait_after_action)
+        await wait(self._wait_after_action)
 
     async def wait_for_idle(self, timeout: int = 30000) -> None:
         """Wait for page to be idle."""
