@@ -81,6 +81,15 @@ class GeminiLLM(LLM):
             tool_config=tool_config,
         )
 
+        # Log token usage
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            self.logger.info(
+                f"Token usage - Prompt: {usage.prompt_token_count}, "
+                f"Response: {usage.candidates_token_count}, "
+                f"Total: {usage.total_token_count}"
+            )
+
         assistant_msg = gemini_response_to_assistant_message(response)
         self._debugger.save_call(messages, assistant_msg)
         return assistant_msg
@@ -110,6 +119,15 @@ class GeminiLLM(LLM):
             gemini_content,
             generation_config=generation_config,
         )
+
+        # Log token usage
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            self.logger.info(
+                f"Token usage - Prompt: {usage.prompt_token_count}, "
+                f"Response: {usage.candidates_token_count}, "
+                f"Total: {usage.total_token_count}"
+            )
 
         if not response.candidates or not response.candidates[0].content:
             raise ValueError("No response from Gemini")
