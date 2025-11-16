@@ -61,6 +61,7 @@ class Agent:
         task_description: str,
         max_correction_attempts: int = 3,
         resources: Optional[Dict[str, str]] = None,
+        wait_after_action: Optional[float] = None,
     ) -> TaskExecution:
         """
         Execute a task autonomously using Worker/Verifier loop.
@@ -69,6 +70,7 @@ class Agent:
             task_description: Task description in natural language
             max_correction_attempts: Maximum correction retry attempts (default: 3)
             resources: Optional dict of file resources (name -> path)
+            wait_after_action: Wait time in seconds after each action (overrides agent default if provided)
 
         Returns:
             TaskExecution object with execution history and final result
@@ -79,10 +81,17 @@ class Agent:
         if not self.session_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
 
+        # Use task-level wait_after_action if provided, otherwise use agent default
+        effective_wait = (
+            wait_after_action
+            if wait_after_action is not None
+            else self.wait_after_action
+        )
+
         task_executor = TaskExecutor(
             llm=self.llm,
             session_browser=self.session_browser,
-            wait_after_action=self.wait_after_action,
+            wait_after_action=effective_wait,
             resources=resources,
         )
 
