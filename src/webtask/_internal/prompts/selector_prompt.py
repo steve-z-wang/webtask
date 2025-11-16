@@ -33,18 +33,21 @@ def build_selector_prompt() -> str:
     response_format = (
         MarkdownBuilder()
         .add_heading("Response Format")
-        .add("Respond with JSON containing:")
-        .add_bullet(
-            "interactive_id: The ID of the matching element (e.g., 'button-0', 'input-1')"
-        )
-        .add_bullet("reasoning: Your reasoning for why this element matches")
-        .add_bullet(
-            "error: Error message if no matching element found (leave empty if match found)"
-        )
+        .add("You MUST respond with valid JSON in this exact format:")
         .add()
-        .add(
-            'Example: {"interactive_id": "button-2", "reasoning": "This button has text Submit which matches the description", "error": ""}'
-        )
+        .add("```json")
+        .add("{")
+        .add('  "interactive_id": "string or null",  // The ID of the matching element (e.g., "button-0", "input-1") or null if no match')
+        .add('  "reasoning": "string or null",       // Your reasoning for the selection or why no match was found')
+        .add('  "error": "string or null"            // Error message if no match found, null if match found')
+        .add("}")
+        .add("```")
+        .add()
+        .add("Example success response:")
+        .add('{"interactive_id": "button-2", "reasoning": "This button has text Submit which matches the description", "error": null}')
+        .add()
+        .add("Example failure response:")
+        .add('{"interactive_id": null, "reasoning": "No element found matching the description", "error": "No matching element found"}')
     )
 
     # Combine all sections
