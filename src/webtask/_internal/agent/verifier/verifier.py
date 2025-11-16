@@ -25,6 +25,7 @@ from .tools.abort_task import AbortTaskTool
 from .tools.request_correction import RequestCorrectionTool
 from ..worker.tools import WaitTool
 from .verifier_browser import VerifierBrowser
+from ..action_tracker import ActionTracker
 
 if TYPE_CHECKING:
     from ..session_browser import SessionBrowser
@@ -49,7 +50,7 @@ class Verifier:
         self._tool_registry.register(RequestCorrectionTool())
         self._tool_registry.register(AbortTaskTool())
 
-    async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
+    async def _execute_tool_calls(self, tool_calls: List[ToolCall], action_tracker: ActionTracker) -> dict:
         """Execute all tool calls and return results."""
         results = []
 
@@ -69,6 +70,17 @@ class Verifier:
             # Log errors if any
             if tool_result.status == ToolResultStatus.ERROR:
                 self._logger.error(f"Tool error: {tool_result.error}")
+
+            # Track action
+            action_tracker.add_action(
+                description=description,
+                status=tool_result.status.value,
+                error=(
+                    tool_result.error
+                    if tool_result.status == ToolResultStatus.ERROR
+                    else None
+                ),
+            )
 
             # Return immediately if decision tool called (only on success)
             if tool_result.status == ToolResultStatus.SUCCESS:
@@ -176,6 +188,7 @@ class Verifier:
         """Shared implementation for verification."""
         start_time = datetime.now()
         decision = None
+        action_tracker = ActionTracker()
 
         self._logger.info(f"Verifier session start - Task: {task_description}")
 
@@ -222,7 +235,7 @@ class Verifier:
                         self._logger.info(f"Reasoning: {content.text}")
 
             # Execute all tool calls and collect results (will raise if no decision made)
-            execution_result = await self._execute_tool_calls(assistant_msg.tool_calls)
+            execution_result = await self._execute_tool_calls(assistant_msg.tool_calls, action_tracker)
             tool_results = execution_result["results"]
             decision = execution_result["decision"]
             feedback = execution_result["feedback"]
@@ -266,7 +279,7 @@ class Verifier:
                 end_time=datetime.now(),
                 max_steps=max_steps,
                 steps_used=step + 1,
-                messages=messages,
+                summary=action_tracker.get_summary_text(),
             )
 
         # This should never be reached - Verifier should always make a decision

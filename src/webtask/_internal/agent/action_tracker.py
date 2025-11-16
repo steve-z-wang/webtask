@@ -41,11 +41,5 @@ class ActionTracker:
 
         return "\n".join(lines)
 
-    def clear(self):
-        self.actions.clear()
-
-    def __len__(self) -> int:
-        return len(self.actions)
-
     def __repr__(self) -> str:
         return f"ActionTracker(actions={len(self.actions)})"

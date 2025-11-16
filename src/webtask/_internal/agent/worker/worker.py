@@ -20,7 +20,7 @@ from ...prompts.worker_prompt import build_worker_prompt
 from ...utils.logger import get_logger
 from .worker_browser import WorkerBrowser
 from .worker_session import WorkerSession, WorkerEndReason
-from .action_tracker import ActionTracker
+from ..action_tracker import ActionTracker
 from .tools import (
     NavigateTool,
     ClickTool,
@@ -107,6 +107,8 @@ class Worker:
         messages: List[Message]
     ) -> List[Message]:
         
+        
+         
     
 
     async def _run_step(
@@ -204,8 +206,7 @@ class Worker:
             max_steps=max_steps,
             steps_used=steps_used,
             end_reason=end_reason,
-            messages=messages,
-            action_summary=action_tracker.get_summary_text(),
+            summary=action_tracker.get_summary_text(),
             final_dom=dom_snapshot,
             final_screenshot=screenshot_b64,
         )
@@ -218,6 +219,7 @@ class Worker:
         verifier_feedback: Optional[str] = None,
     ) -> WorkerSession:
         if previous_session is not None:
+            if 
             messages = previous_session.messages.copy()
             if verifier_feedback:
                 messages.append(
