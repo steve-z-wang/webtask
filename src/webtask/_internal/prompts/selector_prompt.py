@@ -29,34 +29,10 @@ def build_selector_prompt() -> str:
         .add_numbered("Return the interactive_id or an error if no match found")
     )
 
-    # Response Format section
-    response_format = (
-        MarkdownBuilder()
-        .add_heading("Response Format")
-        .add("You MUST respond with valid JSON in this exact format:")
-        .add()
-        .add("```json")
-        .add("{")
-        .add('  "interactive_id": "string or null",  // The ID of the matching element (e.g., "button-0", "input-1") or null if no match')
-        .add('  "reasoning": "string or null",       // Your reasoning for the selection or why no match was found')
-        .add('  "error": "string or null"            // Error message if no match found, null if match found')
-        .add("}")
-        .add("```")
-        .add()
-        .add("Example success response:")
-        .add('{"interactive_id": "button-2", "reasoning": "This button has text Submit which matches the description", "error": null}')
-        .add()
-        .add("Example failure response:")
-        .add('{"interactive_id": null, "reasoning": "No element found matching the description", "error": "No matching element found"}')
-    )
-
-    # Combine all sections
     return (
         MarkdownBuilder()
         .add(who_you_are)
         .add()
         .add(how_to_select)
-        .add()
-        .add(response_format)
         .build()
     )

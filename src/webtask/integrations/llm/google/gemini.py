@@ -8,8 +8,8 @@ import google.generativeai as genai
 from google.generativeai import protos
 
 from webtask.llm import LLM
-from webtask.llm.message import Message, AssistantMessage, TextContent
-from webtask._internal.utils.debug import LLMDebugger
+from webtask.llm.message import Message, UserMessage, AssistantMessage, TextContent
+from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .gemini_mapper import (
     messages_to_gemini_content,
     build_tool_declarations,
@@ -36,7 +36,7 @@ class GeminiLLM(LLM):
         self.model_name = model_name
         self.temperature = temperature
         self.model = model
-        self._debugger = LLMDebugger()
+        self._debugger = LLMContextDebugger()
 
     @classmethod
     def create(
@@ -91,7 +91,15 @@ class GeminiLLM(LLM):
         response_model: Type[T],
     ) -> T:
         """Generate structured JSON response."""
-        gemini_content = messages_to_gemini_content(messages)
+        # Inject schema into messages
+        schema = response_model.model_json_schema()
+        schema_text = f"\n\nYou MUST respond with valid JSON matching this schema:\n```json\n{json.dumps(schema, indent=2)}\n```"
+        
+        messages_with_schema = messages + [
+            UserMessage(content=[TextContent(text=schema_text)])
+        ]
+
+        gemini_content = messages_to_gemini_content(messages_with_schema)
 
         generation_config = genai.GenerationConfig(  # type: ignore[attr-defined]
             temperature=self.temperature,
