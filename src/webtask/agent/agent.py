@@ -51,7 +51,9 @@ class Agent:
         )
 
         self._selector = NaturalSelector(
-            llm=selector_llm or llm, session_browser=self.session_browser
+            llm=selector_llm or llm,
+            session_browser=self.session_browser,
+            include_screenshot=False,
         )
 
     async def execute(

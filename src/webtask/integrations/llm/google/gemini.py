@@ -1,28 +1,24 @@
 """Google Gemini LLM implementation with conversation-based interface."""
 
-from typing import Optional, List, Dict, Any, Type, TypeVar, TYPE_CHECKING
+from typing import Optional, List, Type, TypeVar, TYPE_CHECKING
 import json
-from PIL import Image as PILImage
-import io
-import base64
 from pydantic import BaseModel, ValidationError
 
 import google.generativeai as genai
-from google.generativeai import types
 from google.generativeai import protos
 
 from webtask.llm import LLM
 from webtask.llm.message import (
     Message,
-    SystemMessage,
-    UserMessage,
     AssistantMessage,
-    ToolResultMessage,
     TextContent,
-    ImageContent,
     ToolCall,
 )
 from webtask._internal.utils.debug import LLMDebugger
+from .gemini_converter import (
+    messages_to_gemini_content,
+    build_tool_declarations,
+)
 
 if TYPE_CHECKING:
     from webtask.agent.tool import Tool
@@ -88,168 +84,33 @@ class GeminiLLM(LLM):
         # Create model (generation config set per request)
         gemini_model = genai.GenerativeModel(model_name=model)
 
-        return cls(gemini_model, model, temperature)
+        instance = cls(gemini_model, model, temperature)
 
-    def _clean_schema_for_gemini(self, schema: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Clean Pydantic JSON schema to be compatible with Gemini.
+        # Warm up model with dummy call to avoid cold start on first real use
+        instance.logger.info(f"Warming up {model}...")
+        import asyncio
+        try:
+            asyncio.create_task(instance._warm_up())
+        except Exception:
+            pass  # Ignore warm-up failures
 
-        Gemini only accepts a subset of JSON schema fields. We need to remove
-        unsupported fields like title, maximum, minimum, maxLength, etc.
-        """
-        # Fields that Gemini supports
-        allowed_fields = {
-            "type",
-            "description",
-            "enum",
-            "items",
-            "properties",
-            "required",
-            "nullable",
-            "format",
-        }
+        return instance
 
-        # Create cleaned schema
-        cleaned = {}
-
-        for key, value in schema.items():
-            if key in allowed_fields:
-                if key == "properties" and isinstance(value, dict):
-                    # Recursively clean nested properties
-                    cleaned[key] = {
-                        prop_name: self._clean_schema_for_gemini(prop_schema)
-                        for prop_name, prop_schema in value.items()
-                    }
-                elif key == "items" and isinstance(value, dict):
-                    # Recursively clean array items schema
-                    cleaned[key] = self._clean_schema_for_gemini(value)
-                else:
-                    cleaned[key] = value
-
-        return cleaned
-
-    def _build_tool_declarations(self, tools: List["Tool"]) -> types.Tool:
-        """Build Gemini function declarations from tools."""
-        function_declarations = []
-
-        for tool in tools:
-            # Convert Pydantic model to JSON schema
-            params_schema = tool.Params.model_json_schema()
-
-            # Clean schema to be Gemini-compatible
-            params_schema = self._clean_schema_for_gemini(params_schema)
-
-            function_declarations.append(
-                types.FunctionDeclaration(
-                    name=tool.name,
-                    description=tool.description,
-                    parameters=params_schema,
-                )
+    async def _warm_up(self) -> None:
+        """Make a dummy API call to warm up the model and avoid cold start."""
+        try:
+            from webtask.llm import SystemMessage, TextContent
+            dummy_messages = [
+                SystemMessage(content=[TextContent(text="Hi")])
+            ]
+            gemini_content = messages_to_gemini_content(dummy_messages)
+            await self.model.generate_content_async(
+                gemini_content,
+                generation_config=genai.GenerationConfig(temperature=0),
             )
-
-        return types.Tool(function_declarations=function_declarations)
-
-    def _messages_to_gemini_content(
-        self, messages: List[Message]
-    ) -> List[types.ContentDict]:
-        """
-        Convert Message history to Gemini's content format.
-
-        Gemini uses alternating user/model roles. System messages are
-        combined with the first user message.
-        """
-        gemini_messages = []
-        system_text = None
-
-        for msg in messages:
-            if isinstance(msg, SystemMessage):
-                # Extract system text (to be prepended to first user message)
-                if msg.content:
-                    system_text = "\n\n".join([part.text for part in msg.content])
-
-            elif isinstance(msg, UserMessage):
-                # Build parts list (text and images)
-                parts = []
-
-                # Prepend system text to first user message
-                if system_text:
-                    parts.append(system_text)
-                    system_text = None  # Only add once
-
-                if msg.content:
-                    for content_part in msg.content:
-                        if isinstance(content_part, TextContent):
-                            parts.append(content_part.text)
-                        elif isinstance(content_part, ImageContent):
-                            # Convert base64 to PIL Image
-                            image_bytes = base64.b64decode(content_part.data)
-                            pil_image = PILImage.open(io.BytesIO(image_bytes))
-                            parts.append(pil_image)
-
-                gemini_messages.append({"role": "user", "parts": parts})
-
-            elif isinstance(msg, AssistantMessage):
-                # Assistant message with tool calls
-                # Gemini expects function calls in a specific format
-                parts = []
-
-                # Include content if present
-                if msg.content:
-                    for content_part in msg.content:
-                        if isinstance(content_part, TextContent):
-                            parts.append(content_part.text)
-                        elif isinstance(content_part, ImageContent):
-                            image_bytes = base64.b64decode(content_part.data)
-                            pil_image = PILImage.open(io.BytesIO(image_bytes))
-                            parts.append(pil_image)
-
-                # Include tool calls as function calls
-                if msg.tool_calls:
-                    for tc in msg.tool_calls:
-                        function_call = protos.Part(
-                            function_call=protos.FunctionCall(
-                                name=tc.name,
-                                args=tc.arguments,
-                            )
-                        )
-                        parts.append(function_call)
-
-                if parts:
-                    gemini_messages.append({"role": "model", "parts": parts})
-
-            elif isinstance(msg, ToolResultMessage):
-                # Tool results - convert to function responses
-                parts = []
-
-                # Add function responses for each tool result
-                for result in msg.results:
-                    response_data = {
-                        "status": result.status.value,
-                    }
-                    if result.error:
-                        response_data["error"] = result.error
-
-                    function_response = protos.Part(
-                        function_response=protos.FunctionResponse(
-                            name=result.name,
-                            response=response_data,
-                        )
-                    )
-                    parts.append(function_response)
-
-                # Add observation content (DOM + screenshot)
-                if msg.content:
-                    for content_part in msg.content:
-                        if isinstance(content_part, TextContent):
-                            parts.append(content_part.text)
-                        elif isinstance(content_part, ImageContent):
-                            image_bytes = base64.b64decode(content_part.data)
-                            pil_image = PILImage.open(io.BytesIO(image_bytes))
-                            parts.append(pil_image)
-
-                gemini_messages.append({"role": "user", "parts": parts})
-
-        return gemini_messages
+            self.logger.info(f"{self.model_name} warmed up successfully")
+        except Exception as e:
+            self.logger.warning(f"Model warm-up failed: {e}")
 
     async def call_tools(
         self,
@@ -269,10 +130,10 @@ class GeminiLLM(LLM):
             AssistantMessage with tool_calls
         """
         # Convert messages to Gemini format
-        gemini_content = self._messages_to_gemini_content(messages)
+        gemini_content = messages_to_gemini_content(messages)
 
         # Build tool declarations
-        gemini_tools = self._build_tool_declarations(tools)
+        gemini_tools = build_tool_declarations(tools)
 
         # Create generation config
         generation_config = genai.GenerationConfig(
@@ -287,13 +148,30 @@ class GeminiLLM(LLM):
             )
         )
 
-        # Call Gemini API with tools
-        response = await self.model.generate_content_async(
-            gemini_content,
-            generation_config=generation_config,
-            tools=[gemini_tools],
-            tool_config=tool_config,
+        # Log request details
+        import time
+        num_messages = len(gemini_content)
+        total_parts = sum(len(msg.get("parts", [])) for msg in gemini_content)
+        num_tools = len(tools)
+        self.logger.info(
+            f"Calling Gemini API - Messages: {num_messages}, Parts: {total_parts}, Tools: {num_tools}"
         )
+
+        # Call Gemini API with tools
+        start_time = time.time()
+        try:
+            response = await self.model.generate_content_async(
+                gemini_content,
+                generation_config=generation_config,
+                tools=[gemini_tools],
+                tool_config=tool_config,
+            )
+            elapsed = time.time() - start_time
+            self.logger.info(f"Gemini API responded in {elapsed:.2f}s")
+        except Exception as e:
+            elapsed = time.time() - start_time
+            self.logger.error(f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
+            raise
 
         # Extract both text content (thoughts/reasoning) and tool calls from response
         tool_calls = []
@@ -357,26 +235,36 @@ class GeminiLLM(LLM):
             Instance of response_model with parsed LLM response
         """
         # Convert messages to Gemini format
-        gemini_content = self._messages_to_gemini_content(messages)
+        gemini_content = messages_to_gemini_content(messages)
 
-        # Get JSON schema from response_model
-        schema = response_model.model_json_schema()
-
-        # Clean schema to be Gemini-compatible
-        schema = self._clean_schema_for_gemini(schema)
-
-        # Create generation config with JSON mode
+        # Create generation config WITHOUT response_schema to avoid slow first call
+        # We'll parse JSON ourselves instead
         generation_config = genai.GenerationConfig(
             temperature=self.temperature,
             response_mime_type="application/json",
-            response_schema=schema,
+        )
+
+        # Log request details
+        import time
+        num_messages = len(gemini_content)
+        total_parts = sum(len(msg.get("parts", [])) for msg in gemini_content)
+        self.logger.info(
+            f"Calling Gemini API - Messages: {num_messages}, Parts: {total_parts}"
         )
 
         # Call Gemini API
-        response = await self.model.generate_content_async(
-            gemini_content,
-            generation_config=generation_config,
-        )
+        start_time = time.time()
+        try:
+            response = await self.model.generate_content_async(
+                gemini_content,
+                generation_config=generation_config,
+            )
+            elapsed = time.time() - start_time
+            self.logger.info(f"Gemini API responded in {elapsed:.2f}s")
+        except Exception as e:
+            elapsed = time.time() - start_time
+            self.logger.error(f"Gemini API error after {elapsed:.2f}s: {type(e).__name__}: {e}")
+            raise
 
         # Extract text response
         if not response.candidates or len(response.candidates) == 0:
