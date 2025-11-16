@@ -6,6 +6,8 @@ from webtask.agent.tool import Tool
 from webtask.llm import ToolCall, ToolResultStatus
 from webtask._internal.agent.tool import ToolRegistry
 
+pytestmark = pytest.mark.unit
+
 
 # Test fixtures
 class DummyParams(BaseModel):

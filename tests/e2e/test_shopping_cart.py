@@ -103,7 +103,7 @@ async def test_shopping_cart_automation():
 
         # Navigate to the starting page
         await agent.navigate("https://practicesoftwaretesting.com/")
-        await agent.wait_for_idle()
+        await agent.wait_for_load()
 
         # Execute the shopping cart task
         result = await agent.execute(
