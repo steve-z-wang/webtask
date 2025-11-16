@@ -92,8 +92,6 @@ def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDic
             for result in msg.results:
                 # Create function response for each tool result
                 response_data = {"status": result.status.value}
-                if result.output:
-                    response_data["output"] = result.output
                 if result.error:
                     response_data["error"] = result.error
 
