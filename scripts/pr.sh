@@ -1,8 +1,7 @@
 #!/bin/bash
-# PR checks - Run all checks or auto-fix issues
+# PR checks - Auto-fix formatting and run all checks
 # Usage:
-#   ./scripts/pr.sh       - Run checks only (same as CI)
-#   ./scripts/pr.sh fix   - Auto-fix then run checks
+#   ./scripts/pr.sh - Auto-fix then run checks
 
 set -e  # Exit on error
 
@@ -11,21 +10,18 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-if [ "$1" = "fix" ]; then
-    echo "🔧 Auto-fixing issues..."
-    echo ""
-    echo "🎨 Running black (auto-format)..."
-    black src/ tests/
+echo "🔧 Auto-fixing issues..."
+echo ""
+echo "🎨 Running black (auto-format)..."
+black src/ tests/
 
-    echo ""
-    echo "🔧 Running ruff (auto-fix)..."
-    ruff check --fix src/ tests/
+echo ""
+echo "🔧 Running ruff (auto-fix)..."
+ruff check --fix src/ tests/
 
-    echo ""
-    echo "✅ Auto-fix complete!"
-    echo ""
-fi
-
+echo ""
+echo "✅ Auto-fix complete!"
+echo ""
 echo "🔍 Running PR checks..."
 echo ""
 echo "🔍 Running ruff (linter)..."

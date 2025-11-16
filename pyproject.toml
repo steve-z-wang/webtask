@@ -108,6 +108,5 @@ docs = "mkdocs serve"
 docs-build = "mkdocs build"
 docs-deploy = "mkdocs gh-deploy"
 
-# Combined checks (mimics CI)
+# Combined checks (auto-fixes then runs checks)
 pr = {shell = "./scripts/pr.sh"}
-pr-fix = {shell = "./scripts/pr.sh fix"}
