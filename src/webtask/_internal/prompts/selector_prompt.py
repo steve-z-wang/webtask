@@ -13,6 +13,7 @@ def build_selector_prompt() -> str:
         .add(
             "You are an element selector that identifies which element on a web page matches a natural language description."
         )
+        .build()
     )
 
     # How to Select section
@@ -27,12 +28,7 @@ def build_selector_prompt() -> str:
         )
         .add_numbered("Identify the interactive_id that best matches the description")
         .add_numbered("Return the interactive_id or an error if no match found")
-    )
-
-    return (
-        MarkdownBuilder()
-        .add(who_you_are)
-        .add()
-        .add(how_to_select)
         .build()
     )
+
+    return MarkdownBuilder().add(who_you_are).add().add(how_to_select).build()

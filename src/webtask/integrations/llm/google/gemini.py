@@ -103,7 +103,7 @@ class GeminiLLM(LLM):
         # Inject schema into messages
         schema = response_model.model_json_schema()
         schema_text = f"\n\nYou MUST respond with valid JSON matching this schema:\n```json\n{json.dumps(schema, indent=2)}\n```"
-        
+
         messages_with_schema = messages + [
             UserMessage(content=[TextContent(text=schema_text)])
         ]
