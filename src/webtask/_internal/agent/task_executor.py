@@ -1,30 +1,67 @@
 """TaskExecutor - orchestrates Worker/Verifier loop for a single task."""
 
 from datetime import datetime
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Dict, Optional, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .worker.worker import Worker
-    from .verifier.verifier import Verifier
     from .worker.worker_session import WorkerSession
     from .verifier.verifier_session import VerifierSession
+    from webtask.llm import LLM
+    from .session_browser import SessionBrowser
 
 from .task_execution import TaskExecution, TaskResult
 from .verifier.verifier_session import VerifierDecision
+from .worker.worker import Worker
+from .verifier.verifier import Verifier
 
 
 class TaskExecutor:
     """Executes tasks with Worker/Verifier loop and correction retry logic."""
 
-    def __init__(self, worker: "Worker", verifier: "Verifier"):
-        self._worker = worker
-        self._verifier = verifier
+    def __init__(
+        self,
+        llm: "LLM",
+        session_browser: "SessionBrowser",
+        wait_after_action: float,
+        resources: Optional[Dict[str, str]] = None,
+    ):
+        self._worker = Worker(
+            llm=llm,
+            session_browser=session_browser,
+            wait_after_action=wait_after_action,
+            resources=resources,
+        )
+        self._verifier = Verifier(llm=llm, session_browser=session_browser)
+
+    def _build_previous_history(
+        self, sessions: List[Union["WorkerSession", "VerifierSession"]]
+    ) -> Optional[str]:
+        """Build previous history summary from all sessions except the last."""
+        if len(sessions) <= 1:
+            return None
+
+        lines = []
+        for session in sessions[:-1]:  # Exclude last session
+            # Import here to avoid circular dependency
+            from .worker.worker_session import WorkerSession
+            from .verifier.verifier_session import VerifierSession
+
+            if isinstance(session, WorkerSession):
+                lines.append("Worker attempt:")
+                lines.append(session.summary)
+            elif isinstance(session, VerifierSession):
+                lines.append(f"Verifier decision: {session.decision.value}")
+                if session.feedback:
+                    lines.append(f"Feedback: {session.feedback}")
+                lines.append(f"Actions: {session.summary}")
+            lines.append("")  # Blank line between sessions
+
+        return "\n".join(lines)
 
     async def run(
         self,
         task_description: str,
         max_correction_attempts: int = 3,
-        resources: Optional[Dict[str, str]] = None,
     ) -> TaskExecution:
         """Execute task with Worker/Verifier loop and correction retry logic."""
 
@@ -37,14 +74,10 @@ class TaskExecutor:
 
         while True:
 
-            # Worker attempt (first time or correction retry)
             worker_session = await self._worker.run(
                 task_description=task_description,
                 max_steps=20,
-                resources=(
-                    resources if not sessions else None
-                ),  # Resources only on first run
-                previous_session=worker_session,
+                previous_history=self._build_previous_history(sessions),
                 verifier_feedback=(
                     verifier_session.feedback if verifier_session else None
                 ),
@@ -55,10 +88,10 @@ class TaskExecutor:
             verifier_session = await self._verifier.run(
                 task_description=task_description,
                 max_steps=5,
-                worker_summary=worker_session.action_summary,
+                worker_actions=worker_session.summary,
                 final_dom=worker_session.final_dom,
                 final_screenshot=worker_session.final_screenshot,
-                previous_session=verifier_session,
+                previous_history=self._build_previous_history(sessions),
             )
             sessions.append(verifier_session)
 

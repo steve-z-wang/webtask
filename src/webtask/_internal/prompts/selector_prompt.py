@@ -13,6 +13,7 @@ def build_selector_prompt() -> str:
         .add(
             "You are an element selector that identifies which element on a web page matches a natural language description."
         )
+        .build()
     )
 
     # How to Select section
@@ -27,33 +28,7 @@ def build_selector_prompt() -> str:
         )
         .add_numbered("Identify the interactive_id that best matches the description")
         .add_numbered("Return the interactive_id or an error if no match found")
-    )
-
-    # Response Format section
-    response_format = (
-        MarkdownBuilder()
-        .add_heading("Response Format")
-        .add("Respond with JSON containing:")
-        .add_bullet(
-            "interactive_id: The ID of the matching element (e.g., 'button-0', 'input-1')"
-        )
-        .add_bullet("reasoning: Your reasoning for why this element matches")
-        .add_bullet(
-            "error: Error message if no matching element found (leave empty if match found)"
-        )
-        .add()
-        .add(
-            'Example: {"interactive_id": "button-2", "reasoning": "This button has text Submit which matches the description", "error": ""}'
-        )
-    )
-
-    # Combine all sections
-    return (
-        MarkdownBuilder()
-        .add(who_you_are)
-        .add()
-        .add(how_to_select)
-        .add()
-        .add(response_format)
         .build()
     )
+
+    return MarkdownBuilder().add(who_you_are).add().add(how_to_select).build()

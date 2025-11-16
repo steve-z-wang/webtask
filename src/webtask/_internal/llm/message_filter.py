@@ -14,26 +14,12 @@ class MessageFilter:
         include_types: Set[Type["Message"]] | None = None,
         exclude_types: Set[Type["Message"]] | None = None,
     ):
-        """Initialize message filter.
-
-        Args:
-            include_types: Only keep messages of these types (if specified)
-            exclude_types: Remove messages of these types (if specified)
-
-        Note: If both are specified, include_types takes precedence.
-        """
+        """Initialize message filter."""
         self.include_types = include_types
         self.exclude_types = exclude_types
 
     def filter(self, messages: List["Message"]) -> List["Message"]:
-        """Filter messages by type.
-
-        Args:
-            messages: List of messages to filter
-
-        Returns:
-            Filtered list of messages
-        """
+        """Filter messages by type."""
         if self.include_types is not None:
             # Keep only messages of included types
             return [msg for msg in messages if type(msg) in self.include_types]

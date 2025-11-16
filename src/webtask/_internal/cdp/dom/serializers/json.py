@@ -14,12 +14,6 @@ def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
     - bounds (bounding box: x, y, width, height)
     - metadata (extra data like element_id, original_node reference)
     - children (recursively serialized)
-
-    Args:
-        node: DomNode or Text to serialize
-
-    Returns:
-        Dictionary with complete node data
     """
     if isinstance(node, Text):
         return {"type": "text", "content": node.content}
@@ -55,15 +49,7 @@ def serialize_to_json(node: Union[DomNode, Text]) -> Dict[str, Any]:
 
 
 def serialize_tree_to_json_string(node: Union[DomNode, Text], indent: int = 2) -> str:
-    """Serialize DomNode tree to formatted JSON string.
-
-    Args:
-        node: DomNode or Text to serialize
-        indent: Number of spaces for indentation
-
-    Returns:
-        Formatted JSON string
-    """
+    """Serialize DomNode tree to formatted JSON string."""
     import json
 
     data = serialize_to_json(node)

@@ -10,22 +10,7 @@ def filter_none_nodes(root: AXNode) -> AXNode:
 
     Nodes with role="none" are non-semantic wrappers (similar to generic).
     They don't provide meaningful information for LLM context.
-
-    Args:
         root: Root AXNode to filter
-
-    Returns:
-        New filtered tree with none nodes removed
-
-    Example:
-        Before:
-            [button-0] "Click me"
-              └─ [none-10]
-                  └─ [StaticText-0] "Click me"
-
-        After:
-            [button-0] "Click me"
-              └─ [StaticText-0] "Click me"
     """
 
     def is_none(node: AXNode) -> bool:

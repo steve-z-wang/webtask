@@ -97,15 +97,6 @@ class AXNode:
     def copy(self, **overrides) -> "AXNode":
         """
         Create a copy of this node with optional field overrides.
-
-        Args:
-            **overrides: Fields to override in the copy
-
-        Returns:
-            New AXNode with specified fields overridden
-
-        Example:
-            new_node = node.copy(children=[], parent=None)
         """
         return replace(self, **overrides)
 
@@ -124,12 +115,6 @@ class AXNode:
     def from_cdp(cls, cdp_data: Dict[str, Any]) -> "AXNode":
         """
         Create AXNode tree from CDP accessibility tree data.
-
-        Args:
-            cdp_data: Raw data from Accessibility.getFullAXTree CDP command
-
-        Returns:
-            Root AXNode of the parsed tree
         """
         from .parsers.cdp import parse_cdp_accessibility
 

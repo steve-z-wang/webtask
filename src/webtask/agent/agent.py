@@ -1,6 +1,5 @@
 """Agent - main interface for web automation."""
 
-import asyncio
 import logging
 from typing import Dict, List, Optional
 from webtask.llm import LLM
@@ -9,8 +8,7 @@ from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
 from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
-from webtask._internal.agent.worker.worker import Worker
-from webtask._internal.agent.verifier.verifier import Verifier
+from webtask._internal.utils.wait import wait as custom_wait
 
 
 class Agent:
@@ -42,27 +40,20 @@ class Agent:
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
         """
+        self.llm = llm
         self.session = session
         self.use_screenshot = use_screenshot
         self.wait_after_action = wait_after_action
         self.logger = logging.getLogger(__name__)
 
-        # Create shared browser (used by Worker for interactions, Verifier for screenshots)
         self.session_browser = SessionBrowser(
             session=session, use_screenshot=use_screenshot
         )
 
-        # Create roles (reused across tasks)
-        self.worker = Worker(
-            llm=llm,
-            session_browser=self.session_browser,
-            wait_after_action=wait_after_action,
-        )
-        self.verifier = Verifier(llm=llm, session_browser=self.session_browser)
-
-        # Create selector for low-level imperative mode
         self._selector = NaturalSelector(
-            llm=selector_llm or llm, session_browser=self.session_browser
+            llm=selector_llm or llm,
+            session_browser=self.session_browser,
+            include_screenshot=False,
         )
 
     async def execute(
@@ -70,7 +61,6 @@ class Agent:
         task_description: str,
         max_correction_attempts: int = 3,
         resources: Optional[Dict[str, str]] = None,
-        max_cycles: Optional[int] = None,  # Backward compatibility
     ) -> TaskExecution:
         """
         Execute a task autonomously using Worker/Verifier loop.
@@ -79,7 +69,6 @@ class Agent:
             task_description: Task description in natural language
             max_correction_attempts: Maximum correction retry attempts (default: 3)
             resources: Optional dict of file resources (name -> path)
-            max_cycles: (Deprecated) Alias for max_correction_attempts for backward compatibility
 
         Returns:
             TaskExecution object with execution history and final result
@@ -90,21 +79,16 @@ class Agent:
         if not self.session_browser.get_current_page():
             raise RuntimeError("No session available. Call set_session() first.")
 
-        # Handle backward compatibility with max_cycles
-        if max_cycles is not None:
-            max_correction_attempts = max_cycles
-
-        # Create task executor
         task_executor = TaskExecutor(
-            worker=self.worker,
-            verifier=self.verifier,
+            llm=self.llm,
+            session_browser=self.session_browser,
+            wait_after_action=self.wait_after_action,
+            resources=resources,
         )
 
-        # Run Worker→Verifier loop with correction retries
         result = await task_executor.run(
             task_description=task_description,
             max_correction_attempts=max_correction_attempts,
-            resources=resources,
         )
 
         return result
@@ -198,7 +182,7 @@ class Agent:
         Args:
             seconds: Number of seconds to wait
         """
-        await asyncio.sleep(seconds)
+        await custom_wait(seconds)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False

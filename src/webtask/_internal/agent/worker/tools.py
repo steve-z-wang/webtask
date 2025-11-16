@@ -1,12 +1,14 @@
 """Worker tools - all tools available to the worker."""
 
-import asyncio
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field
 from webtask.agent.tool import Tool
+from ...utils.wait import wait
+from .worker_session import WorkerEndReason
 
 if TYPE_CHECKING:
     from .worker_browser import WorkerBrowser
+    from .worker import EndReason
 
 
 # Browser action tools
@@ -142,10 +144,18 @@ class UploadTool(Tool):
             description="Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')"
         )
 
-    def __init__(self, worker_browser: "WorkerBrowser", resources: Dict[str, str]):
+    def __init__(
+        self,
+        worker_browser: "WorkerBrowser",
+        resources: Optional[Dict[str, str]] = None,
+    ):
         """Initialize upload tool with worker browser and resources."""
         self.worker_browser = worker_browser
         self.resources = resources
+
+    def is_enabled(self) -> bool:
+        """Only enabled if resources are provided."""
+        return self.resources is not None
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -190,7 +200,7 @@ class WaitTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Wait for the specified duration."""
-        await asyncio.sleep(params.seconds)
+        await wait(params.seconds)
 
 
 # Control tools
@@ -201,6 +211,7 @@ class CompleteWorkTool(Tool):
 
     name = "complete_work"
     description = "Signal that you have successfully completed the subtask"
+    is_terminal = True
 
     class Params(BaseModel):
         """Parameters for complete_work tool."""
@@ -209,6 +220,10 @@ class CompleteWorkTool(Tool):
             description="Describe what you accomplished and provide any important context or knowledge that might be useful for future subtasks in this task"
         )
 
+    def __init__(self, end_reason: "EndReason"):
+        """Initialize with reference to end_reason wrapper."""
+        self.end_reason = end_reason
+
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of complete_work action."""
@@ -216,7 +231,7 @@ class CompleteWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is complete."""
-        pass
+        self.end_reason.value = WorkerEndReason.COMPLETE_WORK
 
 
 class AbortWorkTool(Tool):
@@ -224,6 +239,7 @@ class AbortWorkTool(Tool):
 
     name = "abort_work"
     description = "Signal that you cannot proceed further with this subtask (stuck, blocked, error, or impossible to complete)"
+    is_terminal = True
 
     class Params(BaseModel):
         """Parameters for abort_work tool."""
@@ -232,6 +248,10 @@ class AbortWorkTool(Tool):
             description="Explain why you cannot continue and provide any relevant context about what went wrong or what is blocking you"
         )
 
+    def __init__(self, end_reason: "EndReason"):
+        """Initialize with reference to end_reason wrapper."""
+        self.end_reason = end_reason
+
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of abort_work action."""
@@ -239,4 +259,4 @@ class AbortWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is aborted."""
-        pass
+        self.end_reason.value = WorkerEndReason.ABORT_WORK

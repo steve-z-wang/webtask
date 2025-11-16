@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from webtask.llm import (
-    Content,
     Message,
     SystemMessage,
     UserMessage,
@@ -11,8 +10,6 @@ from webtask.llm import (
     TextContent,
     ImageContent,
     ImageMimeType,
-    ToolCall,
-    ToolResultStatus,
 )
 from webtask._internal.llm import purge_messages_content
 from ..tool import ToolRegistry
@@ -31,6 +28,14 @@ if TYPE_CHECKING:
     from webtask.llm.llm import LLM
 
 
+class VerifierResult:
+    """Wrapper to track verifier decision and feedback."""
+
+    def __init__(self):
+        self.decision: Optional[VerifierDecision] = None
+        self.feedback: Optional[str] = None
+
+
 class Verifier:
     """Verifier role - checks if subtask succeeded using conversation-based LLM."""
 
@@ -43,129 +48,49 @@ class Verifier:
         self._tool_registry = ToolRegistry()
         self._logger = get_logger(__name__)
 
-        # Register all tools
+        # Register normal tools (non-terminal)
         self._tool_registry.register(WaitTool())
-        self._tool_registry.register(CompleteTaskTool())
-        self._tool_registry.register(RequestCorrectionTool())
-        self._tool_registry.register(AbortTaskTool())
 
-    async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> dict:
-        """Execute all tool calls and return results."""
-        results = []
-
-        for tool_call in tool_calls:
-            # Get tool and generate description
-            tool = self._tool_registry.get(tool_call.name)
-            params = tool.Params(**tool_call.arguments)
-            description = tool.describe(params)
-
-            # Log tool execution
-            self._logger.info(f"Executing: {description}")
-
-            # Execute using registry
-            tool_result = await self._tool_registry.execute_tool_call(tool_call)
-            results.append(tool_result)
-
-            # Log errors if any
-            if tool_result.status == ToolResultStatus.ERROR:
-                self._logger.error(f"Tool error: {tool_result.error}")
-
-            # Return immediately if decision tool called (only on success)
-            if tool_result.status == ToolResultStatus.SUCCESS:
-                tool = self._tool_registry.get(tool_call.name)
-                if isinstance(tool, CompleteTaskTool):
-                    return {
-                        "results": results,
-                        "decision": VerifierDecision.COMPLETE_TASK,
-                        "feedback": tool_call.arguments.get("feedback", ""),
-                    }
-                elif isinstance(tool, RequestCorrectionTool):
-                    return {
-                        "results": results,
-                        "decision": VerifierDecision.REQUEST_CORRECTION,
-                        "feedback": tool_call.arguments.get("feedback", ""),
-                    }
-                elif isinstance(tool, AbortTaskTool):
-                    return {
-                        "results": results,
-                        "decision": VerifierDecision.ABORT_TASK,
-                        "feedback": tool_call.arguments.get("feedback", ""),
-                    }
-
-        # If we get here, no decision tool was called - this shouldn't happen
-        raise ValueError("No decision tool was called by Verifier")
+        # Control tools registered per-run in _run() with fresh VerifierResult context
 
     async def run(
         self,
         task_description: str,
         max_steps: int,
-        worker_summary: str,
-        final_dom: Optional[str],
-        final_screenshot: Optional[str],
-        previous_session: Optional[VerifierSession] = None,
+        worker_actions: str,
+        final_dom: str,
+        final_screenshot: str,
+        previous_history: Optional[str] = None,
     ) -> VerifierSession:
-        """Execute verification with optional continuation from previous session.
+        user_content = []
 
-        Args:
-            task_description: Task to verify
-            max_steps: Maximum number of steps
-            worker_summary: Summary of worker actions
-            final_dom: Final DOM state after worker actions
-            final_screenshot: Final screenshot after worker actions
-            previous_session: Previous verifier session to continue from
-        """
-        if previous_session is not None:
-            # Continue from previous conversation
-            messages = previous_session.messages.copy()
+        user_content.append(TextContent(text=f"Task: {task_description}"))
 
-            # Add new worker result as user message
-            user_text = f"Worker has made corrections. Here is the updated result:\n\n{worker_summary}"
+        if previous_history:
+            user_content.append(
+                TextContent(text=f"\nPrevious history:\n{previous_history}")
+            )
 
-            user_content: List[Content] = [TextContent(text=user_text)]
+        # Add current worker summary (what just happened)
+        user_content.append(TextContent(text=f"\nWorker actions:\n{worker_actions}"))
 
-            # Add worker's final observations
-            if final_dom:
-                user_content.append(TextContent(text=final_dom, tag="dom_snapshot"))
-            if final_screenshot:
-                user_content.append(
-                    ImageContent(
-                        data=final_screenshot,
-                        mime_type=ImageMimeType.PNG,
-                        tag="screenshot",
-                    )
-                )
+        # Add worker's final observations
+        user_content.append(TextContent(text=final_dom, tag="dom_snapshot"))
+        user_content.append(
+            ImageContent(
+                data=final_screenshot,
+                mime_type=ImageMimeType.PNG,
+                tag="screenshot",
+            )
+        )
 
-            messages.append(UserMessage(content=user_content))
+        # Build session start messages (never compacted)
+        session_start_messages: List[Message] = [
+            SystemMessage(content=[TextContent(text=build_verifier_prompt())]),
+            UserMessage(content=user_content),
+        ]
 
-            return await self._run(task_description, max_steps, messages)
-        else:
-            # Start fresh
-            # Build user content with worker summary + final observations
-            # Explicit type annotation to allow both TextContent and ImageContent
-            user_content: List[Content] = [
-                TextContent(text=f"Task: {task_description}"),
-                TextContent(text=worker_summary, tag="action_summary"),
-            ]
-
-            # Add worker's final observations
-            if final_dom:
-                user_content.append(TextContent(text=final_dom, tag="dom_snapshot"))
-            if final_screenshot:
-                user_content.append(
-                    ImageContent(
-                        data=final_screenshot,
-                        mime_type=ImageMimeType.PNG,
-                        tag="screenshot",
-                    )
-                )
-
-            # Initialize conversation
-            messages: List[Message] = [
-                SystemMessage(content=[TextContent(text=build_verifier_prompt())]),
-                UserMessage(content=user_content),
-            ]
-
-            return await self._run(task_description, max_steps, messages)
+        return await self._run(task_description, max_steps, session_start_messages)
 
     async def _run(
         self,
@@ -175,7 +100,13 @@ class Verifier:
     ) -> VerifierSession:
         """Shared implementation for verification."""
         start_time = datetime.now()
-        decision = None
+        all_descriptions: List[str] = []
+
+        # Create fresh VerifierResult wrapper and register control tools
+        verifier_result = VerifierResult()
+        self._tool_registry.register(CompleteTaskTool(verifier_result))
+        self._tool_registry.register(RequestCorrectionTool(verifier_result))
+        self._tool_registry.register(AbortTaskTool(verifier_result))
 
         self._logger.info(f"Verifier session start - Task: {task_description}")
 
@@ -207,25 +138,33 @@ class Verifier:
             )
             messages.append(assistant_msg)
 
-            # LLM must return tool calls
+            # Handle case when LLM doesn't return tool calls
             if not assistant_msg.tool_calls:
-                raise ValueError("LLM did not return any tool calls")
+                self._logger.warning(
+                    "LLM did not return any tool calls - creating empty result"
+                )
+                tool_results = []
+                descriptions = []
+            else:
+                # Log response
+                tool_names = [tc.name for tc in assistant_msg.tool_calls]
+                self._logger.info(f"Received LLM response - Tools: {tool_names}")
 
-            # Log response
-            tool_names = [tc.name for tc in assistant_msg.tool_calls]
-            self._logger.info(f"Received LLM response - Tools: {tool_names}")
+                # Log reasoning if present
+                if assistant_msg.content:
+                    for content in assistant_msg.content:
+                        if hasattr(content, "text") and content.text:
+                            self._logger.info(f"Reasoning: {content.text}")
 
-            # Log reasoning if present
-            if assistant_msg.content:
-                for content in assistant_msg.content:
-                    if hasattr(content, "text") and content.text:
-                        self._logger.info(f"Reasoning: {content.text}")
+                # Execute tools using registry (control tools modify verifier_result directly)
+                tool_results, descriptions = (
+                    await self._tool_registry.execute_tool_calls(
+                        assistant_msg.tool_calls
+                    )
+                )
 
-            # Execute all tool calls and collect results (will raise if no decision made)
-            execution_result = await self._execute_tool_calls(assistant_msg.tool_calls)
-            tool_results = execution_result["results"]
-            decision = execution_result["decision"]
-            feedback = execution_result["feedback"]
+            # Accumulate descriptions
+            all_descriptions.extend(descriptions)
 
             # Wait after all actions complete
             await wait(self.ACTION_DELAY)
@@ -249,25 +188,34 @@ class Verifier:
             )
             messages.append(result_message)
 
-            # Log decision
-            self._logger.info(f"Decision: {decision.value}")
-            if feedback:
-                self._logger.info(f"Feedback: {feedback}")
+            # Check if control tool made a decision
+            if verifier_result.decision:
+                # Log decision
+                self._logger.info(f"Decision: {verifier_result.decision.value}")
+                if verifier_result.feedback:
+                    self._logger.info(f"Feedback: {verifier_result.feedback}")
 
-            self._logger.info(f"Step {step + 1} - End")
-            self._logger.info(f"Verifier session end - Decision: {decision.value}")
+                self._logger.info(f"Step {step + 1} - End")
+                self._logger.info(
+                    f"Verifier session end - Decision: {verifier_result.decision.value}"
+                )
 
-            # Decision was made, return immediately
-            return VerifierSession(
-                task_description=task_description,
-                decision=decision,
-                feedback=feedback,
-                start_time=start_time,
-                end_time=datetime.now(),
-                max_steps=max_steps,
-                steps_used=step + 1,
-                messages=messages,
-            )
+                # Build summary from all descriptions
+                summary = "\n".join(
+                    f"{i+1}. {desc}" for i, desc in enumerate(all_descriptions)
+                )
+
+                # Decision was made, return immediately
+                return VerifierSession(
+                    task_description=task_description,
+                    decision=verifier_result.decision,
+                    feedback=verifier_result.feedback,
+                    start_time=start_time,
+                    end_time=datetime.now(),
+                    max_steps=max_steps,
+                    steps_used=step + 1,
+                    summary=summary,
+                )
 
         # This should never be reached - Verifier should always make a decision
         raise ValueError("Verifier reached max_steps without making a decision")
