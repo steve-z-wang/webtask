@@ -82,15 +82,15 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def wait_for_idle(self, timeout: int = 30000):
+    async def wait_for_load(self, timeout: int = 10000):
         """
-        Wait for page to be idle (network and DOM stable).
+        Wait for page to fully load.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 30000)
+            timeout: Maximum time to wait in milliseconds (default: 10000)
 
         Raises:
-            TimeoutError: If page doesn't become idle within timeout
+            TimeoutError: If page doesn't load within timeout
         """
         pass
 

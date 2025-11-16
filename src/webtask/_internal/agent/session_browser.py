@@ -97,12 +97,12 @@ class SessionBrowser:
 
         await page.navigate(url)
 
-    async def wait_for_idle(self, timeout: int = 30000) -> None:
-        """Wait for page to be idle."""
+    async def wait_for_load(self, timeout: int = 10000) -> None:
+        """Wait for page to fully load."""
         page = self.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
-        await page.wait_for_idle(timeout=timeout)
+        await page.wait_for_load(timeout=timeout)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False

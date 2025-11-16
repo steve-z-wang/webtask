@@ -171,18 +171,18 @@ class Agent:
         """
         return await self._selector.select(description)
 
-    async def wait_for_idle(self, timeout: int = 30000):
+    async def wait_for_load(self, timeout: int = 10000):
         """
-        Wait for page to be idle (network and DOM stable).
+        Wait for page to fully load.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 30000ms)
+            timeout: Maximum time to wait in milliseconds (default: 10000ms)
 
         Raises:
             RuntimeError: If no page is opened
-            TimeoutError: If page doesn't become idle within timeout
+            TimeoutError: If page doesn't load within timeout
         """
-        await self.session_browser.wait_for_idle(timeout=timeout)
+        await self.session_browser.wait_for_load(timeout=timeout)
 
     async def wait(self, seconds: float):
         """

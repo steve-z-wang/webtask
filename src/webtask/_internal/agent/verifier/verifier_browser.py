@@ -1,5 +1,6 @@
 """VerifierBrowser - simplified browser wrapper for verification without element interaction."""
 
+import base64
 from ..session_browser import SessionBrowser
 from ...context import LLMDomContext
 
@@ -12,12 +13,13 @@ class VerifierBrowser:
 
     async def get_dom_snapshot(self) -> str:
         """Get DOM snapshot without interactive IDs."""
+
+        # Wait for page to be fully loaded before capturing (safety check)
+        await self._session_browser.wait_for_load(timeout=10000)
+        
         page = self._session_browser.get_current_page()
         if page is None:
             return "ERROR: No page opened yet."
-
-        # Wait for page to be idle before capturing context (max 5s)
-        await page.wait_for_idle(timeout=5000)
 
         # Build LLMDomContext without interactive IDs
         dom_context = await LLMDomContext.from_page(page, include_interactive_ids=False)
@@ -44,7 +46,8 @@ class VerifierBrowser:
 
     async def get_screenshot(self, full_page: bool = False) -> str:
         """Get screenshot as base64 string."""
-        import base64
+        # Wait for page to be fully loaded before capturing (safety check)
+        await self._session_browser.wait_for_load(timeout=10000)
 
         screenshot_bytes = await self._session_browser.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")

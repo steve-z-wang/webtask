@@ -4,6 +4,7 @@ from typing import Optional
 from ..session_browser import SessionBrowser
 from ...context import LLMDomContext
 from ...utils.wait import wait
+import base64
 
 
 class WorkerBrowser:
@@ -21,13 +22,18 @@ class WorkerBrowser:
 
     async def get_screenshot(self, full_page: bool = False) -> str:
         """Get screenshot as base64 string."""
-        import base64
+        # Wait for page to be fully loaded before capturing (safety check)
+        await self._session_browser.wait_for_load(timeout=10000)
 
         screenshot_bytes = await self._session_browser.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
     async def get_dom_snapshot(self) -> str:
         """Get DOM snapshot with interactive elements."""
+
+        # Wait for page to be fully loaded before capturing (safety check)
+        await self._session_browser.wait_for_load(timeout=10000)
+        
         page = self._session_browser.get_current_page()
         if page is None:
             return "ERROR: No page opened yet."
@@ -98,6 +104,6 @@ class WorkerBrowser:
         self._dom_context = None
         await wait(self._wait_after_action)
 
-    async def wait_for_idle(self, timeout: int = 30000) -> None:
-        """Wait for page to be idle."""
-        await self._session_browser.wait_for_idle(timeout=timeout)
+    async def wait_for_load(self, timeout: int = 10000) -> None:
+        """Wait for page to fully load."""
+        await self._session_browser.wait_for_load(timeout=timeout)

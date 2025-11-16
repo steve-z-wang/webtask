@@ -174,16 +174,16 @@ class RecordingPage(Page):
 
         return await self._page.close()
 
-    async def wait_for_idle(self, timeout: int = 30000):
-        """Wait for page idle."""
+    async def wait_for_load(self, timeout: int = 10000):
+        """Wait for page to fully load."""
         if self._session._browser._is_replaying:
-            self._get_next_result("wait_for_idle")
+            self._get_next_result("wait_for_load")
             return
 
-        result = await self._page.wait_for_idle(timeout)
+        result = await self._page.wait_for_load(timeout)
 
         if self._session._browser._is_recording:
-            self._record_call("wait_for_idle", {"timeout": timeout}, None)
+            self._record_call("wait_for_load", {"timeout": timeout}, None)
 
         return result
 
