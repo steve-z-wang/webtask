@@ -1,9 +1,9 @@
 """Worker tools - all tools available to the worker."""
 
-import asyncio
 from typing import Dict, List, TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field
 from webtask.agent.tool import Tool
+from ...utils.wait import wait
 from .worker_session import WorkerEndReason
 
 if TYPE_CHECKING:
@@ -200,7 +200,7 @@ class WaitTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Wait for the specified duration."""
-        await asyncio.sleep(params.seconds)
+        await wait(params.seconds)
 
 
 # Control tools

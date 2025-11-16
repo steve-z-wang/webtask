@@ -1,6 +1,5 @@
 """Agent - main interface for web automation."""
 
-import asyncio
 import logging
 from typing import Dict, List, Optional
 from webtask.llm import LLM
@@ -9,6 +8,7 @@ from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
 from webtask._internal.agent.task_execution import TaskExecution
 from webtask._internal.agent.task_executor import TaskExecutor
+from webtask._internal.utils.wait import wait as custom_wait
 
 
 class Agent:
@@ -180,7 +180,7 @@ class Agent:
         Args:
             seconds: Number of seconds to wait
         """
-        await asyncio.sleep(seconds)
+        await custom_wait(seconds)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False
