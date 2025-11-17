@@ -1,6 +1,7 @@
 """LLM context debugger for saving LLM calls to disk."""
 
 import json
+import shutil
 from pathlib import Path
 from typing import List, TYPE_CHECKING
 from ..config import Config
@@ -10,11 +11,15 @@ if TYPE_CHECKING:
 
 
 class LLMContextDebugger:
-    """Saves LLM calls (request + response) to disk with internal counter."""
+    """Saves LLM calls (request + response) to disk with shared counter across all instances."""
+
+    # Class-level state shared across all debugger instances
+    _call_counter = 0
+    _cleaned = False
 
     def __init__(self):
-        """Initialize debugger with counter at 0."""
-        self._call_counter = 0
+        """Initialize debugger (uses shared class-level counter)."""
+        pass
 
     def save_call(
         self,
@@ -25,18 +30,25 @@ class LLMContextDebugger:
         if not Config().is_debug_enabled():
             return
 
-        # Increment counter
-        self._call_counter += 1
-
         debug_dir = Path(Config().get_debug_dir())
+
+        # Clean up debug directory on first call (shared across all instances)
+        if not LLMContextDebugger._cleaned:
+            if debug_dir.exists():
+                shutil.rmtree(debug_dir)
+            LLMContextDebugger._cleaned = True
+
+        # Increment shared counter
+        LLMContextDebugger._call_counter += 1
+
         debug_dir.mkdir(parents=True, exist_ok=True)
 
         # Save complete call in one file
-        call_path = debug_dir / f"llm_call_{self._call_counter}.json"
+        call_path = debug_dir / f"llm_call_{LLMContextDebugger._call_counter}.json"
         with open(call_path, "w") as f:
             json.dump(
                 {
-                    "call_number": self._call_counter,
+                    "call_number": LLMContextDebugger._call_counter,
                     "request": [_message_to_dict(msg) for msg in messages],
                     "response": _message_to_dict(response),
                 },
