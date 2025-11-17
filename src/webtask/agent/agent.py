@@ -29,6 +29,7 @@ class Agent:
         wait_after_action: float = 0.2,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
+        mode: str = "accessibility",
     ):
         """
         Initialize agent.
@@ -39,11 +40,13 @@ class Agent:
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
+            mode: DOM context mode - "accessibility" (default) or "dom"
         """
         self.llm = llm
         self.session = session
         self.use_screenshot = use_screenshot
         self.wait_after_action = wait_after_action
+        self.mode = mode
         self.logger = logging.getLogger(__name__)
 
         self.session_browser = SessionBrowser(
@@ -54,6 +57,7 @@ class Agent:
             llm=selector_llm or llm,
             session_browser=self.session_browser,
             include_screenshot=False,
+            mode=mode,
         )
 
     async def execute(
@@ -62,6 +66,7 @@ class Agent:
         max_correction_attempts: int = 3,
         resources: Optional[Dict[str, str]] = None,
         wait_after_action: Optional[float] = None,
+        mode: Optional[str] = None,
     ) -> TaskExecution:
         """
         Execute a task autonomously using Worker/Verifier loop.
@@ -71,6 +76,7 @@ class Agent:
             max_correction_attempts: Maximum correction retry attempts (default: 3)
             resources: Optional dict of file resources (name -> path)
             wait_after_action: Wait time in seconds after each action (overrides agent default if provided)
+            mode: DOM context mode - "accessibility" or "dom" (overrides agent default if provided)
 
         Returns:
             TaskExecution object with execution history and final result
@@ -88,11 +94,15 @@ class Agent:
             else self.wait_after_action
         )
 
+        # Use task-level mode if provided, otherwise use agent default
+        effective_mode = mode if mode is not None else self.mode
+
         task_executor = TaskExecutor(
             llm=self.llm,
             session_browser=self.session_browser,
             wait_after_action=effective_wait,
             resources=resources,
+            mode=effective_mode,
         )
 
         result = await task_executor.run(

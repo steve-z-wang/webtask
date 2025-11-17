@@ -24,12 +24,14 @@ class TaskExecutor:
         session_browser: "SessionBrowser",
         wait_after_action: float,
         resources: Optional[Dict[str, str]] = None,
+        mode: str = "accessibility",
     ):
         self._worker = Worker(
             llm=llm,
             session_browser=session_browser,
             wait_after_action=wait_after_action,
             resources=resources,
+            mode=mode,
         )
         self._verifier = Verifier(llm=llm, session_browser=session_browser)
 

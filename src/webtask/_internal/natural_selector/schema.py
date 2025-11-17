@@ -7,7 +7,9 @@ from typing import Optional
 class SelectorResponse(BaseModel):
     """Response from selector LLM."""
 
-    interactive_id: Optional[str] = Field(None, description="Matching interactive ID")
+    element_id: Optional[str] = Field(
+        None, description="Matching element ID (role_id or tag_id)"
+    )
     reasoning: Optional[str] = Field(
         None, description="Reasoning for element selection"
     )

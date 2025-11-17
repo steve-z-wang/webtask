@@ -28,8 +28,14 @@ class WorkerBrowser:
         screenshot_bytes = await self._session_browser.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    async def get_dom_snapshot(self) -> str:
-        """Get DOM snapshot with interactive elements."""
+    async def get_dom_snapshot(self, mode: str = "accessibility") -> str:
+        """Get DOM snapshot with interactive elements.
+
+        Args:
+            mode: "accessibility" (default) or "dom"
+                - accessibility: Clean, filtered, role-based IDs (button-0)
+                - dom: Complete, tag-based IDs (input-0), includes file inputs
+        """
 
         # Wait for page to be fully loaded before capturing (safety check)
         await self._session_browser.wait_for_load(timeout=10000)
@@ -41,8 +47,8 @@ class WorkerBrowser:
         # Build LLMDomContext from current page
         self._dom_context = await LLMDomContext.from_page(page)
 
-        # Get context string
-        context_str = self._dom_context.get_context()
+        # Get context string with mode
+        context_str = self._dom_context.get_context(mode=mode)
 
         # Format with URL
         url = page.url
@@ -58,8 +64,8 @@ class WorkerBrowser:
 
         return "\n".join(lines)
 
-    async def _select(self, interactive_id: str):
-        """Select element by interactive ID."""
+    async def _select(self, id: str):
+        """Select element by ID (role_id or tag_id depending on mode)."""
         page = self._session_browser.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
@@ -67,34 +73,34 @@ class WorkerBrowser:
         if self._dom_context is None:
             raise RuntimeError("Context not built yet. Call get_dom_snapshot() first.")
 
-        dom_node = self._dom_context.get_dom_node(interactive_id)
+        dom_node = self._dom_context.get_dom_node(id)
         if dom_node is None:
-            raise KeyError(f"Interactive ID '{interactive_id}' not found")
+            raise KeyError(f"Element ID '{id}' not found")
 
         xpath = dom_node.get_x_path()
         return await page.select_one(xpath)
 
-    async def click(self, interactive_id: str) -> None:
-        """Click element by interactive ID."""
-        element = await self._select(interactive_id)
+    async def click(self, id: str) -> None:
+        """Click element by ID."""
+        element = await self._select(id)
         await element.click()
         await wait(self._wait_after_action)
 
-    async def fill(self, interactive_id: str, value: str) -> None:
-        """Fill element by interactive ID."""
-        element = await self._select(interactive_id)
+    async def fill(self, id: str, value: str) -> None:
+        """Fill element by ID."""
+        element = await self._select(id)
         await element.fill(value)
         await wait(self._wait_after_action)
 
-    async def type(self, interactive_id: str, text: str) -> None:
-        """Type into element by interactive ID."""
-        element = await self._select(interactive_id)
+    async def type(self, id: str, text: str) -> None:
+        """Type into element by ID."""
+        element = await self._select(id)
         await element.type(text)
         await wait(self._wait_after_action)
 
-    async def upload(self, interactive_id: str, file_path: str) -> None:
-        """Upload file to element by interactive ID."""
-        element = await self._select(interactive_id)
+    async def upload(self, id: str, file_path: str) -> None:
+        """Upload file to element by ID."""
+        element = await self._select(id)
         await element.upload_file(file_path)
         await wait(self._wait_after_action)
 

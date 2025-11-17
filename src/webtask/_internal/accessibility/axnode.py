@@ -94,11 +94,17 @@ class AXNode:
     frame_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def copy(self, **overrides) -> "AXNode":
+    def copy(self, children: List["AXNode"], parent: Optional["AXNode"]) -> "AXNode":
+        """Create a copy of this node with new children and parent.
+
+        Args:
+            children: List of child nodes for the new node
+            parent: Parent node for the new node (None for root)
+
+        Returns:
+            New AXNode instance with specified children and parent
         """
-        Create a copy of this node with optional field overrides.
-        """
-        return replace(self, **overrides)
+        return replace(self, children=list(children), parent=parent)
 
     def traverse(self) -> "AXNode":
         """

@@ -24,11 +24,13 @@ class NaturalSelector:
         session_browser: "SessionBrowser",
         max_retries: int = 3,
         include_screenshot: bool = True,
+        mode: str = "accessibility",
     ):
         self._llm = llm
         self._session_browser = session_browser
         self._max_retries = max_retries
         self._include_screenshot = include_screenshot
+        self._mode = mode
         self._dom_context: Optional[LLMDomContext] = None
         self._logger = get_logger(__name__)
 
@@ -45,9 +47,9 @@ class NaturalSelector:
         # Build LLMDomContext with interactive IDs
         self._logger.debug("Building DOM context...")
         self._dom_context = await LLMDomContext.from_page(
-            page, include_interactive_ids=True
+            page, include_element_ids=True
         )
-        page_context = self._dom_context.get_context()
+        page_context = self._dom_context.get_context(mode=self._mode)
         context_size = len(page_context)
         self._logger.debug(
             f"DOM context built successfully - Size: {context_size} chars ({context_size / 1024:.1f} KB)"
@@ -72,7 +74,7 @@ class NaturalSelector:
             UserMessage(
                 content=[
                     TextContent(
-                        text=f'\nWhich interactive_id matches this description: "{description}"?'
+                        text=f'\nWhich element_id matches this description: "{description}"?'
                     )
                 ]
             )
@@ -88,7 +90,7 @@ class NaturalSelector:
                     messages, SelectorResponse
                 )
                 self._logger.info(
-                    f"Received LLM response - Selected: {selector_response.interactive_id}"
+                    f"Received LLM response - Selected: {selector_response.element_id}"
                 )
                 break
 
@@ -117,21 +119,21 @@ class NaturalSelector:
                         f"Last error: {type(e).__name__}: {str(e)}"
                     ) from last_error
 
-        if not selector_response.interactive_id:
+        if not selector_response.element_id:
             if selector_response.error:
                 raise ValueError(
                     f"No matching element found: {selector_response.error}"
                 )
-            raise ValueError("LLM response missing 'interactive_id' field")
+            raise ValueError("LLM response missing 'element_id' field")
 
-        # Get DOM node from interactive ID
+        # Get DOM node from element ID
         self._logger.debug(
-            f"Converting interactive_id '{selector_response.interactive_id}' to element..."
+            f"Converting element_id '{selector_response.element_id}' to element..."
         )
-        node = self._dom_context.get_dom_node(selector_response.interactive_id)
+        node = self._dom_context.get_dom_node(selector_response.element_id)
         if node is None:
             raise ValueError(
-                f"Interactive ID '{selector_response.interactive_id}' not found in page context"
+                f"Element ID '{selector_response.element_id}' not found in page context"
             )
 
         xpath = node.get_x_path()

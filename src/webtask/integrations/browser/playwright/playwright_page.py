@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.async_api import Page as PlaywrightPageType
 from ....browser import Page
 from ...._internal.utils.url import normalize_url
-from ...._internal.cdp.dom import XPath
+from ...._internal.dom import XPath
 
 if TYPE_CHECKING:
     from .playwright_element import PlaywrightElement

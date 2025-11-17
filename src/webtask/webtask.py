@@ -38,6 +38,7 @@ class Webtask:
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
+        mode: str = "accessibility",
     ) -> Agent:
         """Create agent with new browser session. Launches browser on first call.
 
@@ -47,6 +48,7 @@ class Webtask:
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
             Agent instance with new session
@@ -59,6 +61,7 @@ class Webtask:
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
+            mode=mode,
         )
 
         return agent
@@ -71,6 +74,7 @@ class Webtask:
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
+        mode: str = "accessibility",
     ) -> Agent:
         """Create agent with existing browser.
 
@@ -81,6 +85,7 @@ class Webtask:
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
             Agent instance with new session from provided browser
@@ -92,6 +97,7 @@ class Webtask:
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
+            mode=mode,
         )
 
         return agent
@@ -103,6 +109,7 @@ class Webtask:
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
+        mode: str = "accessibility",
     ) -> Agent:
         """Create agent with existing session.
 
@@ -112,6 +119,7 @@ class Webtask:
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
             Agent instance with provided session
@@ -122,6 +130,7 @@ class Webtask:
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
+            mode=mode,
         )
 
     def create_agent_with_page(
@@ -131,6 +140,7 @@ class Webtask:
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
+        mode: str = "accessibility",
     ) -> Agent:
         """Create agent with existing page (session-less mode).
 
@@ -140,6 +150,7 @@ class Webtask:
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
             Agent instance with provided page
@@ -150,6 +161,7 @@ class Webtask:
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
+            mode=mode,
         )
         agent.set_page(page)
         return agent

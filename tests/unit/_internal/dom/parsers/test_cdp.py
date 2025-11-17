@@ -1,7 +1,7 @@
 """Tests for CDP snapshot parser."""
 
 import pytest
-from webtask._internal.cdp.dom.parsers.cdp import (
+from webtask._internal.dom.parsers.cdp import (
     _get_string_resolver,
     _parse_layout_data,
     _create_element_nodes,
@@ -9,7 +9,7 @@ from webtask._internal.cdp.dom.parsers.cdp import (
     _build_tree,
     parse_cdp,
 )
-from webtask._internal.cdp.dom.domnode import DomNode, Text, BoundingBox
+from webtask._internal.dom.domnode import DomNode, Text, BoundingBox
 
 
 @pytest.mark.unit

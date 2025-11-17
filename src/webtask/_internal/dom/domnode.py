@@ -8,6 +8,39 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class Text:
+    """DOM text node."""
+
+    content: str
+    parent: Optional["DomNode"] = field(default=None, repr=False)
+
+    @property
+    def children(self) -> List[Union["DomNode", "Text"]]:
+        """Text nodes are leaf nodes with no children."""
+        return []
+
+    def copy(
+        self, children: List[Union["DomNode", "Text"]], parent: Optional["DomNode"]
+    ) -> "Text":
+        """Create a copy of this text node.
+
+        Args:
+            children: Ignored for text nodes (always empty)
+            parent: Parent node for the new text node
+
+        Returns:
+            New Text instance with same content and specified parent
+        """
+        # Text nodes don't have children, so we ignore the children parameter
+        new_text = Text(content=self.content)
+        new_text.parent = parent
+        return new_text
+
+    def __str__(self):
+        return self.content
+
+
+@dataclass
 class BoundingBox:
     """Element bounding box from browser rendering."""
 
@@ -103,9 +136,22 @@ class DomNode:
         self.children.append(child)
         child.parent = self
 
-    def copy(self) -> "DomNode":
-        """Create shallow copy without children."""
-        return DomNode(data=self.data)
+    def copy(
+        self, children: List[Union["DomNode", "Text"]], parent: Optional["DomNode"]
+    ) -> "DomNode":
+        """Create a copy of this node with new children and parent.
+
+        Args:
+            children: List of child nodes for the new node
+            parent: Parent node for the new node (None for root)
+
+        Returns:
+            New node instance with specified children and parent
+        """
+        new_node = DomNode(data=self.data)
+        new_node.children = list(children)  # Convert to list if needed
+        new_node.parent = parent
+        return new_node
 
     def deepcopy(self) -> "DomNode":
         """Create deep copy without children."""
@@ -160,14 +206,3 @@ class DomNode:
 
         parent_path = self.parent.get_x_path()
         return XPath(f"{parent_path.path}/{self.tag}{position}")
-
-
-@dataclass
-class Text:
-    """DOM text node."""
-
-    content: str
-    parent: Optional[DomNode] = field(default=None, repr=False)
-
-    def __str__(self):
-        return self.content

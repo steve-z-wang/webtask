@@ -106,7 +106,7 @@ class RecordingPage(Page):
     async def select(self, selector) -> List[Element]:
         """Select elements."""
         from .element import RecordingElement
-        from webtask._internal.cdp.dom.selector import XPath
+        from webtask._internal.dom.selector import XPath
 
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)
@@ -141,7 +141,7 @@ class RecordingPage(Page):
     async def select_one(self, selector) -> Element:
         """Select single element."""
         from .element import RecordingElement
-        from webtask._internal.cdp.dom.selector import XPath
+        from webtask._internal.dom.selector import XPath
 
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)

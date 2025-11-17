@@ -66,8 +66,10 @@ class Worker:
         session_browser: "SessionBrowser",
         wait_after_action: float,
         resources: Optional[Dict[str, str]] = None,
+        mode: str = "accessibility",
     ):
         self._llm = llm
+        self._mode = mode
         self.worker_browser = WorkerBrowser(
             session_browser, wait_after_action=wait_after_action
         )
@@ -192,7 +194,7 @@ class Worker:
             )
 
         # Get current page state
-        dom_snapshot = await self.worker_browser.get_dom_snapshot()
+        dom_snapshot = await self.worker_browser.get_dom_snapshot(mode=self._mode)
         screenshot_b64 = await self.worker_browser.get_screenshot()
 
         # Create tool result message
@@ -294,7 +296,7 @@ class Worker:
                 TextContent(text=f"Verifier feedback:\n{verifier_feedback}")
             )
 
-        dom_snapshot = await self.worker_browser.get_dom_snapshot()
+        dom_snapshot = await self.worker_browser.get_dom_snapshot(mode=self._mode)
         screenshot_b64 = await self.worker_browser.get_screenshot()
         user_content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
         user_content.append(

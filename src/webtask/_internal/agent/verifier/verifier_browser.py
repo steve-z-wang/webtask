@@ -22,7 +22,7 @@ class VerifierBrowser:
             return "ERROR: No page opened yet."
 
         # Build LLMDomContext without interactive IDs
-        dom_context = await LLMDomContext.from_page(page, include_interactive_ids=False)
+        dom_context = await LLMDomContext.from_page(page, include_element_ids=False)
         context_str = dom_context.get_context()
 
         # Format with URL
