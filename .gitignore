@@ -49,6 +49,9 @@ test-results/
 # Logs
 *.log
 
+# Debug output
+debug/
+
 # Environment variables
 .env
 testground/

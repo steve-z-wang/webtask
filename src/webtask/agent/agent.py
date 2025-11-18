@@ -85,7 +85,7 @@ class Agent:
             RuntimeError: If no context is available
         """
         if not self.session_browser.get_current_page():
-            raise RuntimeError("No context available. Call set_context() first.")
+            await self.session_browser.create_page()
 
         # Use task-level wait_after_action if provided, otherwise use agent default
         effective_wait = (
