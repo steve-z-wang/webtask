@@ -11,6 +11,21 @@ class Context(ABC):
     Equivalent to Playwright's BrowserContext.
     """
 
+    @property
+    @abstractmethod
+    def pages(self):
+        """
+        Get all existing pages in this context.
+
+        Returns:
+            List of page objects
+
+        Example:
+            >>> context = await browser.create_context()
+            >>> existing_pages = context.pages
+        """
+        pass
+
     @abstractmethod
     async def create_page(self):
         """

@@ -137,12 +137,13 @@ class Webtask:
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        create_new_context: bool = False,
+        use_existing_context: bool = True,
+        use_existing_page: bool = True,
     ) -> Agent:
         """Create agent with existing browser.
 
-        By default, uses existing browser context (window) if available.
-        This prevents creating new windows when connecting to existing browsers.
+        By default, uses existing browser context and page if available.
+        This prevents creating new windows/tabs when connecting to existing browsers.
 
         Args:
             llm: LLM instance for reasoning
@@ -152,40 +153,48 @@ class Webtask:
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            create_new_context: Force creation of new isolated context (default: False)
+            use_existing_context: Use existing context if available (default: True)
+            use_existing_page: Use existing page if available (default: True)
 
         Returns:
             Agent instance with context from provided browser
 
         Example:
-            >>> # Uses existing window - no new window created!
+            >>> # Uses existing window AND tab - nothing new created!
             >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
             >>> agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
+
+            >>> # Force new isolated window
+            >>> agent = await wt.create_agent_with_browser(
+            ...     llm=llm,
+            ...     browser=browser,
+            ...     use_existing_context=False
+            ... )
         """
         # Auto-wrap if needed (currently just validates it's our wrapper)
         wrapped_browser = self._wrap_browser(browser)
 
         # Smart context selection: use existing if available, create if needed
-        if create_new_context or not wrapped_browser.contexts:
-            # Create new isolated context
-            context = await wrapped_browser.create_context(cookies=cookies)
-        else:
+        if use_existing_context and wrapped_browser.contexts:
             # Use existing default context (first window)
             context = wrapped_browser.get_default_context()
             if context is None:
                 # Fallback: create new context
                 context = await wrapped_browser.create_context(cookies=cookies)
+        else:
+            # Create new isolated context
+            context = await wrapped_browser.create_context(cookies=cookies)
 
-        agent = Agent(
-            llm,
+        # Delegate to create_agent_with_context for page handling
+        return self.create_agent_with_context(
+            llm=llm,
             context=context,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
             mode=mode,
+            use_existing_page=use_existing_page,
         )
-
-        return agent
 
     def create_agent_with_context(
         self,
@@ -195,11 +204,13 @@ class Webtask:
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
+        use_existing_page: bool = True,
     ) -> Agent:
         """Create agent with existing context.
 
         Accepts either webtask Context or raw Playwright BrowserContext.
         Automatically wraps Playwright objects.
+        By default, uses existing page if available.
 
         Args:
             llm: LLM instance for reasoning
@@ -208,14 +219,21 @@ class Webtask:
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
+            use_existing_page: Use existing page if available (default: True)
 
         Returns:
             Agent instance with provided context
+
+        Example:
+            >>> # Uses existing tab - no new tab created!
+            >>> context = browser.get_default_context()
+            >>> agent = wt.create_agent_with_context(llm=llm, context=context)
         """
         # Auto-wrap if needed
         wrapped_context = self._wrap_context(context)
 
-        return Agent(
+        # Create agent with context (no page yet)
+        agent = Agent(
             llm,
             context=wrapped_context,
             use_screenshot=use_screenshot,
@@ -223,6 +241,17 @@ class Webtask:
             wait_after_action=wait_after_action,
             mode=mode,
         )
+
+        # Smart page selection: use existing if available
+        if use_existing_page and wrapped_context.pages:
+            # Use first existing page (active tab)
+            page = wrapped_context.pages[0]
+            # Wrap it if it's a raw Playwright page
+            wrapped_page = self._wrap_page(page)
+            agent.set_page(wrapped_page)
+        # else: agent.execute() will auto-create a page when needed
+
+        return agent
 
     def create_agent_with_page(
         self,
