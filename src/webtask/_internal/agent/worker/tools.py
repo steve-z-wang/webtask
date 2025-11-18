@@ -227,7 +227,7 @@ class CompleteWorkTool(Tool):
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of complete_work action."""
-        return "Completed work"
+        return f"Completed work: {params.feedback}"
 
     async def execute(self, params: Params) -> None:
         """Signal that work is complete."""
