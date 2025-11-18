@@ -86,6 +86,38 @@ class PlaywrightBrowser(Browser):
 
         return cls(playwright, browser, headless=False)
 
+    @property
+    def contexts(self):
+        """
+        Get all existing browser contexts.
+
+        Returns:
+            List of Playwright BrowserContext objects
+
+        Example:
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> contexts = browser.contexts  # Existing windows
+        """
+        return self._browser.contexts
+
+    def get_default_context(self):
+        """
+        Get the default (first) existing context, or None if no contexts exist.
+
+        Returns:
+            PlaywrightContext or None
+
+        Example:
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> context = browser.get_default_context()  # First existing window
+        """
+        from .playwright_context import PlaywrightContext
+
+        contexts = self._browser.contexts
+        if contexts:
+            return PlaywrightContext(contexts[0])
+        return None
+
     async def create_context(self, cookies=None):
         """
         Create a new context in this browser.

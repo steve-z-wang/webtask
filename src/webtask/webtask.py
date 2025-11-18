@@ -137,28 +137,45 @@ class Webtask:
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
+        create_new_context: bool = False,
     ) -> Agent:
         """Create agent with existing browser.
 
-        Accepts either webtask Browser or raw Playwright Browser.
-        Note: Raw Playwright Browser wrapping not yet fully supported.
+        By default, uses existing browser context (window) if available.
+        This prevents creating new windows when connecting to existing browsers.
 
         Args:
             llm: LLM instance for reasoning
-            browser: Browser instance (webtask wrapper required)
+            browser: Browser instance or raw Playwright Browser
             cookies: Optional cookies for the context
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
+            create_new_context: Force creation of new isolated context (default: False)
 
         Returns:
-            Agent instance with new context from provided browser
+            Agent instance with context from provided browser
+
+        Example:
+            >>> # Uses existing window - no new window created!
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
         """
         # Auto-wrap if needed (currently just validates it's our wrapper)
         wrapped_browser = self._wrap_browser(browser)
 
-        context = await wrapped_browser.create_context(cookies=cookies)
+        # Smart context selection: use existing if available, create if needed
+        if create_new_context or not wrapped_browser.contexts:
+            # Create new isolated context
+            context = await wrapped_browser.create_context(cookies=cookies)
+        else:
+            # Use existing default context (first window)
+            context = wrapped_browser.get_default_context()
+            if context is None:
+                # Fallback: create new context
+                context = await wrapped_browser.create_context(cookies=cookies)
+
         agent = Agent(
             llm,
             context=context,

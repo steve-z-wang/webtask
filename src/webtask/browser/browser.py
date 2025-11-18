@@ -47,6 +47,38 @@ class Browser(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def contexts(self):
+        """
+        Get all existing browser contexts.
+
+        Returns:
+            List of context objects
+
+        Example:
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> existing_contexts = browser.contexts
+        """
+        pass
+
+    def get_default_context(self):
+        """
+        Get the default (first) existing context, or None if no contexts exist.
+
+        This is a convenience method that returns the first context if any exist.
+
+        Returns:
+            Context instance or None
+
+        Example:
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> context = browser.get_default_context()  # First existing window
+        """
+        # Concrete implementation using abstract contexts property
+        # Subclasses should wrap the raw context appropriately
+        return None  # Subclasses override to return wrapped context
+
     @abstractmethod
     async def create_context(self, **kwargs):
         """
