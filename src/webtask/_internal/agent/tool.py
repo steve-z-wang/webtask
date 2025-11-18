@@ -1,5 +1,6 @@
 """Tool registry for agent tools."""
 
+import logging
 from typing import Dict, List, Tuple
 from webtask.agent.tool import Tool
 from webtask.llm import ToolResult, ToolResultStatus
@@ -10,6 +11,7 @@ class ToolRegistry:
 
     def __init__(self):
         self._tools: Dict[str, Tool] = {}
+        self._logger = logging.getLogger(__name__)
 
     def register(self, tool: Tool) -> None:
         """Register a tool in the registry. Replaces existing tool if name already exists."""
@@ -44,6 +46,11 @@ class ToolRegistry:
                 tool = self.get(tool_call.name)
                 params = tool.Params(**tool_call.arguments)
 
+                # Log tool execution start
+                self._logger.info(
+                    f"Executing tool: {tool_call.name} with params: {tool_call.arguments}"
+                )
+
                 # Execute tool and capture output
                 await tool.execute(params)
 
@@ -58,6 +65,9 @@ class ToolRegistry:
                 description = tool.describe(params)
                 descriptions.append(description)
 
+                # Log tool execution success
+                self._logger.info(f"Tool executed successfully: {description}")
+
                 # If terminal tool succeeded, stop execution
                 if tool.is_terminal:
                     break
@@ -65,6 +75,7 @@ class ToolRegistry:
             except KeyError as e:
                 # Tool not found in registry
                 error_msg = str(e)
+                self._logger.error(f"Tool not found: {tool_call.name} - {error_msg}")
                 result = ToolResult(
                     tool_call_id=tool_call.id,
                     name=tool_call.name,
@@ -77,14 +88,18 @@ class ToolRegistry:
 
             except Exception as e:
                 # Params validation or tool execution error
+                error_msg = str(e)
+                self._logger.error(
+                    f"Tool execution failed: {tool_call.name} - {error_msg}"
+                )
                 result = ToolResult(
                     tool_call_id=tool_call.id,
                     name=tool_call.name,
                     status=ToolResultStatus.ERROR,
-                    error=str(e),
+                    error=error_msg,
                 )
                 results.append(result)
-                descriptions.append(f"{tool_call.name} (ERROR: {str(e)})")
+                descriptions.append(f"{tool_call.name} (ERROR: {error_msg})")
                 break  # Stop on any error
 
         return results, descriptions

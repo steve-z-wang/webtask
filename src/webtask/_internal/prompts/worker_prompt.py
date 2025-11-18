@@ -30,7 +30,7 @@ def build_worker_prompt() -> str:
             "**Execute actions** - Call the necessary browser tools (click, type, fill, navigate, wait)"
         )
         .add_numbered(
-            "**Wait for page updates** - Always call wait for 2-3 seconds after navigate, clicking links, upload, or form submissions to let the page update"
+            "**Wait when needed** - Call wait only after actions that trigger page updates (see Q&A for details)"
         )
         .add_numbered(
             "**Complete when done** - Call complete_work when task is accomplished, or abort_work if blocked"
@@ -61,6 +61,17 @@ def build_worker_prompt() -> str:
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
+        .add()
+        .add("**When should I wait and for how long?**")
+        .add("Wait ONLY after actions that trigger page updates:")
+        .add("- Navigate to a new URL → wait 2-3 seconds")
+        .add("- Click links or buttons that navigate/submit → wait 2-3 seconds")
+        .add("- Form submissions → wait 2-3 seconds")
+        .add("- File uploads → wait 2-3 seconds")
+        .add()
+        .add("Do NOT wait after:")
+        .add("- Type or fill actions (no page reload)")
+        .add("- Clicking dropdowns or UI controls (unless they trigger navigation)")
         .add()
         .add("**What if page is still loading?**")
         .add(
