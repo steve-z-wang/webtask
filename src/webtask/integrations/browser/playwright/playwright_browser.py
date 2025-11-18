@@ -58,6 +58,34 @@ class PlaywrightBrowser(Browser):
 
         return cls(playwright, browser, headless)
 
+    @classmethod
+    async def connect(
+        cls, cdp_url: str = "http://localhost:9222"
+    ) -> "PlaywrightBrowser":
+        """
+        Connect to an existing Chrome/Chromium browser via CDP.
+
+        Customer must launch Chrome with debugging enabled:
+            chrome --remote-debugging-port=9222
+
+        Args:
+            cdp_url: CDP endpoint URL (default: http://localhost:9222)
+
+        Returns:
+            PlaywrightBrowser instance connected to existing browser
+
+        Example:
+            >>> # Customer launches: chrome --remote-debugging-port=9222
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+            >>> session = await browser.create_session()
+        """
+        playwright = await async_playwright().start()
+
+        # Connect to existing browser via CDP
+        browser = await playwright.chromium.connect_over_cdp(cdp_url)
+
+        return cls(playwright, browser, headless=False)
+
     async def create_session(self, cookies=None):
         """
         Create a new session/context in this browser.

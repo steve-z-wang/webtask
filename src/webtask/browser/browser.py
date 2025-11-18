@@ -33,6 +33,20 @@ class Browser(ABC):
         """
         pass
 
+    @classmethod
+    @abstractmethod
+    async def connect(cls, **kwargs):
+        """
+        Connect to an existing browser instance (async factory method).
+
+        Returns:
+            Browser instance connected to existing browser
+
+        Example:
+            >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
+        """
+        pass
+
     @abstractmethod
     async def create_session(self, **kwargs):
         """
