@@ -62,25 +62,20 @@ def build_worker_prompt() -> str:
         MarkdownBuilder()
         .add_heading("Q&A")
         .add()
-        .add("**When should I wait and for how long?**")
-        .add("Wait ONLY after actions that trigger page updates:")
-        .add("- Navigate to a new URL → wait 2-3 seconds")
-        .add("- Click links or buttons that navigate/submit → wait 2-3 seconds")
-        .add("- Form submissions → wait 2-3 seconds")
-        .add("- File uploads → wait 2-3 seconds")
+        .add("**When should I wait?**")
+        .add("Wait only when you expect the page to navigate or reload (e.g., clicking links, submitting forms, uploading files). Don't wait for UI interactions that don't reload the page (e.g., typing, opening dropdowns, selecting options).")
         .add()
-        .add("Do NOT wait after:")
-        .add("- Type or fill actions (no page reload)")
-        .add("- Clicking dropdowns or UI controls (unless they trigger navigation)")
+        .add("**How long should I wait?**")
+        .add("Start with 1 second for simple pages, use 2-3 seconds for complex pages. Adjust based on the page's performance in this session.")
         .add()
         .add("**What if page is still loading?**")
         .add(
-            "Call the wait tool (2-3 seconds) and the next round will have the updated page state."
+            "Call the wait tool (1-2 seconds) and the next round will have the updated page state."
         )
         .add()
         .add("**Can I call multiple tools in one response?**")
         .add(
-            "Yes! You should call all necessary tools together (e.g., fill multiple fields, then click, then wait)."
+            "Yes! You should call all necessary tools together (e.g., fill multiple fields, then click)."
         )
         .add()
         .add("**What if you see a bot challenge?**")
