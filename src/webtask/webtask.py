@@ -1,6 +1,6 @@
 """Webtask - main manager class for web automation."""
 
-from typing import Optional
+from typing import Optional, Union
 from .browser import Browser, Context, Page
 from .llm import LLM
 from .agent import Agent
@@ -30,6 +30,68 @@ class Webtask:
             )
 
         return self.browser
+
+    def _wrap_browser(self, browser) -> Browser:
+        """Wrap raw Playwright browser if needed."""
+        # If already our Browser interface, return as-is
+        if isinstance(browser, Browser):
+            return browser
+
+        # Otherwise, assume it's a Playwright browser and wrap it
+        try:
+            from playwright.async_api import Browser as PlaywrightBrowserType
+            from .integrations.browser.playwright import PlaywrightBrowser
+
+            if isinstance(browser, PlaywrightBrowserType):
+                # Wrap the Playwright browser (need playwright instance too)
+                # For now, we'll just return it - user should use our wrapper if they want full support
+                raise TypeError(
+                    "Direct Playwright Browser wrapping not yet supported. "
+                    "Please use PlaywrightBrowser.connect() or PlaywrightBrowser.create()"
+                )
+        except ImportError:
+            pass
+
+        # If not recognized, assume it's already our interface
+        return browser
+
+    def _wrap_context(self, context) -> Context:
+        """Wrap raw Playwright BrowserContext if needed."""
+        # If already our Context interface, return as-is
+        if isinstance(context, Context):
+            return context
+
+        # Otherwise, assume it's a Playwright BrowserContext and wrap it
+        try:
+            from playwright.async_api import BrowserContext as PlaywrightContextType
+            from .integrations.browser.playwright import PlaywrightContext
+
+            if isinstance(context, PlaywrightContextType):
+                return PlaywrightContext(context)
+        except ImportError:
+            pass
+
+        # If not recognized, assume it's already our interface
+        return context
+
+    def _wrap_page(self, page) -> Page:
+        """Wrap raw Playwright Page if needed."""
+        # If already our Page interface, return as-is
+        if isinstance(page, Page):
+            return page
+
+        # Otherwise, assume it's a Playwright Page and wrap it
+        try:
+            from playwright.async_api import Page as PlaywrightPageType
+            from .integrations.browser.playwright import PlaywrightPage
+
+            if isinstance(page, PlaywrightPageType):
+                return PlaywrightPage(page)
+        except ImportError:
+            pass
+
+        # If not recognized, assume it's already our interface
+        return page
 
     async def create_agent(
         self,
@@ -69,7 +131,7 @@ class Webtask:
     async def create_agent_with_browser(
         self,
         llm: LLM,
-        browser: Browser,
+        browser: Union[Browser, "PlaywrightBrowser"],
         cookies=None,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
@@ -78,9 +140,12 @@ class Webtask:
     ) -> Agent:
         """Create agent with existing browser.
 
+        Accepts either webtask Browser or raw Playwright Browser.
+        Note: Raw Playwright Browser wrapping not yet fully supported.
+
         Args:
             llm: LLM instance for reasoning
-            browser: Existing Browser instance
+            browser: Browser instance (webtask wrapper required)
             cookies: Optional cookies for the context
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
@@ -90,7 +155,10 @@ class Webtask:
         Returns:
             Agent instance with new context from provided browser
         """
-        context = await browser.create_context(cookies=cookies)
+        # Auto-wrap if needed (currently just validates it's our wrapper)
+        wrapped_browser = self._wrap_browser(browser)
+
+        context = await wrapped_browser.create_context(cookies=cookies)
         agent = Agent(
             llm,
             context=context,
@@ -105,7 +173,7 @@ class Webtask:
     def create_agent_with_context(
         self,
         llm: LLM,
-        context: Context,
+        context: Union[Context, "BrowserContext"],
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
@@ -113,9 +181,12 @@ class Webtask:
     ) -> Agent:
         """Create agent with existing context.
 
+        Accepts either webtask Context or raw Playwright BrowserContext.
+        Automatically wraps Playwright objects.
+
         Args:
             llm: LLM instance for reasoning
-            context: Existing Context instance
+            context: Context instance or Playwright BrowserContext
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
@@ -124,9 +195,12 @@ class Webtask:
         Returns:
             Agent instance with provided context
         """
+        # Auto-wrap if needed
+        wrapped_context = self._wrap_context(context)
+
         return Agent(
             llm,
-            context=context,
+            context=wrapped_context,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
@@ -136,7 +210,7 @@ class Webtask:
     def create_agent_with_page(
         self,
         llm: LLM,
-        page: Page,
+        page: Union[Page, "PlaywrightPage"],
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
@@ -144,9 +218,12 @@ class Webtask:
     ) -> Agent:
         """Create agent with existing page (context-less mode).
 
+        Accepts either webtask Page or raw Playwright Page.
+        Automatically wraps Playwright objects.
+
         Args:
             llm: LLM instance for reasoning
-            page: Existing Page instance
+            page: Page instance or Playwright Page
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
@@ -155,6 +232,9 @@ class Webtask:
         Returns:
             Agent instance with provided page
         """
+        # Auto-wrap if needed
+        wrapped_page = self._wrap_page(page)
+
         agent = Agent(
             llm,
             context=None,
@@ -163,7 +243,7 @@ class Webtask:
             wait_after_action=wait_after_action,
             mode=mode,
         )
-        agent.set_page(page)
+        agent.set_page(wrapped_page)
         return agent
 
     async def close(self) -> None:
