@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List, Union, TYPE_CHECKING
 from webtask.browser import Page, Element
 
 if TYPE_CHECKING:
-    from .session import RecordingSession
+    from .context import RecordingContext
 
 
 class RecordingPage(Page):
@@ -15,12 +15,12 @@ class RecordingPage(Page):
 
     def __init__(
         self,
-        session: "RecordingSession",
+        context: "RecordingContext",
         page: Optional[Page] = None,
         fixture_path: str = None,
         instance_id: str = None,
     ):
-        self._session = session
+        self._context = context
         self._page = page
         self._fixture_path = Path(fixture_path) if fixture_path else None
         self._current_url = ""
@@ -31,7 +31,7 @@ class RecordingPage(Page):
 
     async def navigate(self, url: str):
         """Navigate to URL."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             self._current_url = url
             self._get_next_result("navigate")
             return
@@ -39,31 +39,31 @@ class RecordingPage(Page):
         result = await self._page.navigate(url)
         self._current_url = url
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call("navigate", {"url": url}, None)
 
         return result
 
     async def get_cdp_dom_snapshot(self) -> Dict[str, Any]:
         """Get CDP DOM snapshot."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             return self._get_next_result("get_cdp_dom_snapshot")
 
         result = await self._page.get_cdp_dom_snapshot()
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call("get_cdp_dom_snapshot", {}, result)
 
         return result
 
     async def get_cdp_accessibility_tree(self) -> Dict[str, Any]:
         """Get CDP accessibility tree."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             return self._get_next_result("get_cdp_accessibility_tree")
 
         result = await self._page.get_cdp_accessibility_tree()
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call("get_cdp_accessibility_tree", {}, result)
 
         return result
@@ -71,7 +71,7 @@ class RecordingPage(Page):
     def _get_call_path(self, call_index: int):
         """Get path for a specific call file."""
         return (
-            self._session._browser._fixture_path
+            self._context._browser._fixture_path
             / f"page_{self._instance_id}"
             / f"call_{call_index:03d}.json"
         )
@@ -111,7 +111,7 @@ class RecordingPage(Page):
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)
 
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             result = self._get_next_result("select")
             # Return list of RecordingElements with their instance IDs
             return [
@@ -125,7 +125,7 @@ class RecordingPage(Page):
             for i, elem in enumerate(elements)
         ]
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call(
                 "select",
                 {"selector": selector_str},
@@ -146,7 +146,7 @@ class RecordingPage(Page):
         # Convert XPath to string for JSON serialization
         selector_str = selector.path if isinstance(selector, XPath) else str(selector)
 
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             result = self._get_next_result("select_one")
             return RecordingElement(
                 page=self,
@@ -158,7 +158,7 @@ class RecordingPage(Page):
         element = await self._page.select_one(selector)
         recording_element = RecordingElement(page=self, element=element, index=0)
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call(
                 "select_one",
                 {"selector": selector_str},
@@ -169,20 +169,20 @@ class RecordingPage(Page):
 
     async def close(self):
         """Close the page."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             return
 
         return await self._page.close()
 
     async def wait_for_load(self, timeout: int = 10000):
         """Wait for page to fully load."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             self._get_next_result("wait_for_load")
             return
 
         result = await self._page.wait_for_load(timeout)
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call("wait_for_load", {"timeout": timeout}, None)
 
         return result
@@ -191,7 +191,7 @@ class RecordingPage(Page):
         self, path: Optional[Union[str, Path]] = None, full_page: bool = False
     ) -> bytes:
         """Take screenshot."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             # Return base64-decoded bytes from recording
             import base64
 
@@ -200,7 +200,7 @@ class RecordingPage(Page):
 
         result = await self._page.screenshot(path, full_page)
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             import base64
 
             # Encode bytes to base64 for JSON storage
@@ -216,13 +216,13 @@ class RecordingPage(Page):
         self, text: str, clear: bool = False, delay: float = 80
     ) -> None:
         """Type text."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             self._get_next_result("keyboard_type")
             return
 
         result = await self._page.keyboard_type(text, clear, delay)
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call(
                 "keyboard_type", {"text": text, "clear": clear, "delay": delay}, None
             )
@@ -231,12 +231,12 @@ class RecordingPage(Page):
 
     async def evaluate(self, script: str) -> Any:
         """Execute JavaScript."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             return self._get_next_result("evaluate")
 
         result = await self._page.evaluate(script)
 
-        if self._session._browser._is_recording:
+        if self._context._browser._is_recording:
             self._record_call("evaluate", {"script": script}, result)
 
         return result
@@ -244,7 +244,7 @@ class RecordingPage(Page):
     @property
     def url(self) -> str:
         """Get current URL."""
-        if self._session._browser._is_replaying:
+        if self._context._browser._is_replaying:
             return self._current_url
 
         return self._page.url

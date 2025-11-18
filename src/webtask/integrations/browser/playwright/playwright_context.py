@@ -1,42 +1,42 @@
-"""Playwright session implementation."""
+"""Playwright context implementation."""
 
 from typing import TYPE_CHECKING
 from playwright.async_api import BrowserContext
-from ....browser import Session
+from ....browser import Context
 
 if TYPE_CHECKING:
     from .playwright_page import PlaywrightPage
 
 
-class PlaywrightSession(Session):
+class PlaywrightContext(Context):
     """
-    Playwright implementation of Session.
+    Playwright implementation of Context.
 
-    Wraps Playwright's BrowserContext for session management.
+    Wraps Playwright's BrowserContext for context management.
     Users should set cookies directly on the BrowserContext before passing it in.
     """
 
-    def __init__(self, context: BrowserContext):
+    def __init__(self, browser_context: BrowserContext):
         """
-        Initialize PlaywrightSession.
+        Initialize PlaywrightContext.
 
         Args:
-            context: Playwright BrowserContext instance
+            browser_context: Playwright BrowserContext instance
         """
         super().__init__()
-        self._context = context
+        self._context = browser_context
 
     async def create_page(self) -> "PlaywrightPage":
         """
-        Create a new page/tab in this session.
+        Create a new page/tab in this context.
 
         Returns:
             PlaywrightPage instance
 
         Example:
-            >>> session = await PlaywrightSession.create_session(browser)
-            >>> page1 = await session.create_page()
-            >>> page2 = await session.create_page()  # New tab in same session
+            >>> context = await browser.create_context()
+            >>> page1 = await context.create_page()
+            >>> page2 = await context.create_page()  # New tab in same context
         """
         from .playwright_page import PlaywrightPage
 
@@ -44,6 +44,6 @@ class PlaywrightSession(Session):
         return PlaywrightPage(playwright_page)
 
     async def close(self):
-        """Close the session/context."""
+        """Close the context."""
         if self._context:
             await self._context.close()

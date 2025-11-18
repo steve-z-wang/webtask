@@ -1,7 +1,7 @@
 """Webtask - main manager class for web automation."""
 
 from typing import Optional
-from .browser import Browser, Session, Page
+from .browser import Browser, Context, Page
 from .llm import LLM
 from .agent import Agent
 
@@ -40,24 +40,24 @@ class Webtask:
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
     ) -> Agent:
-        """Create agent with new browser session. Launches browser on first call.
+        """Create agent with new browser context. Launches browser on first call.
 
         Args:
             llm: LLM instance for reasoning
-            cookies: Optional cookies for the session
+            cookies: Optional cookies for the context
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
-            Agent instance with new session
+            Agent instance with new context
         """
         browser = await self._ensure_browser()
-        session = await browser.create_session(cookies=cookies)
+        context = await browser.create_context(cookies=cookies)
         agent = Agent(
             llm,
-            session=session,
+            context=context,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
@@ -81,19 +81,19 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             browser: Existing Browser instance
-            cookies: Optional cookies for the session
+            cookies: Optional cookies for the context
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
-            Agent instance with new session from provided browser
+            Agent instance with new context from provided browser
         """
-        session = await browser.create_session(cookies=cookies)
+        context = await browser.create_context(cookies=cookies)
         agent = Agent(
             llm,
-            session=session,
+            context=context,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
@@ -102,31 +102,31 @@ class Webtask:
 
         return agent
 
-    def create_agent_with_session(
+    def create_agent_with_context(
         self,
         llm: LLM,
-        session: Session,
+        context: Context,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
     ) -> Agent:
-        """Create agent with existing session.
+        """Create agent with existing context.
 
         Args:
             llm: LLM instance for reasoning
-            session: Existing Session instance
+            context: Existing Context instance
             use_screenshot: Use screenshots with bounding boxes (default: True)
             selector_llm: Optional separate LLM for element selection
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
-            Agent instance with provided session
+            Agent instance with provided context
         """
         return Agent(
             llm,
-            session=session,
+            context=context,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,
@@ -142,7 +142,7 @@ class Webtask:
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
     ) -> Agent:
-        """Create agent with existing page (session-less mode).
+        """Create agent with existing page (context-less mode).
 
         Args:
             llm: LLM instance for reasoning
@@ -157,7 +157,7 @@ class Webtask:
         """
         agent = Agent(
             llm,
-            session=None,
+            context=None,
             use_screenshot=use_screenshot,
             selector_llm=selector_llm,
             wait_after_action=wait_after_action,

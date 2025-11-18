@@ -1,26 +1,26 @@
-"""RecordingSession - Session wrapper for test recording and replay."""
+"""RecordingContext - Context wrapper for test recording and replay."""
 
 import uuid
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
-from webtask.browser import Session
+from webtask.browser import Context
 
 if TYPE_CHECKING:
     from .browser import RecordingBrowser
 
 
-class RecordingSession(Session):
-    """Session wrapper that records/replays interactions."""
+class RecordingContext(Context):
+    """Context wrapper that records/replays interactions."""
 
     def __init__(
         self,
         browser: "RecordingBrowser",
-        session: Optional[Session] = None,
+        context: Optional[Context] = None,
         fixture_path: str = None,
         instance_id: str = None,
     ):
         self._browser = browser
-        self._session = session
+        self._context = context
         self._fixture_path = Path(fixture_path) if fixture_path else None
 
         # Instance tracking - use provided ID or generate new UUID
@@ -35,15 +35,15 @@ class RecordingSession(Session):
             result = self._get_next_result("create_page")
             page_id = result.get("page_instance_id")
             return RecordingPage(
-                session=self,
+                context=self,
                 page=None,
                 fixture_path=str(self._fixture_path),
                 instance_id=page_id,
             )
 
-        page = await self._session.create_page()
+        page = await self._context.create_page()
         recording_page = RecordingPage(
-            session=self, page=page, fixture_path=str(self._fixture_path)
+            context=self, page=page, fixture_path=str(self._fixture_path)
         )
 
         if self._browser._is_recording:
@@ -97,4 +97,4 @@ class RecordingSession(Session):
         if self._browser._is_replaying:
             return
 
-        return await self._session.close()
+        return await self._context.close()

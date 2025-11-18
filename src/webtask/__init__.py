@@ -5,7 +5,7 @@ from .agent import Agent, Tool
 
 from .browser import (
     Browser,
-    Session,
+    Context,
     Page,
     Element,
 )
@@ -38,7 +38,7 @@ __all__ = [
     "TaskResult",
     # Browser interfaces (for custom implementations)
     "Browser",
-    "Session",
+    "Context",
     "Page",
     "Element",
     # LLM interface

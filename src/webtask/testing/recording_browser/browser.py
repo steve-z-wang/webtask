@@ -146,33 +146,33 @@ class RecordingBrowser(Browser):
         """Create browser (not used with RecordingBrowser - use __init__ directly)."""
         raise NotImplementedError("Use RecordingBrowser(...) directly instead")
 
-    async def create_session(self, **kwargs):
-        """Create a recording session."""
-        from .session import RecordingSession
+    async def create_context(self, **kwargs):
+        """Create a recording context."""
+        from .context import RecordingContext
 
         if self._is_replaying:
-            result = self._get_next_result("create_session")
-            session_id = result.get("session_instance_id")
-            return RecordingSession(
+            result = self._get_next_result("create_context")
+            context_id = result.get("context_instance_id")
+            return RecordingContext(
                 browser=self,
-                session=None,
+                context=None,
                 fixture_path=str(self._fixture_path),
-                instance_id=session_id,
+                instance_id=context_id,
             )
 
-        session = await self._browser.create_session(**kwargs)
-        recording_session = RecordingSession(
-            browser=self, session=session, fixture_path=str(self._fixture_path)
+        context = await self._browser.create_context(**kwargs)
+        recording_context = RecordingContext(
+            browser=self, context=context, fixture_path=str(self._fixture_path)
         )
 
         if self._is_recording:
             self._record_call(
-                "create_session",
+                "create_context",
                 kwargs,
-                {"session_instance_id": recording_session._instance_id},
+                {"context_instance_id": recording_context._instance_id},
             )
 
-        return recording_session
+        return recording_context
 
     async def close(self):
         """Close the browser."""

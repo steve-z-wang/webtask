@@ -2,7 +2,7 @@
 
 from .browser import (
     PlaywrightBrowser,
-    PlaywrightSession,
+    PlaywrightContext,
     PlaywrightPage,
     PlaywrightElement,
 )
@@ -14,7 +14,7 @@ from .llm import (
 __all__ = [
     # Playwright
     "PlaywrightBrowser",
-    "PlaywrightSession",
+    "PlaywrightContext",
     "PlaywrightPage",
     "PlaywrightElement",
     # LLM

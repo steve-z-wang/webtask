@@ -2,14 +2,14 @@
 
 from .playwright import (
     PlaywrightBrowser,
-    PlaywrightSession,
+    PlaywrightContext,
     PlaywrightPage,
     PlaywrightElement,
 )
 
 __all__ = [
     "PlaywrightBrowser",
-    "PlaywrightSession",
+    "PlaywrightContext",
     "PlaywrightPage",
     "PlaywrightElement",
 ]

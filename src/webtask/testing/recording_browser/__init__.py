@@ -5,13 +5,13 @@ and replay them for deterministic, offline testing.
 """
 
 from .browser import RecordingBrowser
-from .session import RecordingSession
+from .context import RecordingContext
 from .page import RecordingPage
 from .element import RecordingElement
 
 __all__ = [
     "RecordingBrowser",
-    "RecordingSession",
+    "RecordingContext",
     "RecordingPage",
     "RecordingElement",
 ]

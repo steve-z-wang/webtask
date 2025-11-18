@@ -3,7 +3,7 @@
 import logging
 from typing import Dict, List, Optional
 from webtask.llm import LLM
-from webtask.browser import Page, Session
+from webtask.browser import Page, Context
 from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
 from webtask._internal.agent.task_execution import TaskExecution
@@ -15,7 +15,7 @@ class Agent:
     """
     Main agent interface for web automation.
 
-    Requires a Session for browser management and page operations.
+    Requires a Context for browser management and page operations.
 
     Two modes of operation:
     - High-level autonomous: execute(task) - Agent autonomously executes with Worker/Verifier loop
@@ -25,7 +25,7 @@ class Agent:
     def __init__(
         self,
         llm: LLM,
-        session: Optional[Session] = None,
+        context: Optional[Context] = None,
         wait_after_action: float = 0.2,
         use_screenshot: bool = True,
         selector_llm: Optional[LLM] = None,
@@ -36,21 +36,21 @@ class Agent:
 
         Args:
             llm: LLM instance for reasoning (task planning, completion checking)
-            session: Optional session instance (can be set later with set_session())
+            context: Optional context instance (can be set later with set_context())
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
             selector_llm: Optional separate LLM for element selection (defaults to main llm)
             mode: DOM context mode - "accessibility" (default) or "dom"
         """
         self.llm = llm
-        self.session = session
+        self.context = context
         self.use_screenshot = use_screenshot
         self.wait_after_action = wait_after_action
         self.mode = mode
         self.logger = logging.getLogger(__name__)
 
         self.session_browser = SessionBrowser(
-            session=session, use_screenshot=use_screenshot
+            context=context, use_screenshot=use_screenshot
         )
 
         self._selector = NaturalSelector(
@@ -82,10 +82,10 @@ class Agent:
             TaskExecution object with execution history and final result
 
         Raises:
-            RuntimeError: If no session is available
+            RuntimeError: If no context is available
         """
         if not self.session_browser.get_current_page():
-            raise RuntimeError("No session available. Call set_session() first.")
+            raise RuntimeError("No context available. Call set_context() first.")
 
         # Use task-level wait_after_action if provided, otherwise use agent default
         effective_wait = (
@@ -123,7 +123,7 @@ class Agent:
             The new Page instance
 
         Raises:
-            RuntimeError: If no session is available
+            RuntimeError: If no context is available
         """
         return await self.session_browser.create_page(url)
 
@@ -232,21 +232,21 @@ class Agent:
         """
         self.session_browser.set_page(page)
 
-    def set_session(self, session: Session) -> None:
+    def set_context(self, context: Context) -> None:
         """
-        Set or update the session.
+        Set or update the context.
 
         Enables multi-page operations after initialization.
 
         Args:
-            session: Session instance for creating pages
+            context: Context instance for creating pages
         """
-        self.session = session
-        self.session_browser.set_session(session)
+        self.context = context
+        self.session_browser.set_context(context)
 
     async def close(self) -> None:
         """Close the agent and cleanup all resources."""
         await self.session_browser.close()
 
-        if self.session:
-            await self.session.close()
+        if self.context:
+            await self.context.close()

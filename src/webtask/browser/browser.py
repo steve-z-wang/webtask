@@ -48,16 +48,16 @@ class Browser(ABC):
         pass
 
     @abstractmethod
-    async def create_session(self, **kwargs):
+    async def create_context(self, **kwargs):
         """
-        Create a new session/context in this browser.
+        Create a new context in this browser.
 
         Returns:
-            Session instance
+            Context instance
 
         Example:
             >>> browser = await PlaywrightBrowser.create()
-            >>> session = await browser.create_session()
+            >>> context = await browser.create_context()
         """
         pass
 
