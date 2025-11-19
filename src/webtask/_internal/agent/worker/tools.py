@@ -1,6 +1,6 @@
 """Worker tools - all tools available to the worker."""
 
-from typing import Dict, List, TYPE_CHECKING, Optional
+from typing import Dict, List, TYPE_CHECKING, Optional, Any
 from pydantic import BaseModel, Field
 from webtask.agent.tool import Tool
 from ...utils.wait import wait
@@ -8,7 +8,7 @@ from .worker_session import WorkerEndReason
 
 if TYPE_CHECKING:
     from .worker_browser import WorkerBrowser
-    from .worker import EndReason
+    from .worker import EndReason, OutputStorage
 
 
 # Browser action tools
@@ -204,6 +204,41 @@ class WaitTool(Tool):
 
 
 # Control tools
+
+
+class SetOutputTool(Tool):
+    """Store structured output data that will be returned to the user."""
+
+    name = "set_output"
+    description = "Store structured output data (dict, list, etc.) that will be returned to the user as the result"
+
+    class Params(BaseModel):
+        """Parameters for set_output tool."""
+
+        data: Any = Field(
+            description="Structured data to return (e.g., dict with extracted information, list of items, etc.)"
+        )
+
+    def __init__(self, output_storage: "OutputStorage"):
+        """Initialize with reference to output storage wrapper."""
+        self.output_storage = output_storage
+
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of set_output action."""
+        # Convert data to readable string representation
+        try:
+            import json
+            data_str = json.dumps(params.data, indent=2, ensure_ascii=False)
+        except (TypeError, ValueError):
+            # Fallback to string representation
+            data_str = str(params.data)
+
+        return f"Set output data:\n{data_str}"
+
+    async def execute(self, params: Params) -> None:
+        """Store the output data."""
+        self.output_storage.value = params.data
 
 
 class CompleteWorkTool(Tool):

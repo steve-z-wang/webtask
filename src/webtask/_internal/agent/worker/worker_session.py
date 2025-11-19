@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any
 
 
 class WorkerEndReason(str, Enum):
@@ -30,6 +30,7 @@ class WorkerSession:
     end_reason: Optional[WorkerEndReason] = None
     final_dom: Optional[str] = None
     final_screenshot: Optional[str] = None
+    output: Optional[Any] = None  # Structured output from set_output() tool
 
     def __str__(self) -> str:
         """Simple string representation showing basic info."""

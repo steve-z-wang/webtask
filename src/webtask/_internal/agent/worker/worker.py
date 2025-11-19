@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Any
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -26,6 +26,7 @@ from .tools import (
     TypeTool,
     UploadTool,
     WaitTool,
+    SetOutputTool,
     CompleteWorkTool,
     AbortWorkTool,
 )
@@ -40,6 +41,13 @@ class EndReason:
 
     def __init__(self):
         self.value: Optional[WorkerEndReason] = None
+
+
+class OutputStorage:
+    """Wrapper to store structured output data."""
+
+    def __init__(self):
+        self.value: Optional[Any] = None
 
 
 @dataclass
@@ -233,8 +241,10 @@ class Worker:
         start_time = datetime.now()
         pairs: List[ToolCallPair] = []  # Single source of truth
 
-        # Create fresh EndReason context and register control tools
+        # Create fresh EndReason and OutputStorage contexts and register control tools
         end_reason = EndReason()
+        output_storage = OutputStorage()
+        self._tool_registry.register(SetOutputTool(output_storage))
         self._tool_registry.register(CompleteWorkTool(end_reason))
         self._tool_registry.register(AbortWorkTool(end_reason))
 
@@ -272,6 +282,7 @@ class Worker:
             summary=summary,
             final_dom=dom_snapshot,
             final_screenshot=screenshot_b64,
+            output=output_storage.value,
         )
 
     async def run(

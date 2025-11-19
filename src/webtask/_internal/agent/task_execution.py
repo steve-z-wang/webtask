@@ -4,15 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import List, Union, TYPE_CHECKING
+from typing import List, Union, TYPE_CHECKING, Optional, Any
 
 if TYPE_CHECKING:
     from .worker.worker_session import WorkerSession
     from .verifier.verifier_session import VerifierSession
 
 
-class TaskResult(str, Enum):
-    """Task execution result."""
+class TaskStatus(str, Enum):
+    """Task execution status."""
 
     COMPLETE = "complete_task"
     ABORTED = "abort_task"
@@ -24,8 +24,7 @@ class TaskExecution:
 
     task_description: str
     sessions: List[Union["WorkerSession", "VerifierSession"]]
-    result: TaskResult
-    feedback: str
+    status: TaskStatus
     created_at: datetime
     completed_at: datetime
 
@@ -36,8 +35,7 @@ class TaskExecution:
         lines.append("TASK EXECUTION SUMMARY")
         lines.append("=" * 80)
         lines.append(f"Task: {self.task_description}")
-        lines.append(f"Result: {self.result.value}")
-        lines.append(f"Feedback: {self.feedback}")
+        lines.append(f"Status: {self.status.value}")
 
         duration = (self.completed_at - self.created_at).total_seconds()
         lines.append(
@@ -75,4 +73,19 @@ class TaskExecution:
 
     def __str__(self) -> str:
         """Simple string representation showing basic info."""
-        return f"TaskExecution(task='{self.task_description}', result={self.result.value}, sessions={len(self.sessions)})"
+        return f"TaskExecution(task='{self.task_description}', status={self.status.value}, sessions={len(self.sessions)})"
+
+
+@dataclass
+class TaskResult:
+    """User-facing result with output and feedback."""
+
+    status: TaskStatus
+    output: Optional[Any] = None  # Structured data from set_output()
+    feedback: Optional[str] = None  # Human summary from verifier
+    execution: Optional[TaskExecution] = None  # Full execution history for debugging
+
+    @property
+    def is_complete(self) -> bool:
+        """Check if task completed successfully."""
+        return self.status == TaskStatus.COMPLETE

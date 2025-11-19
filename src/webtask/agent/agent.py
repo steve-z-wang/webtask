@@ -6,7 +6,7 @@ from webtask.llm import LLM
 from webtask.browser import Page, Context
 from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
-from webtask._internal.agent.task_execution import TaskExecution
+from webtask._internal.agent.task_execution import TaskExecution, TaskResult
 from webtask._internal.agent.task_executor import TaskExecutor
 from webtask._internal.utils.wait import wait as custom_wait
 
@@ -67,7 +67,7 @@ class Agent:
         resources: Optional[Dict[str, str]] = None,
         wait_after_action: Optional[float] = None,
         mode: Optional[str] = None,
-    ) -> TaskExecution:
+    ) -> TaskResult:
         """
         Execute a task autonomously using Worker/Verifier loop.
 
@@ -79,7 +79,7 @@ class Agent:
             mode: DOM context mode - "accessibility" or "dom" (overrides agent default if provided)
 
         Returns:
-            TaskExecution object with execution history and final result
+            TaskResult with status, output, feedback, and execution history
 
         Raises:
             RuntimeError: If no context is available

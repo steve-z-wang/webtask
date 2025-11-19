@@ -157,6 +157,41 @@ def clean_schema_for_gemini(schema: Dict[str, Any]) -> Dict[str, Any]:
     return cleaned
 
 
+def convert_gemini_types(value: Any) -> Any:
+    """
+    Recursively convert Gemini-specific types to standard Python types.
+
+    Converts:
+    - MapComposite → dict
+    - RepeatedComposite → list
+    - Nested structures recursively
+    - Primitives (str, int, float, bool, None) remain as-is
+
+    Args:
+        value: Value to convert (may be MapComposite, RepeatedComposite, dict, list, or primitive)
+
+    Returns:
+        Standard Python type (dict, list, or primitive)
+    """
+    # Check if it's a MapComposite (dict-like Gemini type)
+    if hasattr(value, '__iter__') and hasattr(value, 'keys') and not isinstance(value, (str, bytes)):
+        # Convert to dict and recursively convert all values
+        return {k: convert_gemini_types(v) for k, v in dict(value).items()}
+
+    # Check if it's a RepeatedComposite or list
+    elif isinstance(value, (list, tuple)) or (hasattr(value, '__iter__') and not isinstance(value, (str, bytes, dict))):
+        # Convert to list and recursively convert all items
+        try:
+            return [convert_gemini_types(item) for item in value]
+        except TypeError:
+            # Not iterable in the way we expect, return as-is
+            return value
+
+    # Primitives (str, int, float, bool, None) - return as-is
+    else:
+        return value
+
+
 def build_tool_declarations(tools: List["Tool"]) -> types.Tool:
     """Build Gemini function declarations from tools."""
     function_declarations = []
@@ -189,10 +224,11 @@ def gemini_response_to_assistant_message(response) -> "AssistantMessage":
             if hasattr(part, "text") and part.text:
                 content_parts.append(TextContent(text=part.text))
             elif hasattr(part, "function_call") and part.function_call:
+                # Convert arguments recursively to handle nested MapComposite/RepeatedComposite
                 tool_calls.append(
                     ToolCall(
                         name=part.function_call.name,
-                        arguments=dict(part.function_call.args),
+                        arguments=convert_gemini_types(part.function_call.args),
                     )
                 )
 

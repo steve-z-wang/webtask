@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from webtask.llm import LLM
     from .session_browser import SessionBrowser
 
-from .task_execution import TaskExecution, TaskResult
+from .task_execution import TaskExecution, TaskStatus, TaskResult
 from .verifier.verifier_session import VerifierDecision
 from .worker.worker import Worker
 from .verifier.verifier import Verifier
@@ -64,15 +64,16 @@ class TaskExecutor:
         self,
         task_description: str,
         max_correction_attempts: int = 3,
-    ) -> TaskExecution:
+    ) -> TaskResult:
         """Execute task with Worker/Verifier loop and correction retry logic."""
 
         start_time = datetime.now()
         correction_count = 0
         sessions: List[Union["WorkerSession", "VerifierSession"]] = []
         worker_session, verifier_session = None, None
-        verifier_result = None
+        verifier_status = None
         verifier_feedback = None
+        worker_output = None  # Track output from worker
 
         while True:
 
@@ -85,6 +86,10 @@ class TaskExecutor:
                 ),
             )
             sessions.append(worker_session)
+
+            # Capture output from this worker session (last one wins)
+            if worker_session.output is not None:
+                worker_output = worker_session.output
 
             # Verifier checks result
             verifier_session = await self._verifier.run(
@@ -99,18 +104,18 @@ class TaskExecutor:
 
             # Handle verifier decision
             if verifier_session.decision == VerifierDecision.COMPLETE_TASK:
-                verifier_result = TaskResult.COMPLETE
+                verifier_status = TaskStatus.COMPLETE
                 verifier_feedback = verifier_session.feedback
                 break
 
             elif verifier_session.decision == VerifierDecision.ABORT_TASK:
-                verifier_result = TaskResult.ABORTED
+                verifier_status = TaskStatus.ABORTED
                 verifier_feedback = verifier_session.feedback
                 break
 
             elif verifier_session.decision == VerifierDecision.REQUEST_CORRECTION:
                 if correction_count >= max_correction_attempts:
-                    verifier_result = TaskResult.ABORTED
+                    verifier_status = TaskStatus.ABORTED
                     verifier_feedback = f"Exceeded {max_correction_attempts} correction attempts. Last feedback: {verifier_session.feedback}"
                     break
 
@@ -118,12 +123,19 @@ class TaskExecutor:
                 correction_count += 1
                 continue  # Loop back to worker
 
-        # Create and return TaskExecution with all collected data
-        return TaskExecution(
+        # Create TaskExecution (internal execution history)
+        task_execution = TaskExecution(
             task_description=task_description,
             sessions=sessions,
-            result=verifier_result,
-            feedback=verifier_feedback,
+            status=verifier_status,
             created_at=start_time,
             completed_at=datetime.now(),
+        )
+
+        # Build and return user-facing TaskResult
+        return TaskResult(
+            status=verifier_status,
+            output=worker_output,
+            feedback=verifier_feedback,
+            execution=task_execution,
         )
