@@ -50,11 +50,20 @@ class WorkerBrowser:
         # Get context string with mode
         context_str = self._dom_context.get_context(mode=mode)
 
-        # Format with URL
+        # Format with URL and element ID explanation
         url = page.url
         lines = ["Page:"]
         if url:
             lines.append(f"  URL: {url}")
+        lines.append("")
+
+        # Add format explanation based on mode
+        if mode == "accessibility":
+            lines.append("Elements use role-based IDs (e.g., button-0, combobox-1, link-2).")
+            lines.append("Always use the exact element IDs shown below.")
+        else:  # dom mode
+            lines.append("Elements use tag-based IDs (e.g., input-0, button-1, a-2).")
+            lines.append("Always use the exact element IDs shown below.")
         lines.append("")
 
         if not context_str:
