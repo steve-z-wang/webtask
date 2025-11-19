@@ -1,9 +1,16 @@
 """Webtask - main manager class for web automation."""
 
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 from .browser import Browser, Context, Page
 from .llm import LLM
 from .agent import Agent
+
+if TYPE_CHECKING:
+    from playwright.async_api import (
+        Browser as PlaywrightBrowser,
+        BrowserContext,
+        Page as PlaywrightPage,
+    )
 
 
 class Webtask:
@@ -40,7 +47,6 @@ class Webtask:
         # Otherwise, assume it's a Playwright browser and wrap it
         try:
             from playwright.async_api import Browser as PlaywrightBrowserType
-            from .integrations.browser.playwright import PlaywrightBrowser
 
             if isinstance(browser, PlaywrightBrowserType):
                 # Wrap the Playwright browser (need playwright instance too)
