@@ -88,10 +88,10 @@ class SessionBrowser:
         """Navigate to URL."""
         page = self.get_current_page()
         if page is None:
-            if self._session is None:
+            if self._context is None:
                 raise RuntimeError(
-                    "Cannot navigate: no page available and no session to create one. "
-                    "Use set_page() to inject a page, or set_session() to enable page creation."
+                    "Cannot navigate: no page available and no context to create one. "
+                    "Use set_page() to inject a page, or set_context() to enable page creation."
                 )
             page = await self.create_page()
 
