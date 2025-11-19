@@ -27,6 +27,14 @@ class RecordingContext(Context):
         self._instance_id = instance_id or str(uuid.uuid4())
         self._call_index = 0
 
+    @property
+    def pages(self):
+        """Get all pages in this context."""
+        if self._browser._is_replaying:
+            # In replay mode, pages aren't tracked
+            return []
+        return self._context.pages if self._context else []
+
     async def create_page(self):
         """Create a recording page."""
         from .page import RecordingPage

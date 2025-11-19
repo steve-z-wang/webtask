@@ -1,0 +1,9 @@
+{
+  "class": "page",
+  "instance_id": "223d35c2-0891-4bc4-a201-48ca03cc2df2",
+  "method": "navigate",
+  "args": {
+    "url": "https://practicesoftwaretesting.com/"
+  },
+  "result": null
+}

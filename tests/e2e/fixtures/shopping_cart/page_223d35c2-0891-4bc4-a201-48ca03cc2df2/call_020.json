@@ -1,0 +1,11 @@
+{
+  "class": "page",
+  "instance_id": "223d35c2-0891-4bc4-a201-48ca03cc2df2",
+  "method": "select_one",
+  "args": {
+    "selector": "/html/body/app-root/div/app-detail/div[1]/div[2]/div[3]/button[2]"
+  },
+  "result": {
+    "element_instance_id": "f175853a-74ef-4246-ba58-303caeebffc5"
+  }
+}

@@ -146,6 +146,19 @@ class RecordingBrowser(Browser):
         """Create browser (not used with RecordingBrowser - use __init__ directly)."""
         raise NotImplementedError("Use RecordingBrowser(...) directly instead")
 
+    @classmethod
+    async def connect(cls, **kwargs):
+        """Connect to browser (not used with RecordingBrowser - use __init__ directly)."""
+        raise NotImplementedError("Use RecordingBrowser(...) directly instead")
+
+    @property
+    def contexts(self):
+        """Get all browser contexts."""
+        if self._is_replaying:
+            # In replay mode, contexts aren't tracked
+            return []
+        return self._browser.contexts if self._browser else []
+
     async def create_context(self, **kwargs):
         """Create a recording context."""
         from .context import RecordingContext

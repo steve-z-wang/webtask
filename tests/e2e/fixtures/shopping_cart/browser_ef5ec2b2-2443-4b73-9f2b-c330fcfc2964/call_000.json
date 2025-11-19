@@ -1,0 +1,11 @@
+{
+  "method": "create_context",
+  "args": {
+    "cookies": null
+  },
+  "result": {
+    "context_instance_id": "83a60e99-fb21-404b-9211-2c103a3e3b5a"
+  },
+  "class": "browser",
+  "instance_id": "ef5ec2b2-2443-4b73-9f2b-c330fcfc2964"
+}

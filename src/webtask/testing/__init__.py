@@ -22,7 +22,7 @@ Example:
 from .recording_llm import RecordingLLM
 from .recording_browser import (
     RecordingBrowser,
-    RecordingSession,
+    RecordingContext,
     RecordingPage,
     RecordingElement,
 )
@@ -30,7 +30,7 @@ from .recording_browser import (
 __all__ = [
     "RecordingLLM",
     "RecordingBrowser",
-    "RecordingSession",
+    "RecordingContext",
     "RecordingPage",
     "RecordingElement",
 ]
