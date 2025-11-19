@@ -67,7 +67,7 @@ async def test_execute_nonexistent_tool(registry):
     assert len(results) == 1
     assert results[0].status == ToolResultStatus.ERROR
     assert results[0].name == "scroll"
-    assert "Tool not found" in results[0].error
+    assert "not found in registry" in results[0].error
 
     # Should have error description
     assert len(descriptions) == 1
