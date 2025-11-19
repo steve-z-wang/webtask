@@ -42,8 +42,23 @@ class ToolRegistry:
 
         for tool_call in tool_calls:
             try:
-                # Get tool and validate parameters
-                tool = self.get(tool_call.name)
+                # Get tool - catch KeyError separately for clearer error message
+                try:
+                    tool = self.get(tool_call.name)
+                except KeyError:
+                    error_msg = f"Tool '{tool_call.name}' not found in registry"
+                    self._logger.error(error_msg)
+                    result = ToolResult(
+                        tool_call_id=tool_call.id,
+                        name=tool_call.name,
+                        status=ToolResultStatus.ERROR,
+                        error=error_msg,
+                    )
+                    results.append(result)
+                    descriptions.append(f"{tool_call.name} (ERROR: Tool not found)")
+                    break  # Stop on tool not found
+
+                # Validate parameters and execute tool
                 params = tool.Params(**tool_call.arguments)
 
                 # Log tool execution start
@@ -71,20 +86,6 @@ class ToolRegistry:
                 # If terminal tool succeeded, stop execution
                 if tool.is_terminal:
                     break
-
-            except KeyError as e:
-                # Tool not found in registry
-                error_msg = str(e)
-                self._logger.error(f"Tool not found: {tool_call.name} - {error_msg}")
-                result = ToolResult(
-                    tool_call_id=tool_call.id,
-                    name=tool_call.name,
-                    status=ToolResultStatus.ERROR,
-                    error=f"Tool not found: {error_msg}",
-                )
-                results.append(result)
-                descriptions.append(f"{tool_call.name} (ERROR: Tool not found)")
-                break  # Stop on tool not found
 
             except Exception as e:
                 # Params validation or tool execution error
