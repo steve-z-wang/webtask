@@ -87,6 +87,12 @@ class Agent:
         if not self.session_browser.get_current_page():
             await self.session_browser.create_page()
 
+        # Check if current page is on a problematic URL (Shadow DOM issues)
+        page = self.session_browser.get_current_page()
+        if page and page.url.startswith("chrome://"):
+            # Navigate away from chrome:// URLs which use Shadow DOM
+            await page.navigate("about:blank")
+
         # Use task-level wait_after_action if provided, otherwise use agent default
         effective_wait = (
             wait_after_action
