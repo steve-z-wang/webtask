@@ -25,7 +25,6 @@ class VerifierSession:
     end_time: datetime
     max_steps: int = 5
     steps_used: int = 0
-    summary: str = ""
 
     def __str__(self) -> str:
         """Simple string representation showing basic info."""

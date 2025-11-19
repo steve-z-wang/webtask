@@ -58,11 +58,13 @@ class ToolCallPair:
     - The assistant's tool calls
     - The results of executing those tools
     - Human-readable descriptions of the actions taken
+    - The assistant's reasoning/thoughts before taking actions
     """
 
     assistant_msg: AssistantMessage
     tool_result_msg: ToolResultMessage
     descriptions: List[str]  # Action descriptions for summary generation
+    reasoning: Optional[str] = None  # LLM's thoughts/reasoning before actions
 
 
 class Worker:
@@ -95,16 +97,27 @@ class Worker:
         # Control tools registered per-run in _run() with fresh EndReason context
 
     def _build_summary(self, pairs: List[ToolCallPair]) -> str:
-        """Build summary text from pairs."""
+        """Build summary text from pairs, including reasoning and actions."""
         if not pairs:
             return ""
 
         lines = []
-        action_num = 1
-        for pair in pairs:
-            for description in pair.descriptions:
-                lines.append(f"{action_num}. {description}")
-                action_num += 1
+        for step_num, pair in enumerate(pairs, 1):
+            lines.append(f"\nStep {step_num}:")
+
+            # Add reasoning if present
+            if pair.reasoning:
+                # Indent reasoning for readability
+                reasoning_lines = pair.reasoning.strip().split("\n")
+                lines.append("  Reasoning:")
+                for reasoning_line in reasoning_lines:
+                    lines.append(f"    {reasoning_line}")
+
+            # Add actions
+            if pair.descriptions:
+                lines.append("  Actions:")
+                for description in pair.descriptions:
+                    lines.append(f"    - {description}")
 
         return "\n".join(lines)
 
@@ -201,6 +214,14 @@ class Worker:
                 assistant_msg.tool_calls
             )
 
+        # Extract reasoning from assistant message
+        reasoning = None
+        if assistant_msg.content:
+            for content in assistant_msg.content:
+                if hasattr(content, "text") and content.text:
+                    reasoning = content.text
+                    break
+
         # Get current page state
         dom_snapshot = await self.worker_browser.get_dom_snapshot(mode=self._mode)
         screenshot_b64 = await self.worker_browser.get_screenshot()
@@ -223,6 +244,7 @@ class Worker:
             assistant_msg=assistant_msg,
             tool_result_msg=tool_result_msg,
             descriptions=descriptions,
+            reasoning=reasoning,
         )
 
         self._logger.info(f"Step {step + 1} - End")

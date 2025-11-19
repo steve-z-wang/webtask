@@ -55,7 +55,6 @@ class TaskExecutor:
                 lines.append(f"Verifier decision: {session.decision.value}")
                 if session.feedback:
                     lines.append(f"Feedback: {session.feedback}")
-                lines.append(f"Actions: {session.summary}")
             lines.append("")  # Blank line between sessions
 
         return "\n".join(lines)

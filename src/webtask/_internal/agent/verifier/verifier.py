@@ -100,7 +100,6 @@ class Verifier:
     ) -> VerifierSession:
         """Shared implementation for verification."""
         start_time = datetime.now()
-        all_descriptions: List[str] = []
 
         # Create fresh VerifierResult wrapper and register control tools
         verifier_result = VerifierResult()
@@ -163,9 +162,6 @@ class Verifier:
                     )
                 )
 
-            # Accumulate descriptions
-            all_descriptions.extend(descriptions)
-
             # Wait after all actions complete
             await wait(self.ACTION_DELAY)
 
@@ -200,11 +196,6 @@ class Verifier:
                     f"Verifier session end - Decision: {verifier_result.decision.value}"
                 )
 
-                # Build summary from all descriptions
-                summary = "\n".join(
-                    f"{i+1}. {desc}" for i, desc in enumerate(all_descriptions)
-                )
-
                 # Decision was made, return immediately
                 return VerifierSession(
                     task_description=task_description,
@@ -214,7 +205,6 @@ class Verifier:
                     end_time=datetime.now(),
                     max_steps=max_steps,
                     steps_used=step + 1,
-                    summary=summary,
                 )
 
         # This should never be reached - Verifier should always make a decision
