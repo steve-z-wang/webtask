@@ -63,10 +63,14 @@ def build_worker_prompt() -> str:
         .add_heading("Q&A")
         .add()
         .add("**When should I wait?**")
-        .add("Wait only when you expect the page to navigate or reload (e.g., clicking links, submitting forms, uploading files). Don't wait for UI interactions that don't reload the page (e.g., typing, opening dropdowns, selecting options).")
+        .add(
+            "Wait only when you expect the page to navigate or reload (e.g., clicking links, submitting forms, uploading files). Don't wait for UI interactions that don't reload the page (e.g., typing, opening dropdowns, selecting options)."
+        )
         .add()
         .add("**How long should I wait?**")
-        .add("Start with 1 second for simple pages, use 2-3 seconds for complex pages. Adjust based on the page's performance in this session.")
+        .add(
+            "Start with 1 second for simple pages, use 2-3 seconds for complex pages. Adjust based on the page's performance in this session."
+        )
         .add()
         .add("**What if page is still loading?**")
         .add(

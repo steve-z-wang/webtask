@@ -59,7 +59,9 @@ class WorkerBrowser:
 
         # Add format explanation based on mode
         if mode == "accessibility":
-            lines.append("Elements use role-based IDs (e.g., button-0, combobox-1, link-2).")
+            lines.append(
+                "Elements use role-based IDs (e.g., button-0, combobox-1, link-2)."
+            )
             lines.append("Always use the exact element IDs shown below.")
         else:  # dom mode
             lines.append("Elements use tag-based IDs (e.g., input-0, button-1, a-2).")

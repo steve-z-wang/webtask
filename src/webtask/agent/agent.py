@@ -6,7 +6,7 @@ from webtask.llm import LLM
 from webtask.browser import Page, Context
 from webtask._internal.agent.session_browser import SessionBrowser
 from webtask._internal.natural_selector import NaturalSelector
-from webtask._internal.agent.task_execution import TaskExecution, TaskResult
+from webtask._internal.agent.task_execution import TaskResult
 from webtask._internal.agent.task_executor import TaskExecutor
 from webtask._internal.utils.wait import wait as custom_wait
 

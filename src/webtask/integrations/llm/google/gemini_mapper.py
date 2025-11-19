@@ -174,12 +174,18 @@ def convert_gemini_types(value: Any) -> Any:
         Standard Python type (dict, list, or primitive)
     """
     # Check if it's a MapComposite (dict-like Gemini type)
-    if hasattr(value, '__iter__') and hasattr(value, 'keys') and not isinstance(value, (str, bytes)):
+    if (
+        hasattr(value, "__iter__")
+        and hasattr(value, "keys")
+        and not isinstance(value, (str, bytes))
+    ):
         # Convert to dict and recursively convert all values
         return {k: convert_gemini_types(v) for k, v in dict(value).items()}
 
     # Check if it's a RepeatedComposite or list
-    elif isinstance(value, (list, tuple)) or (hasattr(value, '__iter__') and not isinstance(value, (str, bytes, dict))):
+    elif isinstance(value, (list, tuple)) or (
+        hasattr(value, "__iter__") and not isinstance(value, (str, bytes, dict))
+    ):
         # Convert to list and recursively convert all items
         try:
             return [convert_gemini_types(item) for item in value]

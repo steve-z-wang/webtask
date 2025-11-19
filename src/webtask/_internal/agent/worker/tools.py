@@ -229,6 +229,7 @@ class SetOutputTool(Tool):
         # Convert data to readable string representation
         try:
             import json
+
             data_str = json.dumps(params.data, indent=2, ensure_ascii=False)
         except (TypeError, ValueError):
             # Fallback to string representation
