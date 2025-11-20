@@ -60,16 +60,13 @@ class TaskRunner:
     def __init__(
         self,
         llm: "LLM",
-        context: "Context",
-        wait_after_action: float,
+        browser: AgentBrowser,
         resources: Optional[Dict[str, str]] = None,
         mode: str = "accessibility",
     ):
         self._llm = llm
         self._mode = mode
-        self.browser = AgentBrowser(
-            context=context, wait_after_action=wait_after_action
-        )
+        self.browser = browser
         self._tool_registry = ToolRegistry()
         self._logger = get_logger(__name__)
 

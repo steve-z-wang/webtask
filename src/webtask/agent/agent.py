@@ -6,6 +6,7 @@ from webtask.llm import LLM
 from webtask.browser import Context
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Result, Run
+from webtask._internal.agent.agent_browser import AgentBrowser
 
 
 class Agent:
@@ -44,6 +45,12 @@ class Agent:
         self.stateful = stateful
         self.logger = logging.getLogger(__name__)
 
+        # Create AgentBrowser once - shared across all do() calls
+        # This preserves page state between tasks
+        self.browser = AgentBrowser(
+            context=context, wait_after_action=wait_after_action
+        )
+
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
         self._previous_runs: List[Run] = []
@@ -79,8 +86,7 @@ class Agent:
 
         runner = TaskRunner(
             llm=self.llm,
-            context=self.context,
-            wait_after_action=effective_wait,
+            browser=self.browser,
             resources=resources,
             mode=effective_mode,
         )
