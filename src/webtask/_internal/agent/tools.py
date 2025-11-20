@@ -252,7 +252,7 @@ class CompleteWorkTool(Tool):
         """Parameters for complete_work tool."""
 
         feedback: str = Field(
-            description="Describe what you accomplished and provide any important context or knowledge that might be useful for future subtasks in this task"
+            description="Brief 1-2 sentence summary of what you accomplished"
         )
 
     def __init__(self, result: "Result"):
