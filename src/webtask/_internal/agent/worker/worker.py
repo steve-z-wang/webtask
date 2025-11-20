@@ -1,7 +1,6 @@
 """Worker role - executes one subtask with conversation-based LLM."""
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Any
 from webtask.llm import (
     Message,
@@ -18,7 +17,7 @@ from ..tool import ToolRegistry
 from ...prompts.worker_prompt import build_worker_prompt
 from ...utils.logger import get_logger
 from .worker_browser import WorkerBrowser
-from .worker_session import WorkerSession, WorkerEndReason
+from .worker_session import WorkerSession, WorkerStatus
 from .tools import (
     NavigateTool,
     ClickTool,
@@ -40,7 +39,7 @@ class EndReason:
     """Wrapper to track if worker execution should end."""
 
     def __init__(self):
-        self.value: Optional[WorkerEndReason] = None
+        self.value: Optional[WorkerStatus] = None
 
 
 class OutputStorage:
@@ -256,12 +255,12 @@ class Worker:
         task_description: str,
         max_steps: int,
         session_start_messages: List[Message],
+        previous_pairs: Optional[List[ToolCallPair]] = None,
     ) -> WorkerSession:
         """Execute worker session with ToolCallPair tracking."""
         self._logger.info(f"Worker session start - Task: {task_description}")
 
-        start_time = datetime.now()
-        pairs: List[ToolCallPair] = []  # Single source of truth
+        pairs: List[ToolCallPair] = previous_pairs or []  # Continue from previous or start fresh
 
         # Create fresh EndReason and OutputStorage contexts and register control tools
         end_reason = EndReason()
@@ -288,47 +287,45 @@ class Worker:
                 break
         else:
             self._logger.info("Worker session end - Reason: max_steps_reached")
-            end_reason.value = WorkerEndReason.MAX_STEPS
+            end_reason.value = WorkerStatus.MAX_STEPS
             steps_used = max_steps
 
-        # Build summary from all pairs
-        summary = self._build_summary(pairs)
+        # Build feedback summary from all pairs
+        feedback = self._build_summary(pairs)
 
         return WorkerSession(
+            status=end_reason.value,
+            output=output_storage.value,
+            feedback=feedback,
+            pairs=pairs,
             task_description=task_description,
-            start_time=start_time,
-            end_time=datetime.now(),
-            max_steps=max_steps,
             steps_used=steps_used,
-            end_reason=end_reason.value,
-            summary=summary,
+            max_steps=max_steps,
             final_dom=dom_snapshot,
             final_screenshot=screenshot_b64,
-            output=output_storage.value,
         )
 
-    async def run(
+    async def do(
         self,
-        task_description: str,
-        max_steps: int,
-        previous_history: Optional[str] = None,
-        verifier_feedback: Optional[str] = None,
+        task: str,
+        previous_session: Optional[WorkerSession] = None,
+        max_steps: int = 20,
     ) -> WorkerSession:
-        """Execute worker with optional context from task executor."""
+        """
+        Execute task, optionally continuing from previous session.
+
+        Args:
+            task: Task description
+            previous_session: Optional previous WorkerSession to continue from
+            max_steps: Maximum number of steps to execute
+
+        Returns:
+            WorkerSession with execution result and conversation history
+        """
         user_content = []
+        user_content.append(TextContent(text=f"Task: {task}"))
 
-        user_content.append(TextContent(text=f"Task: {task_description}"))
-
-        if previous_history:
-            user_content.append(
-                TextContent(text=f"Previous history:\n{previous_history}")
-            )
-
-        if verifier_feedback:
-            user_content.append(
-                TextContent(text=f"Verifier feedback:\n{verifier_feedback}")
-            )
-
+        # Get current page state
         dom_snapshot = await self.worker_browser.get_dom_snapshot(mode=self._mode)
         screenshot_b64 = await self.worker_browser.get_screenshot()
         user_content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
@@ -346,4 +343,7 @@ class Worker:
             UserMessage(content=user_content),
         ]
 
-        return await self._run(task_description, max_steps, session_start_messages)
+        # Extract previous pairs if continuing from previous session
+        previous_pairs = previous_session.pairs if previous_session else None
+
+        return await self._run(task, max_steps, session_start_messages, previous_pairs)

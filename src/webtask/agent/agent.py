@@ -1,13 +1,12 @@
 """Agent - main interface for web automation."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from webtask.llm import LLM
 from webtask.browser import Page, Context
 from webtask._internal.agent.session_browser import SessionBrowser
-from webtask._internal.natural_selector import NaturalSelector
-from webtask._internal.agent.task_execution import TaskResult
-from webtask._internal.agent.task_executor import TaskExecutor
+from webtask._internal.agent.worker.worker import Worker
+from webtask._internal.agent.worker.worker_session import WorkerSession
 from webtask._internal.utils.wait import wait as custom_wait
 
 
@@ -17,9 +16,9 @@ class Agent:
 
     Requires a Context for browser management and page operations.
 
-    Two modes of operation:
-    - High-level autonomous: execute(task) - Agent autonomously executes with Worker/Verifier loop
-    - Low-level imperative: navigate(), select(), wait() - Direct control for manual workflows
+    Primary interface:
+    - High-level autonomous: do(task) - Agent autonomously executes tasks with Worker
+    - Supports persist_context for multi-turn conversations
     """
 
     def __init__(
@@ -28,58 +27,60 @@ class Agent:
         context: Optional[Context] = None,
         wait_after_action: float = 0.2,
         use_screenshot: bool = True,
-        selector_llm: Optional[LLM] = None,
         mode: str = "accessibility",
+        persist_context: bool = False,
     ):
         """
         Initialize agent.
 
         Args:
-            llm: LLM instance for reasoning (task planning, completion checking)
+            llm: LLM instance for reasoning and task execution
             context: Optional context instance (can be set later with set_context())
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             use_screenshot: Use screenshots with bounding boxes in LLM context (default: True)
-            selector_llm: Optional separate LLM for element selection (defaults to main llm)
             mode: DOM context mode - "accessibility" (default) or "dom"
+            persist_context: If True, maintain conversation history between do() calls (default: False)
         """
         self.llm = llm
         self.context = context
         self.use_screenshot = use_screenshot
         self.wait_after_action = wait_after_action
         self.mode = mode
+        self.persist_context = persist_context
         self.logger = logging.getLogger(__name__)
 
         self.session_browser = SessionBrowser(
             context=context, use_screenshot=use_screenshot
         )
 
-        self._selector = NaturalSelector(
-            llm=selector_llm or llm,
-            session_browser=self.session_browser,
-            include_screenshot=False,
-            mode=mode,
-        )
+        # Store last WorkerSession if persist_context=True
+        self.last_session: Optional[WorkerSession] = None
 
-    async def execute(
+    async def do(
         self,
-        task_description: str,
-        max_correction_attempts: int = 3,
+        task: str,
+        max_steps: int = 20,
         resources: Optional[Dict[str, str]] = None,
         wait_after_action: Optional[float] = None,
         mode: Optional[str] = None,
-    ) -> TaskResult:
+    ) -> Dict[str, Any]:
         """
-        Execute a task autonomously using Worker/Verifier loop.
+        Execute a task using Worker (new simplified interface).
 
         Args:
-            task_description: Task description in natural language
-            max_correction_attempts: Maximum correction retry attempts (default: 3)
+            task: Task description in natural language
+            max_steps: Maximum number of steps to execute (default: 20)
             resources: Optional dict of file resources (name -> path)
             wait_after_action: Wait time in seconds after each action (overrides agent default if provided)
             mode: DOM context mode - "accessibility" or "dom" (overrides agent default if provided)
 
         Returns:
-            TaskResult with status, output, feedback, and execution history
+            Dict with status, output, and feedback:
+            {
+                "status": "completed" | "aborted" | "max_steps",
+                "output": Any,  # Structured data from set_output tool
+                "feedback": str  # Summary of what happened
+            }
 
         Raises:
             RuntimeError: If no context is available
@@ -103,7 +104,8 @@ class Agent:
         # Use task-level mode if provided, otherwise use agent default
         effective_mode = mode if mode is not None else self.mode
 
-        task_executor = TaskExecutor(
+        # Create worker
+        worker = Worker(
             llm=self.llm,
             session_browser=self.session_browser,
             wait_after_action=effective_wait,
@@ -111,12 +113,19 @@ class Agent:
             mode=effective_mode,
         )
 
-        result = await task_executor.run(
-            task_description=task_description,
-            max_correction_attempts=max_correction_attempts,
-        )
+        # Execute with optional context persistence
+        if self.persist_context:
+            session = await worker.do(task, self.last_session, max_steps)
+            self.last_session = session
+        else:
+            session = await worker.do(task, None, max_steps)
 
-        return result
+        # Convert WorkerSession to simple user-facing result
+        return {
+            "status": session.status.value,
+            "output": session.output,
+            "feedback": session.feedback,
+        }
 
     async def open_page(self, url: Optional[str] = None) -> Page:
         """
@@ -170,22 +179,6 @@ class Agent:
             url: URL to navigate to
         """
         await self.session_browser.navigate(url)
-
-    async def select(self, description: str):
-        """
-        Select element by natural language description (low-level imperative mode).
-
-        Args:
-            description: Natural language description of element
-
-        Returns:
-            Browser Element with .click(), .fill() methods
-
-        Raises:
-            RuntimeError: If no page is opened
-            ValueError: If LLM fails to find a matching element
-        """
-        return await self._selector.select(description)
 
     async def wait_for_load(self, timeout: int = 10000):
         """
