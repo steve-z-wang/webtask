@@ -47,14 +47,14 @@ class Webtask:
         # Otherwise, assume it's a Playwright browser and wrap it
         try:
             from playwright.async_api import Browser as PlaywrightBrowserType
+            from .integrations.browser.playwright import PlaywrightBrowser
 
             if isinstance(browser, PlaywrightBrowserType):
-                # Wrap the Playwright browser (need playwright instance too)
-                # For now, we'll just return it - user should use our wrapper if they want full support
-                raise TypeError(
-                    "Direct Playwright Browser wrapping not yet supported. "
-                    "Please use PlaywrightBrowser.connect() or PlaywrightBrowser.create()"
-                )
+                # Wrap the Playwright browser
+                # We need the playwright instance, which we can get from the browser
+                playwright = browser._playwright
+                headless = browser._is_headless if hasattr(browser, "_is_headless") else False
+                return PlaywrightBrowser(playwright, browser, headless)
         except ImportError:
             pass
 
