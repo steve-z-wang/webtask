@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pywebtask"
-version = "0.17.2"
+version = "0.17.3"
 description = "LLM-powered web automation library with autonomous agents"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -64,6 +64,10 @@ Documentation = "https://steve-z-wang.github.io/webtask/"
 # AWS Bedrock support
 bedrock = [
     "boto3>=1.28.0",
+]
+# MCP server support
+mcp = [
+    "mcp>=0.1.0",
 ]
 dev = [
     "pytest>=7.0.0",
