@@ -2,9 +2,9 @@
 
 import pytest
 from pydantic import BaseModel, Field
-from webtask.agent.tool import Tool
+from webtask.llm.tool import Tool
 from webtask.llm import ToolCall, ToolResultStatus
-from webtask._internal.agent.tool import ToolRegistry
+from webtask._internal.agent.tool_registry import ToolRegistry
 
 pytestmark = pytest.mark.unit
 

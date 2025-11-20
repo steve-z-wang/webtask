@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from .message import Message, AssistantMessage
 
 if TYPE_CHECKING:
-    from webtask.agent.tool import Tool
+    from webtask.llm.tool import Tool
 
 T = TypeVar("T", bound=BaseModel)
 
