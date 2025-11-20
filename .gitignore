@@ -54,5 +54,6 @@ debug/
 
 # Environment variables
 .env
+.env.test
 testground/
 .pdm-python

@@ -31,7 +31,7 @@ class Bedrock(LLM):
 
     def __init__(
         self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         region_name: str = "us-east-1",
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
@@ -42,7 +42,7 @@ class Bedrock(LLM):
         """Initialize Bedrock.
 
         Args:
-            model: Bedrock model ID (e.g., "anthropic.claude-3-5-sonnet-20241022-v2:0")
+            model: Bedrock model ID (e.g., "us.anthropic.claude-sonnet-4-5-20250929-v1:0")
             region_name: AWS region name (default: "us-east-1")
             aws_access_key_id: Optional AWS access key (if not using default credentials)
             aws_secret_access_key: Optional AWS secret key
