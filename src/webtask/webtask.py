@@ -38,7 +38,7 @@ class Webtask:
 
         return self.browser
 
-    def _wrap_browser(self, browser) -> Browser:
+    def _wrap_browser(self, browser, playwright=None) -> Browser:
         """Wrap raw Playwright browser if needed."""
         # If already our Browser interface, return as-is
         if isinstance(browser, Browser):
@@ -50,10 +50,9 @@ class Webtask:
             from .integrations.browser.playwright import PlaywrightBrowser
 
             if isinstance(browser, PlaywrightBrowserType):
-                # Wrap the Playwright browser
-                # We need the playwright instance, which we can get from the browser
-                playwright = browser._playwright
-                headless = browser._is_headless if hasattr(browser, "_is_headless") else False
+                # Wrap the already-launched Playwright browser
+                # playwright=None means user manages their own cleanup
+                headless = False  # We can't detect this, assume visible
                 return PlaywrightBrowser(playwright, browser, headless)
         except ImportError:
             pass
@@ -105,7 +104,7 @@ class Webtask:
         cookies=None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        stateful: bool = False,
+        stateful: bool = True,
     ) -> Agent:
         """Create agent with new browser context. Launches browser on first call.
 
@@ -114,7 +113,7 @@ class Webtask:
             cookies: Optional cookies for the context
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            stateful: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
             Agent instance with new context
@@ -138,7 +137,7 @@ class Webtask:
         cookies=None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        stateful: bool = False,
+        stateful: bool = True,
         use_existing_context: bool = True,
     ) -> Agent:
         """Create agent with existing browser.
@@ -148,11 +147,11 @@ class Webtask:
 
         Args:
             llm: LLM instance for reasoning
-            browser: Browser instance or raw Playwright Browser
+            browser: Browser instance or raw Playwright Browser (already launched)
             cookies: Optional cookies for the context
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            stateful: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: True)
             use_existing_context: Use existing context if available (default: True)
 
         Returns:
@@ -163,6 +162,11 @@ class Webtask:
             >>> browser = await PlaywrightBrowser.connect("http://localhost:9222")
             >>> agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
 
+            >>> # Or with raw Playwright browser:
+            >>> playwright = await async_playwright().start()
+            >>> browser = await playwright.chromium.launch()
+            >>> agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
+
             >>> # Force new isolated window
             >>> agent = await wt.create_agent_with_browser(
             ...     llm=llm,
@@ -170,7 +174,7 @@ class Webtask:
             ...     use_existing_context=False
             ... )
         """
-        # Auto-wrap if needed (currently just validates it's our wrapper)
+        # Auto-wrap if needed
         wrapped_browser = self._wrap_browser(browser)
 
         # Smart context selection: use existing if available, create if needed
