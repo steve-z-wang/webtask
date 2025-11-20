@@ -45,7 +45,14 @@ async def start_agent_tool(session_manager) -> Dict[str, Any]:
             llm = Gemini(api_key=api_key)
 
         elif llm_provider == "bedrock":
-            from webtask.integrations.llm import Bedrock
+            try:
+                from webtask.integrations.llm import Bedrock
+            except ImportError:
+                return {
+                    "success": False,
+                    "error": "Bedrock support not installed",
+                    "message": "Install boto3 to use AWS Bedrock: pip install pywebtask[bedrock]",
+                }
 
             bedrock_config = llm_config.get("bedrock", {})
             region = bedrock_config.get("region", "us-east-1")
