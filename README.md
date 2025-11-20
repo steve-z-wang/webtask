@@ -21,12 +21,12 @@ export GEMINI_API_KEY="your-key"  # or OPENAI_API_KEY
 **Autonomous mode** - Give it a task, let the agent figure out the steps:
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import GeminiLLM
+from webtask.integrations.llm import Gemini
 from playwright.async_api import async_playwright
 
 async with async_playwright() as p:
     browser = await p.chromium.launch(headless=False)
-    llm = GeminiLLM(model="gemini-2.5-flash")
+    llm = Gemini(model="gemini-2.5-flash")
 
     agent = await Webtask().create_agent_with_browser(llm=llm, browser=browser)
 

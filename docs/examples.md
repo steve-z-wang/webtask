@@ -9,7 +9,7 @@ Complete code examples for common use cases.
 ```python
 async def add_to_cart():
     wt = Webtask(headless=False)
-    llm = GeminiLLM.create(model="gemini-2.5-flash")
+    llm = Gemini.create(model="gemini-2.5-flash")
     agent = await wt.create_agent(llm=llm, action_delay=1.5)
 
     result = await agent.execute(
@@ -33,7 +33,7 @@ asyncio.run(add_to_cart())
 ```python
 async def multiple_tabs():
     wt = Webtask(headless=False)
-    llm = GeminiLLM.create(model="gemini-2.5-flash")
+    llm = Gemini.create(model="gemini-2.5-flash")
     agent = await wt.create_agent(llm=llm)
 
     # First page
@@ -87,7 +87,7 @@ asyncio.run(with_openai())
 ```python
 async def with_error_handling():
     wt = Webtask(headless=False)
-    llm = GeminiLLM.create(model="gemini-2.5-flash")
+    llm = Gemini.create(model="gemini-2.5-flash")
     agent = await wt.create_agent(llm=llm)
 
     try:

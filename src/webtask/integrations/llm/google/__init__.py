@@ -1,5 +1,5 @@
 """Google Gemini LLM integration."""
 
-from .gemini import GeminiLLM
+from .gemini import Gemini
 
-__all__ = ["GeminiLLM"]
+__all__ = ["Gemini"]

@@ -49,7 +49,9 @@ def messages_to_bedrock_format(
                             {
                                 "image": {
                                     "format": "png",  # Assume PNG, could be made configurable
-                                    "source": {"bytes": base64.b64decode(content_part.data)},
+                                    "source": {
+                                        "bytes": base64.b64decode(content_part.data)
+                                    },
                                 }
                             }
                         )

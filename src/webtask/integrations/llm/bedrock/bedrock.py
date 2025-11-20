@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from webtask.llm.tool import Tool
 
 
-class BedrockLLM(LLM):
+class Bedrock(LLM):
     """AWS Bedrock implementation using Converse API.
 
     Supports Claude models via AWS Bedrock.
@@ -39,7 +39,7 @@ class BedrockLLM(LLM):
         temperature: float = 0.5,
         max_tokens: int = 4096,
     ):
-        """Initialize BedrockLLM.
+        """Initialize Bedrock.
 
         Args:
             model: Bedrock model ID (e.g., "anthropic.claude-3-5-sonnet-20241022-v2:0")

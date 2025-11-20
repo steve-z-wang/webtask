@@ -8,7 +8,7 @@ from .browser import (
 )
 
 from .llm import (
-    GeminiLLM,
+    Gemini,
 )
 
 __all__ = [
@@ -18,5 +18,5 @@ __all__ = [
     "PlaywrightPage",
     "PlaywrightElement",
     # LLM
-    "GeminiLLM",
+    "Gemini",
 ]

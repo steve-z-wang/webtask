@@ -22,7 +22,7 @@ import pytest
 import os
 from dotenv import load_dotenv
 from webtask import Webtask
-from webtask.integrations.llm import GeminiLLM
+from webtask.integrations.llm import Gemini
 from webtask.integrations.browser.playwright import PlaywrightBrowser
 from webtask.testing import RecordingLLM, RecordingBrowser
 from webtask._internal.config import Config
@@ -72,7 +72,7 @@ async def test_shopping_cart_automation():
     # Setup LLM with recording
     api_key = os.getenv("GOOGLE_API_KEY")
     base_llm = (
-        GeminiLLM(model="gemini-2.5-flash", api_key=api_key)
+        Gemini(model="gemini-2.5-flash", api_key=api_key)
         if not config.is_replaying()
         else None
     )

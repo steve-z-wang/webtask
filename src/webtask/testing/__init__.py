@@ -5,11 +5,11 @@ of web automation scripts.
 
 Example:
     from webtask.testing import RecordingLLM, RecordingBrowser
-    from webtask.integrations.llm import GeminiLLM
+    from webtask.integrations.llm import Gemini
     from webtask.integrations.browser.playwright import PlaywrightBrowser
 
     # Record mode (WEBTASK_TEST_MODE=record)
-    base_llm = GeminiLLM(...)
+    base_llm = Gemini(...)
     llm = RecordingLLM(llm=base_llm, fixture_path="fixtures/llm/test/")
 
     base_browser = await PlaywrightBrowser.create(...)

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from webtask.llm.tool import Tool
 
 
-class GeminiLLM(LLM):
+class Gemini(LLM):
     """Google Gemini implementation with conversation-based interface."""
 
     def __init__(
@@ -27,7 +27,7 @@ class GeminiLLM(LLM):
         api_key: Optional[str] = None,
         temperature: float = 0.5,
     ):
-        """Initialize GeminiLLM.
+        """Initialize Gemini.
 
         Args:
             model: Gemini model name (e.g., "gemini-2.5-flash", "gemini-2.5-pro")

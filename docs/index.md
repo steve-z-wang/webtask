@@ -16,13 +16,13 @@ LLM-powered web automation library with autonomous agents.
 
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import GeminiLLM
+from webtask.integrations.llm import Gemini
 
 # Create Webtask manager
 wt = Webtask()
 
 # Choose your LLM
-llm = GeminiLLM(model="gemini-2.5-flash")
+llm = Gemini(model="gemini-2.5-flash")
 
 # Create agent
 agent = await wt.create_agent(llm=llm)

@@ -320,10 +320,10 @@ src/webtask/
 **Creating an agent**
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import GeminiLLM
+from webtask.integrations.llm import Gemini
 
 wt = Webtask(headless=False)
-llm = GeminiLLM.create(model="gemini-2.5-flash")
+llm = Gemini.create(model="gemini-2.5-flash")
 agent = await wt.create_agent(llm=llm, action_delay=1.0)
 ```
 

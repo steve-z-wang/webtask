@@ -11,14 +11,14 @@ Here's a complete example:
 ```python
 import asyncio
 from webtask import Webtask
-from webtask.integrations.llm import GeminiLLM
+from webtask.integrations.llm import Gemini
 
 async def main():
     # Create Webtask manager (browser launches lazily)
     wt = Webtask(headless=False)  # Set headless=True for no GUI
 
     # Create LLM (choose Gemini or OpenAI)
-    llm = GeminiLLM(model="gemini-2.5-flash")
+    llm = Gemini(model="gemini-2.5-flash")
 
     # Create agent with screenshot support (enabled by default)
     agent = await wt.create_agent(llm=llm)
@@ -53,7 +53,7 @@ wt = Webtask(headless=True)
 
 ```python
 # Stateful mode - maintains conversation history across tasks
-llm = GeminiLLM(model="gemini-2.5-flash")
+llm = Gemini(model="gemini-2.5-flash")
 agent = await wt.create_agent(llm=llm, stateful=True)
 
 # Execute multiple related tasks

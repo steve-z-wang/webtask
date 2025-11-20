@@ -1,5 +1,5 @@
 """AWS Bedrock LLM integration."""
 
-from .bedrock import BedrockLLM
+from .bedrock import Bedrock
 
-__all__ = ["BedrockLLM"]
+__all__ = ["Bedrock"]
