@@ -9,7 +9,7 @@ hide:
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-LLM-powered web automation library with autonomous agents and natural language selectors.
+LLM-powered web automation library with autonomous agents.
 
 
 ## Quick Example
@@ -28,20 +28,18 @@ llm = GeminiLLM.create(model="gemini-2.5-flash")
 agent = await wt.create_agent(llm=llm)
 
 # Execute task
-result = await agent.execute("search for cats and click the first result")
+result = await agent.do("search for cats and click the first result")
 print(f"Status: {result.status}")
 ```
-
-No CSS selectors. No XPath. Just describe what you want.
 
 
 ## Key Features
 
-- **Two interaction modes**: Autonomous or direct control
+- **Autonomous agents**: Give it a task, let it figure out the steps
 - **Multimodal understanding**: Visual (screenshots) + text (DOM) context
-- **Natural language selectors**: "search box" instead of `#search-input`
 - **Extensible**: Pluggable LLM and browser interfaces - use provided implementations or bring your own
-- **Batteries included**: Ships with OpenAI, Gemini LLMs and Playwright browser
+- **Batteries included**: Ships with Gemini LLM and Playwright browser
+- **Stateful mode**: Maintain conversation history across multiple tasks
 
 
 ## Status
