@@ -55,7 +55,9 @@ def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDic
                         pil_image = PILImage.open(io.BytesIO(image_bytes))
                         parts.append(pil_image)
 
-            gemini_messages.append({"role": "user", "parts": parts})
+            # Only add message if parts is not empty (Gemini requires at least one part)
+            if parts:
+                gemini_messages.append({"role": "user", "parts": parts})
 
         elif isinstance(msg, AssistantMessage):
             # Assistant message with tool calls
@@ -83,7 +85,9 @@ def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDic
                         )
                     )
 
-            gemini_messages.append({"role": "model", "parts": parts})
+            # Only add message if parts is not empty (Gemini requires at least one part)
+            if parts:
+                gemini_messages.append({"role": "model", "parts": parts})
 
         elif isinstance(msg, ToolResultMessage):
             # Tool results message - convert to Gemini function response
