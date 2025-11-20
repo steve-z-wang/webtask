@@ -31,7 +31,7 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
-    from ..session_browser import SessionBrowser
+    from webtask.browser import Context
     from webtask.llm.llm import LLM
 
 
@@ -72,7 +72,7 @@ class Worker:
     def __init__(
         self,
         llm: "LLM",
-        session_browser: "SessionBrowser",
+        context: "Context",
         wait_after_action: float,
         resources: Optional[Dict[str, str]] = None,
         mode: str = "accessibility",
@@ -80,7 +80,7 @@ class Worker:
         self._llm = llm
         self._mode = mode
         self.worker_browser = WorkerBrowser(
-            session_browser, wait_after_action=wait_after_action
+            context=context, wait_after_action=wait_after_action
         )
         self._tool_registry = ToolRegistry()
         self._logger = get_logger(__name__)
