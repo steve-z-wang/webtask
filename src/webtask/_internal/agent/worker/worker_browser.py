@@ -133,8 +133,15 @@ class WorkerBrowser:
             raise RuntimeError("No page is currently open")
         return await page.screenshot(path=path, full_page=full_page)
 
-    async def get_screenshot(self, full_page: bool = False) -> str:
-        """Get screenshot as base64 string."""
+    async def get_screenshot(self, full_page: bool = False) -> Optional[str]:
+        """Get screenshot as base64 string.
+
+        Returns None if no page is open.
+        """
+        page = self.get_current_page()
+        if page is None:
+            return None
+
         # Wait for page to be fully loaded before capturing (safety check)
         await self.wait_for_load(timeout=10000)
 
@@ -148,14 +155,16 @@ class WorkerBrowser:
             mode: "accessibility" (default) or "dom"
                 - accessibility: Clean, filtered, role-based IDs (button-0)
                 - dom: Complete, tag-based IDs (input-0), includes file inputs
+
+        Returns:
+            DOM snapshot string, or message if no page is open
         """
+        page = self.get_current_page()
+        if page is None:
+            return "No page is currently open. Use the navigate tool to open a page first."
 
         # Wait for page to be fully loaded before capturing (safety check)
         await self.wait_for_load(timeout=10000)
-
-        page = self.get_current_page()
-        if page is None:
-            return "ERROR: No page opened yet."
 
         # Build LLMDomContext from current page
         self._dom_context = await LLMDomContext.from_page(page)

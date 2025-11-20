@@ -325,17 +325,21 @@ class Worker:
         user_content = []
         user_content.append(TextContent(text=f"Task: {task}"))
 
-        # Get current page state
+        # Get current page state (may be None if no page is open)
         dom_snapshot = await self.worker_browser.get_dom_snapshot(mode=self._mode)
         screenshot_b64 = await self.worker_browser.get_screenshot()
+
         user_content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
-        user_content.append(
-            ImageContent(
-                data=screenshot_b64,
-                mime_type=ImageMimeType.PNG,
-                tag="screenshot",
+
+        # Only add screenshot if we have one (page is open)
+        if screenshot_b64 is not None:
+            user_content.append(
+                ImageContent(
+                    data=screenshot_b64,
+                    mime_type=ImageMimeType.PNG,
+                    tag="screenshot",
+                )
             )
-        )
 
         # Build session start messages (never compacted)
         session_start_messages = [
