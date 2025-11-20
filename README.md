@@ -29,6 +29,7 @@ async with async_playwright() as p:
     llm = GeminiLLM(model="gemini-2.5-flash")
 
     agent = await Webtask().create_agent_with_browser(llm=llm, browser=browser)
+
     result = await agent.do("search for cats and click the first result")
 ```
 
