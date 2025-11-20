@@ -24,7 +24,7 @@ from .llm import (
     ToolResultStatus,
 )
 
-__version__ = "0.17.3"
+__version__ = "0.17.4"
 
 __all__ = [
     # Manager
