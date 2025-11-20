@@ -2,7 +2,7 @@
 
 import logging
 from typing import Dict, List, Tuple
-from webtask.agent.tool import Tool
+from webtask.llm.tool import Tool
 from webtask.llm import ToolResult, ToolResultStatus
 
 

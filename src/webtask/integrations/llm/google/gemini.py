@@ -17,7 +17,7 @@ from .gemini_mapper import (
 )
 
 if TYPE_CHECKING:
-    from webtask.agent.tool import Tool
+    from webtask.llm.tool import Tool
 
 T = TypeVar("T", bound=BaseModel)
 

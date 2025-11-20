@@ -9,7 +9,7 @@ from webtask.llm import LLM, Message, AssistantMessage
 from webtask._internal.config import Config
 
 if TYPE_CHECKING:
-    from webtask.agent.tool import Tool
+    from webtask.llm.tool import Tool
 
 T = TypeVar("T", bound=BaseModel)
 

@@ -17,7 +17,7 @@ from webtask.llm import (
 )
 
 if TYPE_CHECKING:
-    from webtask.agent.tool import Tool
+    from webtask.llm.tool import Tool
 
 
 def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDict]:

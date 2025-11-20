@@ -2,7 +2,7 @@
 
 from typing import Dict, List, TYPE_CHECKING, Optional, Any
 from pydantic import BaseModel, Field
-from webtask.agent.tool import Tool
+from webtask.llm.tool import Tool
 from ...utils.wait import wait
 from .worker_session import WorkerEndReason
 

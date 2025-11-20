@@ -168,30 +168,3 @@ class ToolResultMessage(Message):
         image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
 
         return f"ToolResultMessage(results=[{results_str}], text_parts={text_count}, images={image_count})"
-
-
-# ========== Helper Functions ==========
-
-
-def get_message_role(message: Message) -> str:
-    """Convert message type to role string for LLM APIs.
-
-    Args:
-        message: Message instance
-
-    Returns:
-        Role string: "system", "user", or "assistant"
-
-    Raises:
-        ValueError: If message type is unknown
-    """
-    if isinstance(message, SystemMessage):
-        return "system"
-    elif isinstance(message, UserMessage):
-        return "user"
-    elif isinstance(message, AssistantMessage):
-        return "assistant"
-    elif isinstance(message, ToolResultMessage):
-        return "user"  # Tool results come back as user messages
-    else:
-        raise ValueError(f"Unknown message type: {type(message)}")
