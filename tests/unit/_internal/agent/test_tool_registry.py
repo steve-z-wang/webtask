@@ -158,13 +158,21 @@ async def test_stop_on_first_error(registry):
     # Execute
     results, descriptions = await registry.execute_tool_calls(tool_calls)
 
-    # Should only have 1 result (stopped after first error)
-    assert len(results) == 1
+    # Should have 2 results (1 executed with error + 1 skipped)
+    assert len(results) == 2
     assert results[0].status == ToolResultStatus.ERROR
     assert results[0].name == "nonexistent"
+    assert "not found" in results[0].error
 
-    # Should only have 1 description
-    assert len(descriptions) == 1
+    # Second tool should be skipped
+    assert results[1].status == ToolResultStatus.ERROR
+    assert results[1].name == "dummy"
+    assert "Skipped" in results[1].error
+
+    # Should have 2 descriptions
+    assert len(descriptions) == 2
+    assert "ERROR" in descriptions[0]
+    assert "SKIPPED" in descriptions[1]
 
 
 @pytest.mark.asyncio
@@ -179,10 +187,18 @@ async def test_stop_on_param_validation_error(registry):
     # Execute
     results, descriptions = await registry.execute_tool_calls(tool_calls)
 
-    # Should only have 1 result (stopped after first error)
-    assert len(results) == 1
+    # Should have 2 results (1 executed with error + 1 skipped)
+    assert len(results) == 2
     assert results[0].status == ToolResultStatus.ERROR
     assert results[0].name == "dummy"
+    assert "validation error" in results[0].error
 
-    # Should only have 1 description
-    assert len(descriptions) == 1
+    # Second tool should be skipped
+    assert results[1].status == ToolResultStatus.ERROR
+    assert results[1].name == "dummy"
+    assert "Skipped" in results[1].error
+
+    # Should have 2 descriptions
+    assert len(descriptions) == 2
+    assert "ERROR" in descriptions[0]
+    assert "SKIPPED" in descriptions[1]

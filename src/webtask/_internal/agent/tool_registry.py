@@ -39,8 +39,9 @@ class ToolRegistry:
         """Execute multiple tool calls in batch, stopping early if any tool fails or terminal tool succeeds."""
         results = []
         descriptions = []
+        executed_count = 0
 
-        for tool_call in tool_calls:
+        for idx, tool_call in enumerate(tool_calls):
             try:
                 # Get tool - catch KeyError separately for clearer error message
                 try:
@@ -56,6 +57,7 @@ class ToolRegistry:
                     )
                     results.append(result)
                     descriptions.append(f"{tool_call.name} (ERROR: Tool not found)")
+                    executed_count = idx + 1
                     break  # Stop on tool not found
 
                 # Validate parameters and execute tool
@@ -76,6 +78,7 @@ class ToolRegistry:
                     status=ToolResultStatus.SUCCESS,
                 )
                 results.append(result)
+                executed_count = idx + 1
 
                 description = tool.describe(params)
                 descriptions.append(description)
@@ -101,6 +104,19 @@ class ToolRegistry:
                 )
                 results.append(result)
                 descriptions.append(f"{tool_call.name} (ERROR: {error_msg})")
+                executed_count = idx + 1
                 break  # Stop on any error
+
+        # Create skipped results for remaining tool calls (required for Bedrock compatibility)
+        for tool_call in tool_calls[executed_count:]:
+            result = ToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_call.name,
+                status=ToolResultStatus.ERROR,
+                error="Skipped due to previous tool failure",
+            )
+            results.append(result)
+            descriptions.append(f"{tool_call.name} (SKIPPED)")
+            self._logger.info(f"Tool skipped: {tool_call.name} (previous tool failed)")
 
         return results, descriptions
