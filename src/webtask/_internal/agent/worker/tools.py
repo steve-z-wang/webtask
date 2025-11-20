@@ -4,7 +4,7 @@ from typing import Dict, List, TYPE_CHECKING, Optional, Any
 from pydantic import BaseModel, Field
 from webtask.llm.tool import Tool
 from ...utils.wait import wait
-from .worker_session import WorkerEndReason
+from .worker_session import WorkerStatus
 
 if TYPE_CHECKING:
     from .worker_browser import WorkerBrowser
@@ -267,7 +267,7 @@ class CompleteWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is complete."""
-        self.end_reason.value = WorkerEndReason.COMPLETE_WORK
+        self.end_reason.value = WorkerStatus.COMPLETED
 
 
 class AbortWorkTool(Tool):
@@ -295,4 +295,4 @@ class AbortWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is aborted."""
-        self.end_reason.value = WorkerEndReason.ABORT_WORK
+        self.end_reason.value = WorkerStatus.ABORTED
