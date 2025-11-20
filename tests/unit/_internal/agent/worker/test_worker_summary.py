@@ -14,11 +14,10 @@ class TestTaskRunnerSummary:
     def task_runner(self, mocker):
         """Create a TaskRunner instance with mocked dependencies."""
         mock_llm = mocker.Mock()
-        mock_context = mocker.Mock()
+        mock_browser = mocker.Mock()
         return TaskRunner(
             llm=mock_llm,
-            context=mock_context,
-            wait_after_action=0.1,
+            browser=mock_browser,
         )
 
     def test_build_summary_with_reasoning_and_actions(self, task_runner):

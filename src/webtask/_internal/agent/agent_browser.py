@@ -45,6 +45,10 @@ class AgentBrowser:
         """Set or update the context."""
         self._context = context
 
+    def set_wait_after_action(self, wait_after_action: float) -> None:
+        """Set wait_after_action duration."""
+        self._wait_after_action = wait_after_action
+
     async def create_page(self, url: Optional[str] = None) -> Page:
         """Create new page and switch to it."""
         if self._context is None:

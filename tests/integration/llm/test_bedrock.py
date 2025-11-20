@@ -73,7 +73,9 @@ async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
     messages = [
         SystemMessage(content=[TextContent(text="You are a web automation agent.")]),
         UserMessage(
-            content=[TextContent(text="Navigate to https://example.com and click button-5")]
+            content=[
+                TextContent(text="Navigate to https://example.com and click button-5")
+            ]
         ),
     ]
 

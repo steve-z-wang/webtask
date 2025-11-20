@@ -33,7 +33,6 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
-    from webtask.browser import Context
     from webtask.llm.llm import LLM
 
 

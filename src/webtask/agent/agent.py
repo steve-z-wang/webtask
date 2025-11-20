@@ -76,31 +76,36 @@ class Agent:
         Returns:
             Result with status, output, and feedback
         """
-        effective_wait = (
-            wait_after_action
-            if wait_after_action is not None
-            else self.wait_after_action
-        )
+        # Temporarily override wait_after_action if provided
+        original_wait = None
+        if wait_after_action is not None:
+            original_wait = self.browser._wait_after_action
+            self.browser.set_wait_after_action(wait_after_action)
 
         effective_mode = mode if mode is not None else self.mode
 
-        runner = TaskRunner(
-            llm=self.llm,
-            browser=self.browser,
-            resources=resources,
-            mode=effective_mode,
-        )
+        try:
+            runner = TaskRunner(
+                llm=self.llm,
+                browser=self.browser,
+                resources=resources,
+                mode=effective_mode,
+            )
 
-        run = await runner.run(
-            task,
-            previous_runs=self._previous_runs if self.stateful else None,
-            max_steps=max_steps,
-        )
+            run = await runner.run(
+                task,
+                previous_runs=self._previous_runs if self.stateful else None,
+                max_steps=max_steps,
+            )
 
-        if self.stateful:
-            self._previous_runs.append(run)
+            if self.stateful:
+                self._previous_runs.append(run)
 
-        return run.result
+            return run.result
+        finally:
+            # Restore original wait_after_action if it was overridden
+            if original_wait is not None:
+                self.browser.set_wait_after_action(original_wait)
 
     async def close(self) -> None:
         """Close the agent and cleanup context."""
