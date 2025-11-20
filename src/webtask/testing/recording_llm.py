@@ -33,7 +33,7 @@ class RecordingLLM(LLM):
     Example:
         # Record mode (WEBTASK_TEST_MODE=record)
         llm = RecordingLLM(
-            GeminiLLM.create(...),
+            GeminiLLM(...),
             fixture_path="tests/e2e/fixtures/shopping_cart/"
         )
 

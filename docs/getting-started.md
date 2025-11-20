@@ -18,18 +18,16 @@ async def main():
     wt = Webtask(headless=False)  # Set headless=True for no GUI
 
     # Create LLM (choose Gemini or OpenAI)
-    llm = GeminiLLM.create(model="gemini-2.5-flash")
+    llm = GeminiLLM(model="gemini-2.5-flash")
 
     # Create agent with screenshot support (enabled by default)
     agent = await wt.create_agent(llm=llm)
 
     # Execute a task
-    result = await agent.execute("Go to google.com and search for 'cats'")
-
-    from webtask import TaskStatus
+    result = await agent.do("Go to google.com and search for 'cats'")
 
     print(f"Task status: {result.status}")
-    print(f"Manager/Subtask sessions: {len(result.history)}")
+    print(f"Feedback: {result.feedback}")
 
     # Clean up
     await wt.close()
@@ -51,14 +49,16 @@ wt = Webtask(headless=False)
 wt = Webtask(headless=True)
 ```
 
-### Screenshot Mode
+### Stateful Mode
 
 ```python
-# With screenshots (default, more accurate)
-agent = await wt.create_agent(llm=llm, use_screenshot=True)
+# Stateful mode - maintains conversation history across tasks
+llm = GeminiLLM(model="gemini-2.5-flash")
+agent = await wt.create_agent(llm=llm, stateful=True)
 
-# Without screenshots (faster, cheaper)
-agent = await wt.create_agent(llm=llm, use_screenshot=False)
+# Execute multiple related tasks
+await agent.do("Go to google.com")
+await agent.do("Search for cats")  # Agent remembers it's on Google
 ```
 
 

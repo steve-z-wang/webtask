@@ -4,7 +4,7 @@
 [![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-LLM-powered web automation with autonomous agents and natural language selectors.
+LLM-powered web automation with autonomous agents.
 
 **[📚 Documentation](https://steve-z-wang.github.io/webtask/)** | **[🐍 PyPI](https://pypi.org/project/pywebtask/)** | **[📊 Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)**
 
@@ -22,24 +22,16 @@ export GEMINI_API_KEY="your-key"  # or OPENAI_API_KEY
 ```python
 from webtask import Webtask
 from webtask.integrations.llm import GeminiLLM
+from playwright.async_api import async_playwright
 
-wt = Webtask(headless=False)
-llm = GeminiLLM.create(model="gemini-2.5-flash")
-agent = await wt.create_agent(llm=llm)
+async with async_playwright() as p:
+    browser = await p.chromium.launch(headless=False)
+    llm = GeminiLLM(model="gemini-2.5-flash")
 
-result = await agent.execute("search for cats and click the first result")
+    agent = await Webtask().create_agent_with_browser(llm=llm, browser=browser)
+
+    result = await agent.do("search for cats and click the first result")
 ```
-
-**Direct control** - Natural language selectors, you control the flow:
-```python
-await agent.navigate("https://example.com")
-search = await agent.select("search box")
-await search.fill("cats")
-button = await agent.select("search button")
-await button.click()
-```
-
-No CSS selectors. No XPath. Just describe what you want.
 
 ---
 

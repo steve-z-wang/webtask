@@ -9,7 +9,7 @@ Example:
     from webtask.integrations.browser.playwright import PlaywrightBrowser
 
     # Record mode (WEBTASK_TEST_MODE=record)
-    base_llm = GeminiLLM.create(...)
+    base_llm = GeminiLLM(...)
     llm = RecordingLLM(llm=base_llm, fixture_path="fixtures/llm/test/")
 
     base_browser = await PlaywrightBrowser.create(...)
