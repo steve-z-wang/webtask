@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-import sys
-from pathlib import Path
 from typing import Any
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -22,9 +20,11 @@ log_dir.mkdir(parents=True, exist_ok=True)
 log_file = log_dir / "mcp_server.log"
 
 # Set up file handler for webtask logs (overwrite each session)
-file_handler = logging.FileHandler(log_file, mode='w')
+file_handler = logging.FileHandler(log_file, mode="w")
 file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 
 webtask_logger = logging.getLogger("webtask")
 webtask_logger.setLevel(logging.DEBUG)

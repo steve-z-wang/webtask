@@ -1,9 +1,7 @@
 """Configuration management for MCP server."""
 
 import json
-import os
 from pathlib import Path
-from typing import Optional
 
 
 def get_config_dir() -> Path:

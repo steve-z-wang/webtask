@@ -15,7 +15,6 @@ async def start_agent_tool(session_manager) -> Dict[str, Any]:
     Returns:
         Session ID and status
     """
-    import os
     import subprocess
     import time
     import socket
