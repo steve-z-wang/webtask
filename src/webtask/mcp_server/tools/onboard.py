@@ -89,10 +89,12 @@ async def onboard_tool(
             "provider": "gemini",  # "gemini" or "bedrock"
             "gemini": {
                 "api_key": "YOUR_GEMINI_API_KEY_HERE",
+                "model": "gemini-2.5-flash",  # Optional: override default model
             },
             "bedrock": {
                 "region": "us-east-1",
-                "bearer_token": "",  # Optional: leave empty to use AWS credentials
+                "bearer_token": "",  # AWS Bedrock API key (leave empty to use environment AWS_BEARER_TOKEN_BEDROCK)
+                "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # Optional: override default model
             },
         },
         "browser": {

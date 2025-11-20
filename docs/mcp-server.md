@@ -58,11 +58,13 @@ When you first use the MCP server, you'll need to run the onboarding process:
   "llm": {
     "provider": "gemini",
     "gemini": {
-      "api_key": "YOUR_GEMINI_API_KEY_HERE"
+      "api_key": "YOUR_GEMINI_API_KEY_HERE",
+      "model": "gemini-2.5-flash"
     },
     "bedrock": {
       "region": "us-east-1",
-      "bearer_token": ""
+      "bearer_token": "",
+      "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     }
   },
   "browser": {
@@ -75,7 +77,9 @@ When you first use the MCP server, you'll need to run the onboarding process:
 
 3. **Set your LLM provider**:
    - For **Gemini**: Set `llm.provider` to `"gemini"` and add your API key to `llm.gemini.api_key`
+     - Optional: Set `llm.gemini.model` to override the default model (default: `gemini-2.5-flash`)
    - For **AWS Bedrock**: Set `llm.provider` to `"bedrock"` and configure `llm.bedrock` settings
+     - Optional: Set `llm.bedrock.model` to override the default model (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`)
 
 4. **Restart Claude Desktop** to apply the configuration
 
@@ -197,6 +201,8 @@ This provides a web UI at `http://localhost:5173` to test MCP tools interactivel
 
 ### Google Gemini
 
+**Default model**: `gemini-2.5-flash`
+
 1. Get an API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Set in config:
    ```json
@@ -204,41 +210,57 @@ This provides a web UI at `http://localhost:5173` to test MCP tools interactivel
      "llm": {
        "provider": "gemini",
        "gemini": {
-         "api_key": "your-api-key-here"
+         "api_key": "your-api-key-here",
+         "model": "gemini-2.5-flash"
        }
      }
    }
    ```
 
+**Available models**: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash-exp`
+
 ### AWS Bedrock
 
-**Option 1: Bearer Token**
+**Default model**: `us.anthropic.claude-haiku-4-5-20251001-v1:0`
+
+AWS Bedrock uses **bearer token authentication** (API keys introduced in July 2024).
+
+1. Generate an API key from [AWS Bedrock Console](https://console.aws.amazon.com/bedrock/)
+2. Set in config:
+
+**Option 1: Bearer Token in Config**
 ```json
 {
   "llm": {
     "provider": "bedrock",
     "bedrock": {
       "region": "us-east-1",
-      "bearer_token": "your-bearer-token-here"
+      "bearer_token": "your-bedrock-api-key-here",
+      "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     }
   }
 }
 ```
 
-**Option 2: AWS Credentials**
+**Option 2: Environment Variable**
 ```json
 {
   "llm": {
     "provider": "bedrock",
     "bedrock": {
       "region": "us-east-1",
-      "bearer_token": ""
+      "bearer_token": "",
+      "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     }
   }
 }
 ```
 
-With an empty bearer token, webtask will use your AWS credentials from environment variables or `~/.aws/credentials`.
+With an empty `bearer_token`, webtask will use the `AWS_BEARER_TOKEN_BEDROCK` environment variable.
+
+**Available models**: `us.anthropic.claude-haiku-4-5-20251001-v1:0`, `us.anthropic.claude-sonnet-4-5-20250929-v1:0`
+
+**Note**: AWS Bedrock API keys are recommended for development. For production, consider using IAM roles or temporary credentials.
 
 ## Troubleshooting
 

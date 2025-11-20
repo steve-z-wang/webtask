@@ -42,7 +42,13 @@ async def start_agent_tool(session_manager) -> Dict[str, Any]:
                     "error": "Gemini API key not configured",
                     "message": "Please edit ~/.config/webtask/config.json and set llm.gemini.api_key",
                 }
-            llm = Gemini(api_key=api_key)
+
+            # Get optional model override
+            model = gemini_config.get("model")
+            if model:
+                llm = Gemini(api_key=api_key, model=model)
+            else:
+                llm = Gemini(api_key=api_key)
 
         elif llm_provider == "bedrock":
             try:
@@ -57,13 +63,21 @@ async def start_agent_tool(session_manager) -> Dict[str, Any]:
             bedrock_config = llm_config.get("bedrock", {})
             region = bedrock_config.get("region", "us-east-1")
             bearer_token = bedrock_config.get("bearer_token", "")
+            model = bedrock_config.get("model")
 
-            # Bearer token maps to AWS session token
+            # Set bearer token as environment variable if provided
+            # (boto3 automatically reads AWS_BEARER_TOKEN_BEDROCK)
             if bearer_token:
-                llm = Bedrock(region_name=region, aws_session_token=bearer_token)
-            else:
-                # Use default AWS credentials from environment
-                llm = Bedrock(region_name=region)
+                import os
+
+                os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bearer_token
+
+            # Build kwargs for Bedrock initialization
+            bedrock_kwargs = {"region_name": region}
+            if model:
+                bedrock_kwargs["model"] = model
+
+            llm = Bedrock(**bedrock_kwargs)
 
         else:
             return {
