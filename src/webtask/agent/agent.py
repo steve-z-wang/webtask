@@ -21,7 +21,7 @@ class Agent:
     def __init__(
         self,
         llm: LLM,
-        context: Optional[Context] = None,
+        context: Context,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
         persist_context: bool = False,
@@ -31,7 +31,7 @@ class Agent:
 
         Args:
             llm: LLM instance for reasoning and task execution
-            context: Optional context instance (can be set later with set_context())
+            context: Context instance for browser management
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
             persist_context: If True, maintain conversation history between do() calls (default: False)
@@ -72,13 +72,7 @@ class Agent:
                 "output": Any,  # Structured data from set_output tool
                 "feedback": str  # Summary of what happened
             }
-
-        Raises:
-            RuntimeError: If no context is available
         """
-        if self.context is None:
-            raise RuntimeError("No context available. Set context first.")
-
         # Use task-level wait_after_action if provided, otherwise use agent default
         effective_wait = (
             wait_after_action
@@ -119,15 +113,6 @@ class Agent:
             "output": session.output,
             "feedback": session.feedback,
         }
-
-    def set_context(self, context: Context) -> None:
-        """
-        Set or update the context.
-
-        Args:
-            context: Context instance for creating pages
-        """
-        self.context = context
 
     async def close(self) -> None:
         """Close the agent and cleanup context."""
