@@ -1,0 +1,73 @@
+{
+  "method": "call_tools",
+  "request": {
+    "messages": [
+      {
+        "timestamp": "2025-11-19T23:57:44.880553",
+        "content": [
+          {
+            "tag": null
+          }
+        ]
+      },
+      {
+        "timestamp": "2025-11-19T23:57:44.880570",
+        "content": [
+          {
+            "tag": null
+          },
+          {
+            "tag": "dom_snapshot"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "wait",
+        "description": "Wait for specified seconds (useful after actions that trigger page changes, modals, or dynamic content loading)"
+      },
+      {
+        "name": "click",
+        "description": "Click an element on the page"
+      },
+      {
+        "name": "fill",
+        "description": "Fill a form element with a value (fast, direct value setting)"
+      },
+      {
+        "name": "type",
+        "description": "Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)"
+      },
+      {
+        "name": "navigate",
+        "description": "Navigate to a URL"
+      },
+      {
+        "name": "set_output",
+        "description": "Store structured output data (dict, list, etc.) that will be returned to the user as the result"
+      },
+      {
+        "name": "complete_work",
+        "description": "Signal that you have successfully completed the subtask"
+      },
+      {
+        "name": "abort_work",
+        "description": "Signal that you cannot proceed further with this subtask (stuck, blocked, error, or impossible to complete)"
+      }
+    ]
+  },
+  "response": {
+    "timestamp": "2025-11-19T23:57:45.892720",
+    "content": null,
+    "tool_calls": [
+      {
+        "id": null,
+        "name": "navigate",
+        "arguments": {
+          "url": "https://practicesoftwaretesting.com/"
+        }
+      }
+    ]
+  }
+}
