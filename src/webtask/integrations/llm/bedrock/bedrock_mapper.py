@@ -91,7 +91,7 @@ def messages_to_bedrock_format(
 
             for result in msg.results:
                 # Create tool result
-                tool_result_content = {"toolUseId": result.id, "content": []}
+                tool_result_content = {"toolUseId": result.tool_call_id, "content": []}
 
                 if result.error:
                     tool_result_content["status"] = "error"
