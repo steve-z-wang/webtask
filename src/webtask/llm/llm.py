@@ -2,14 +2,11 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Type, TypeVar, TYPE_CHECKING
-from pydantic import BaseModel
+from typing import List, TYPE_CHECKING
 from .message import Message, AssistantMessage
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class LLM(ABC):
@@ -24,7 +21,7 @@ class LLM(ABC):
         messages: List[Message],
         tools: List["Tool"],
     ) -> AssistantMessage:
-        """Generate response with tool calling (for Worker/Verifier).
+        """Generate response with tool calling.
 
         Args:
             messages: Conversation history as list of Message objects.
@@ -47,35 +44,5 @@ class LLM(ABC):
             - Messages maintain conversation context across multiple turns
             - Tool calls are returned in AssistantMessage.tool_calls
             - Each LLM implementation handles its own API format conversion
-        """
-        pass
-
-    @abstractmethod
-    async def generate_response(
-        self,
-        messages: List[Message],
-        response_model: Type[T],
-    ) -> T:
-        """Generate structured JSON response (for NaturalSelector).
-
-        Args:
-            messages: Conversation history as list of Message objects.
-            response_model: Pydantic model class for structured output.
-
-        Returns:
-            Instance of response_model with parsed LLM response.
-
-        Example:
-            >>> messages = [
-            ...     SystemMessage(content=[TextContent(text="You are a selector")]),
-            ...     UserMessage(content=[TextContent(text="Find the login button")]),
-            ... ]
-            >>> response = await llm.generate_response(messages, SelectorResponse)
-            >>> print(response.element_id)
-            "button-5"
-
-        Note:
-            - LLM must return valid JSON matching response_model schema
-            - Implementation should handle validation and retries
         """
         pass

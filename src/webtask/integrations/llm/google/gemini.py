@@ -1,14 +1,12 @@
 """Google Gemini LLM implementation with conversation-based interface."""
 
-from typing import Optional, List, Type, TypeVar, TYPE_CHECKING
-import json
-from pydantic import BaseModel, ValidationError
+from typing import Optional, List, TYPE_CHECKING
 
 import google.generativeai as genai
 from google.generativeai import protos
 
 from webtask.llm import LLM
-from webtask.llm.message import Message, UserMessage, AssistantMessage, TextContent
+from webtask.llm.message import Message, AssistantMessage
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .gemini_mapper import (
     messages_to_gemini_content,
@@ -18,8 +16,6 @@ from .gemini_mapper import (
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class GeminiLLM(LLM):
@@ -86,54 +82,3 @@ class GeminiLLM(LLM):
         assistant_msg = gemini_response_to_assistant_message(response)
         self._debugger.save_call(messages, assistant_msg)
         return assistant_msg
-
-    async def generate_response(
-        self,
-        messages: List[Message],
-        response_model: Type[T],
-    ) -> T:
-        """Generate structured JSON response."""
-        # Inject schema into messages
-        schema = response_model.model_json_schema()
-        schema_text = f"\n\nYou MUST respond with valid JSON matching this schema:\n```json\n{json.dumps(schema, indent=2)}\n```"
-
-        messages_with_schema = messages + [
-            UserMessage(content=[TextContent(text=schema_text)])
-        ]
-
-        gemini_content = messages_to_gemini_content(messages_with_schema)
-
-        generation_config = genai.GenerationConfig(  # type: ignore[attr-defined]
-            temperature=self.temperature,
-            response_mime_type="application/json",
-        )
-
-        response = await self.model.generate_content_async(
-            gemini_content,
-            generation_config=generation_config,
-        )
-
-        # Log token usage
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
-            usage = response.usage_metadata
-            self.logger.info(
-                f"Token usage - Prompt: {usage.prompt_token_count}, "
-                f"Response: {usage.candidates_token_count}, "
-                f"Total: {usage.total_token_count}"
-            )
-
-        if not response.candidates or not response.candidates[0].content:
-            raise ValueError("No response from Gemini")
-
-        text_response = response.candidates[0].content.parts[0].text
-
-        try:
-            result = response_model.model_validate(json.loads(text_response))
-            self._debugger.save_call(
-                messages, AssistantMessage(content=[TextContent(text=text_response)])
-            )
-            return result
-        except (json.JSONDecodeError, ValidationError) as e:
-            raise ValueError(
-                f"Failed to parse Gemini response as {response_model.__name__}: {e}"
-            ) from e
