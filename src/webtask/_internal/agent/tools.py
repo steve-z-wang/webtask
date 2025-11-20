@@ -1,14 +1,13 @@
-"""Worker tools - all tools available to the worker."""
+"""Task tools - all tools available to the worker."""
 
 from typing import Dict, List, TYPE_CHECKING, Optional, Any
 from pydantic import BaseModel, Field
 from webtask.llm.tool import Tool
-from ...utils.wait import wait
-from .worker_session import WorkerStatus
+from webtask.agent.result import Status, Result
+from ..utils.wait import wait
 
 if TYPE_CHECKING:
-    from .worker_browser import WorkerBrowser
-    from .worker import EndReason, OutputStorage
+    from .agent_browser import AgentBrowser
 
 
 # Browser action tools
@@ -25,9 +24,9 @@ class NavigateTool(Tool):
 
         url: str = Field(description="URL to navigate to")
 
-    def __init__(self, worker_browser: "WorkerBrowser"):
+    def __init__(self, browser: "AgentBrowser"):
         """Initialize navigate tool with worker browser."""
-        self.worker_browser = worker_browser
+        self.browser = browser
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -36,7 +35,7 @@ class NavigateTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Execute navigation."""
-        await self.worker_browser.navigate(params.url)
+        await self.browser.navigate(params.url)
 
 
 class ClickTool(Tool):
@@ -53,9 +52,9 @@ class ClickTool(Tool):
             description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')"
         )
 
-    def __init__(self, worker_browser: "WorkerBrowser"):
+    def __init__(self, browser: "AgentBrowser"):
         """Initialize click tool with worker browser."""
-        self.worker_browser = worker_browser
+        self.browser = browser
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -64,7 +63,7 @@ class ClickTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Execute click on element."""
-        await self.worker_browser.click(params.element_id)
+        await self.browser.click(params.element_id)
 
 
 class FillTool(Tool):
@@ -82,9 +81,9 @@ class FillTool(Tool):
             description="Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')"
         )
 
-    def __init__(self, worker_browser: "WorkerBrowser"):
+    def __init__(self, browser: "AgentBrowser"):
         """Initialize fill tool with worker browser."""
-        self.worker_browser = worker_browser
+        self.browser = browser
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -93,7 +92,7 @@ class FillTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Execute fill on element."""
-        await self.worker_browser.fill(params.element_id, params.value)
+        await self.browser.fill(params.element_id, params.value)
 
 
 class TypeTool(Tool):
@@ -111,9 +110,9 @@ class TypeTool(Tool):
             description="Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')"
         )
 
-    def __init__(self, worker_browser: "WorkerBrowser"):
+    def __init__(self, browser: "AgentBrowser"):
         """Initialize type tool with worker browser."""
-        self.worker_browser = worker_browser
+        self.browser = browser
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -122,7 +121,7 @@ class TypeTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Execute type on element."""
-        await self.worker_browser.type(params.element_id, params.text)
+        await self.browser.type(params.element_id, params.text)
 
 
 class UploadTool(Tool):
@@ -146,11 +145,11 @@ class UploadTool(Tool):
 
     def __init__(
         self,
-        worker_browser: "WorkerBrowser",
+        browser: "AgentBrowser",
         resources: Optional[Dict[str, str]] = None,
     ):
         """Initialize upload tool with worker browser and resources."""
-        self.worker_browser = worker_browser
+        self.browser = browser
         self.resources = resources
 
     def is_enabled(self) -> bool:
@@ -175,7 +174,7 @@ class UploadTool(Tool):
 
         # Upload files (single file or multiple)
         file_path = paths if len(paths) > 1 else paths[0]
-        await self.worker_browser.upload(params.element_id, file_path)
+        await self.browser.upload(params.element_id, file_path)
 
 
 class WaitTool(Tool):
@@ -219,9 +218,9 @@ class SetOutputTool(Tool):
             description="Structured data to return (e.g., dict with extracted information, list of items, etc.)"
         )
 
-    def __init__(self, output_storage: "OutputStorage"):
-        """Initialize with reference to output storage wrapper."""
-        self.output_storage = output_storage
+    def __init__(self, result: "Result"):
+        """Initialize with reference to worker result."""
+        self.result = result
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -239,7 +238,7 @@ class SetOutputTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Store the output data."""
-        self.output_storage.value = params.data
+        self.result.output = params.data
 
 
 class CompleteWorkTool(Tool):
@@ -256,9 +255,9 @@ class CompleteWorkTool(Tool):
             description="Describe what you accomplished and provide any important context or knowledge that might be useful for future subtasks in this task"
         )
 
-    def __init__(self, end_reason: "EndReason"):
-        """Initialize with reference to end_reason wrapper."""
-        self.end_reason = end_reason
+    def __init__(self, result: "Result"):
+        """Initialize with reference to worker result."""
+        self.result = result
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -266,8 +265,9 @@ class CompleteWorkTool(Tool):
         return f"Completed work: {params.feedback}"
 
     async def execute(self, params: Params) -> None:
-        """Signal that work is complete."""
-        self.end_reason.value = WorkerStatus.COMPLETED
+        """Signal that work is complete and store feedback."""
+        self.result.status = Status.COMPLETED
+        self.result.feedback = params.feedback
 
 
 class AbortWorkTool(Tool):
@@ -284,9 +284,9 @@ class AbortWorkTool(Tool):
             description="Explain why you cannot continue and provide any relevant context about what went wrong or what is blocking you"
         )
 
-    def __init__(self, end_reason: "EndReason"):
-        """Initialize with reference to end_reason wrapper."""
-        self.end_reason = end_reason
+    def __init__(self, result: "Result"):
+        """Initialize with reference to worker result."""
+        self.result = result
 
     @staticmethod
     def describe(params: Params) -> str:
@@ -294,5 +294,6 @@ class AbortWorkTool(Tool):
         return f"Aborted work: {params.reason}"
 
     async def execute(self, params: Params) -> None:
-        """Signal that work is aborted."""
-        self.end_reason.value = WorkerStatus.ABORTED
+        """Signal that work is aborted and store reason as feedback."""
+        self.result.status = Status.ABORTED
+        self.result.feedback = params.reason

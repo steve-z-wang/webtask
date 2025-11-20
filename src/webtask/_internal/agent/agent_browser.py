@@ -1,14 +1,14 @@
-"""WorkerBrowser - browser interface for Worker with page management and LLMDomContext."""
+"""AgentBrowser - browser interface for agent with page management and LLMDomContext."""
 
 from typing import Dict, List, Optional
 from webtask.browser import Page, Context
-from ...context import LLMDomContext
-from ...utils.wait import wait
+from ..context import LLMDomContext
+from ..utils.wait import wait
 import base64
 
 
-class WorkerBrowser:
-    """Worker browser with page management and interactive element mapping."""
+class AgentBrowser:
+    """Agent browser with page management and interactive element mapping."""
 
     def __init__(
         self,
@@ -161,7 +161,9 @@ class WorkerBrowser:
         """
         page = self.get_current_page()
         if page is None:
-            return "No page is currently open. Use the navigate tool to open a page first."
+            return (
+                "No page is currently open. Use the navigate tool to open a page first."
+            )
 
         # Wait for page to be fully loaded before capturing (safety check)
         await self.wait_for_load(timeout=10000)

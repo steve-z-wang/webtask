@@ -97,17 +97,11 @@ async def test_shopping_cart_automation():
 
     try:
         # Create agent with recording wrappers
-        agent = await wt.create_agent_with_browser(
-            llm=llm, browser=browser, use_screenshot=True
-        )
+        agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
 
-        # Navigate to the starting page
-        await agent.navigate("https://practicesoftwaretesting.com/")
-        await agent.wait_for_load()
-
-        # Execute the shopping cart task
-        result = await agent.execute(
-            "add 2 Flat-Head Wood Screws and 5 cross-head screws to the cart, and proceed to the cart",
+        # Execute the shopping cart task (includes navigation)
+        result = await agent.do(
+            "Navigate to https://practicesoftwaretesting.com/ and add 2 Flat-Head Wood Screws and 5 cross-head screws to the cart, and proceed to the cart",
         )
 
         # Verify task completed successfully
@@ -115,14 +109,13 @@ async def test_shopping_cart_automation():
 
         # The task should have completed (not aborted)
         print(f"\nTask Status: {result.status}")
-        print(f"Number of sessions: {len(result.execution.sessions)}")
         print(f"Feedback: {result.feedback}")
 
         # Verify task completed (not aborted)
-        from webtask._internal.agent.task_execution import TaskStatus
+        from webtask.agent.result import Status
 
         assert (
-            result.status == TaskStatus.COMPLETE
+            result.status == Status.COMPLETED
         ), f"Task should have completed successfully, but status is {result.status}"
 
     finally:

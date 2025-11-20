@@ -1,7 +1,7 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
 from .webtask import Webtask
-from .agent import Agent, Tool
+from .agent import Agent, Status, Result, Tool
 
 from .browser import (
     Browser,
@@ -24,8 +24,6 @@ from .llm import (
     ToolResultStatus,
 )
 
-from ._internal.agent.task_execution import TaskExecution, TaskResult
-
 __version__ = "0.16.0"
 
 __all__ = [
@@ -33,9 +31,9 @@ __all__ = [
     "Webtask",
     # Agent
     "Agent",
+    "Status",
+    "Result",
     "Tool",
-    "TaskExecution",
-    "TaskResult",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Context",

@@ -1,27 +1,27 @@
-"""Unit tests for Worker summary generation with reasoning."""
+"""Unit tests for TaskRunner summary generation with reasoning."""
 
 import pytest
-from webtask._internal.agent.worker.worker import Worker, ToolCallPair
+from webtask._internal.agent.task_runner import TaskRunner, ToolCallPair
 from webtask.llm import AssistantMessage, ToolResultMessage, TextContent
 
 pytestmark = pytest.mark.unit
 
 
-class TestWorkerSummary:
-    """Test Worker._build_summary() generates correct format with reasoning."""
+class TestTaskRunnerSummary:
+    """Test TaskRunner._build_summary() generates correct format with reasoning."""
 
     @pytest.fixture
-    def worker(self, mocker):
-        """Create a Worker instance with mocked dependencies."""
+    def task_runner(self, mocker):
+        """Create a TaskRunner instance with mocked dependencies."""
         mock_llm = mocker.Mock()
-        mock_session_browser = mocker.Mock()
-        return Worker(
+        mock_context = mocker.Mock()
+        return TaskRunner(
             llm=mock_llm,
-            session_browser=mock_session_browser,
+            context=mock_context,
             wait_after_action=0.1,
         )
 
-    def test_build_summary_with_reasoning_and_actions(self, worker):
+    def test_build_summary_with_reasoning_and_actions(self, task_runner):
         """Test summary includes reasoning and actions in correct format."""
         pairs = [
             ToolCallPair(
@@ -41,20 +41,16 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
-        # Verify format
-        assert "Step 1:" in summary
-        assert "Step 2:" in summary
-        assert "Reasoning:" in summary
-        assert "Actions:" in summary
-        assert "I need to navigate first" in summary
-        assert "Now I'll interact with the page" in summary
-        assert "- Navigated to https://example.com" in summary
-        assert "- Clicked button-5" in summary
-        assert "- Filled input-1 with 'test'" in summary
+        # Verify format (reasoning as main bullet, actions indented)
+        assert "- I need to navigate first" in summary
+        assert "- Now I'll interact with the page" in summary
+        assert "  - Navigated to https://example.com" in summary
+        assert "  - Clicked button-5" in summary
+        assert "  - Filled input-1 with 'test'" in summary
 
-    def test_build_summary_with_multiline_reasoning(self, worker):
+    def test_build_summary_with_multiline_reasoning(self, task_runner):
         """Test summary handles multiline reasoning correctly."""
         pairs = [
             ToolCallPair(
@@ -65,15 +61,15 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
-        # Verify multiline reasoning is properly indented
-        assert "Reasoning:" in summary
-        assert "    First line of reasoning" in summary
-        assert "    Second line of reasoning" in summary
-        assert "    Third line" in summary
+        # Verify multiline reasoning is properly formatted
+        assert "- First line of reasoning" in summary
+        assert "  Second line of reasoning" in summary
+        assert "  Third line" in summary
+        assert "  - Clicked button-1" in summary
 
-    def test_build_summary_without_reasoning(self, worker):
+    def test_build_summary_without_reasoning(self, task_runner):
         """Test summary works when reasoning is None."""
         pairs = [
             ToolCallPair(
@@ -84,21 +80,18 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
-        # Should still have step and actions, but no reasoning section
-        assert "Step 1:" in summary
-        assert "Reasoning:" not in summary
-        assert "Actions:" in summary
-        assert "- Waited 1.0 seconds" in summary
+        # Should have actions but no reasoning
+        assert "  - Waited 1.0 seconds" in summary
 
-    def test_build_summary_empty_pairs(self, worker):
+    def test_build_summary_empty_pairs(self, task_runner):
         """Test summary returns empty string for no pairs."""
-        summary = worker._build_summary([])
+        summary = task_runner._build_summary([])
         assert summary == ""
 
-    def test_build_summary_multiple_steps(self, worker):
-        """Test summary correctly numbers multiple steps."""
+    def test_build_summary_multiple_steps(self, task_runner):
+        """Test summary handles multiple pairs correctly."""
         pairs = [
             ToolCallPair(
                 assistant_msg=AssistantMessage(content=[], tool_calls=[]),
@@ -120,16 +113,17 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
-        # Verify all steps are numbered correctly
-        assert "Step 1:" in summary
-        assert "Step 2:" in summary
-        assert "Step 3:" in summary
-        assert summary.count("Reasoning:") == 3
-        assert summary.count("Actions:") == 3
+        # Verify all pairs are included
+        assert "- Step 1 reasoning" in summary
+        assert "- Step 2 reasoning" in summary
+        assert "- Step 3 reasoning" in summary
+        assert "  - Action 1" in summary
+        assert "  - Action 2" in summary
+        assert "  - Action 3" in summary
 
-    def test_build_summary_with_no_actions(self, worker):
+    def test_build_summary_with_no_actions(self, task_runner):
         """Test summary when step has reasoning but no actions."""
         pairs = [
             ToolCallPair(
@@ -140,16 +134,13 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
-        # Should have reasoning but no actions section
-        assert "Step 1:" in summary
-        assert "Reasoning:" in summary
-        assert "Thinking but no actions taken" in summary
-        assert "Actions:" not in summary
+        # Should have reasoning only (no actions)
+        assert "- Thinking but no actions taken" in summary
 
-    def test_summary_format_matches_specification(self, worker):
-        """Test that the summary format exactly matches the specified format."""
+    def test_summary_format_matches_specification(self, task_runner):
+        """Test that the summary format exactly matches the implemented format."""
         pairs = [
             ToolCallPair(
                 assistant_msg=AssistantMessage(content=[], tool_calls=[]),
@@ -165,21 +156,13 @@ class TestWorkerSummary:
             ),
         ]
 
-        summary = worker._build_summary(pairs)
+        summary = task_runner._build_summary(pairs)
 
         expected_lines = [
-            "",
-            "Step 1:",
-            "  Reasoning:",
-            "    I need to navigate to the login page first before I can enter credentials.",
-            "  Actions:",
-            "    - Navigated to https://example.com/login",
-            "",
-            "Step 2:",
-            "  Reasoning:",
-            "    The login page has loaded successfully. I can see two input fields (input-1 and input-2) and a submit button (button-5). I'll fill in the username field first with 'testuser'.",
-            "  Actions:",
-            "    - Filled input-1 with 'testuser'",
+            "- I need to navigate to the login page first before I can enter credentials.",
+            "  - Navigated to https://example.com/login",
+            "- The login page has loaded successfully. I can see two input fields (input-1 and input-2) and a submit button (button-5). I'll fill in the username field first with 'testuser'.",
+            "  - Filled input-1 with 'testuser'",
         ]
 
         assert summary == "\n".join(expected_lines)

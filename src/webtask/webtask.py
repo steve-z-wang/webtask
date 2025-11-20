@@ -105,7 +105,7 @@ class Webtask:
         cookies=None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        persist_context: bool = False,
+        stateful: bool = False,
     ) -> Agent:
         """Create agent with new browser context. Launches browser on first call.
 
@@ -114,7 +114,7 @@ class Webtask:
             cookies: Optional cookies for the context
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            persist_context: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: False)
 
         Returns:
             Agent instance with new context
@@ -126,7 +126,7 @@ class Webtask:
             context=context,
             wait_after_action=wait_after_action,
             mode=mode,
-            persist_context=persist_context,
+            stateful=stateful,
         )
 
         return agent
@@ -138,7 +138,7 @@ class Webtask:
         cookies=None,
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        persist_context: bool = False,
+        stateful: bool = False,
         use_existing_context: bool = True,
     ) -> Agent:
         """Create agent with existing browser.
@@ -152,7 +152,7 @@ class Webtask:
             cookies: Optional cookies for the context
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            persist_context: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: False)
             use_existing_context: Use existing context if available (default: True)
 
         Returns:
@@ -190,7 +190,7 @@ class Webtask:
             context=context,
             wait_after_action=wait_after_action,
             mode=mode,
-            persist_context=persist_context,
+            stateful=stateful,
         )
 
         return agent
@@ -201,7 +201,7 @@ class Webtask:
         context: Union[Context, "BrowserContext"],
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        persist_context: bool = False,
+        stateful: bool = False,
     ) -> Agent:
         """Create agent with existing context.
 
@@ -213,7 +213,7 @@ class Webtask:
             context: Context instance or Playwright BrowserContext
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            persist_context: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: False)
 
         Returns:
             Agent instance with provided context
@@ -231,7 +231,7 @@ class Webtask:
             context=wrapped_context,
             wait_after_action=wait_after_action,
             mode=mode,
-            persist_context=persist_context,
+            stateful=stateful,
         )
 
         return agent
@@ -242,7 +242,7 @@ class Webtask:
         page: Union[Page, "PlaywrightPage"],
         wait_after_action: float = 0.2,
         mode: str = "accessibility",
-        persist_context: bool = False,
+        stateful: bool = False,
     ) -> Agent:
         """Create agent with existing page.
 
@@ -254,7 +254,7 @@ class Webtask:
             page: Page instance or Playwright Page
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             mode: DOM context mode - "accessibility" (default) or "dom"
-            persist_context: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: False)
 
         Returns:
             Agent instance with context from the provided page
@@ -270,7 +270,7 @@ class Webtask:
             context=context,
             wait_after_action=wait_after_action,
             mode=mode,
-            persist_context=persist_context,
+            stateful=stateful,
         )
         return agent
 
