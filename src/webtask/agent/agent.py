@@ -3,10 +3,8 @@
 import logging
 from typing import Dict, List, Optional, Any
 from webtask.llm import LLM
-from webtask.browser import Page, Context
+from webtask.browser import Context
 from webtask._internal.agent.worker.worker import Worker
-from webtask._internal.agent.worker.worker_session import WorkerSession
-from webtask._internal.utils.wait import wait as custom_wait
 
 
 class Agent:
@@ -45,8 +43,9 @@ class Agent:
         self.persist_context = persist_context
         self.logger = logging.getLogger(__name__)
 
-        # Store last WorkerSession if persist_context=True
-        self.last_session: Optional[WorkerSession] = None
+        # Store all conversation pairs if persist_context=True
+        # Accumulates pairs from all do() calls for multi-turn conversations
+        self._accumulated_pairs: List = []  # List[ToolCallPair]
 
     async def do(
         self,
@@ -101,10 +100,18 @@ class Agent:
 
         # Execute with optional context persistence
         if self.persist_context:
-            session = await worker.do(task, self.last_session, max_steps)
-            self.last_session = session
+            # Pass accumulated pairs from all previous do() calls
+            # This maintains full conversation history across multiple tasks
+            session = await worker.do(
+                task,
+                previous_pairs=self._accumulated_pairs if self._accumulated_pairs else None,
+                max_steps=max_steps
+            )
+            # Accumulate new pairs from this session for next call
+            self._accumulated_pairs.extend(session.pairs)
         else:
-            session = await worker.do(task, None, max_steps)
+            # No context persistence - fresh session each time
+            session = await worker.do(task, previous_pairs=None, max_steps=max_steps)
 
         # Convert WorkerSession to simple user-facing result
         return {

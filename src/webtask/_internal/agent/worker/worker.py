@@ -308,15 +308,15 @@ class Worker:
     async def do(
         self,
         task: str,
-        previous_session: Optional[WorkerSession] = None,
+        previous_pairs: Optional[List[ToolCallPair]] = None,
         max_steps: int = 20,
     ) -> WorkerSession:
         """
-        Execute task, optionally continuing from previous session.
+        Execute task, optionally continuing from previous conversation history.
 
         Args:
             task: Task description
-            previous_session: Optional previous WorkerSession to continue from
+            previous_pairs: Optional list of previous ToolCallPairs for conversation history
             max_steps: Maximum number of steps to execute
 
         Returns:
@@ -342,8 +342,5 @@ class Worker:
             SystemMessage(content=[TextContent(text=build_worker_prompt())]),
             UserMessage(content=user_content),
         ]
-
-        # Extract previous pairs if continuing from previous session
-        previous_pairs = previous_session.pairs if previous_session else None
 
         return await self._run(task, max_steps, session_start_messages, previous_pairs)
