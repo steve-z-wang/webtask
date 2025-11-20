@@ -58,10 +58,11 @@ async def start_agent_tool(session_manager) -> Dict[str, Any]:
             region = bedrock_config.get("region", "us-east-1")
             bearer_token = bedrock_config.get("bearer_token", "")
 
-            # Use bearer token if provided, otherwise use AWS credentials
+            # Bearer token maps to AWS session token
             if bearer_token:
-                llm = Bedrock(region_name=region, bearer_token=bearer_token)
+                llm = Bedrock(region_name=region, aws_session_token=bearer_token)
             else:
+                # Use default AWS credentials from environment
                 llm = Bedrock(region_name=region)
 
         else:
