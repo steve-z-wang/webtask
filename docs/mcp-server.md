@@ -4,11 +4,23 @@ The webtask MCP (Model Context Protocol) server allows you to integrate web auto
 
 ## Installation
 
+### Prerequisites
+
+You need Chrome or Chromium installed on your system. The MCP server connects to your existing Chrome installation.
+
+- **macOS**: Chrome is usually at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+- **Windows**: Chrome is usually at `C:\Program Files\Google\Chrome\Application\chrome.exe`
+- **Linux**: Chrome is usually at `/usr/bin/google-chrome`
+
+### Install webtask
+
 Install webtask with MCP support:
 
 ```bash
 pip install pywebtask[mcp]
 ```
+
+**Note**: This installs the Python packages only. It does NOT install Chrome - you must have Chrome already installed on your system.
 
 ## Configuration
 
