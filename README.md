@@ -22,16 +22,14 @@ export GEMINI_API_KEY="your-key"  # or OPENAI_API_KEY
 ```python
 from webtask import Webtask
 from webtask.integrations.llm import GeminiLLM
-from webtask.integrations.browser.playwright import PlaywrightBrowser
+from playwright.async_api import async_playwright
 
-# Connect to existing browser or create new one
-browser = await PlaywrightBrowser.create(headless=False)
+async with async_playwright() as p:
+    browser = await p.chromium.launch(headless=False)
+    llm = GeminiLLM(model="gemini-2.5-flash")
 
-wt = Webtask()
-llm = GeminiLLM.create(model="gemini-2.5-flash")
-agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
-
-result = await agent.do("search for cats and click the first result")
+    agent = await Webtask().create_agent_with_browser(llm=llm, browser=browser)
+    result = await agent.do("search for cats and click the first result")
 ```
 
 ---

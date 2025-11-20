@@ -72,7 +72,7 @@ async def test_shopping_cart_automation():
     # Setup LLM with recording
     api_key = os.getenv("GOOGLE_API_KEY")
     base_llm = (
-        GeminiLLM.create(model="gemini-2.5-flash", api_key=api_key)
+        GeminiLLM(model="gemini-2.5-flash", api_key=api_key)
         if not config.is_replaying()
         else None
     )

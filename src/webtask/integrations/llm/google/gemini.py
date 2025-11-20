@@ -27,33 +27,26 @@ class GeminiLLM(LLM):
 
     def __init__(
         self,
-        model: genai.GenerativeModel,
-        model_name: str,
-        temperature: float,
-    ):
-        """Initialize GeminiLLM (use create factory instead)."""
-        super().__init__()
-        self.model_name = model_name
-        self.temperature = temperature
-        self.model = model
-        self._debugger = LLMContextDebugger()
-
-    @classmethod
-    def create(
-        cls,
         model: str = "gemini-2.5-flash",
         api_key: Optional[str] = None,
         temperature: float = 0.5,
-    ) -> "GeminiLLM":
-        """Create a GeminiLLM instance."""
+    ):
+        """Initialize GeminiLLM.
+
+        Args:
+            model: Gemini model name (e.g., "gemini-2.5-flash", "gemini-2.5-pro")
+            api_key: Optional API key (if not set via environment variable)
+            temperature: Sampling temperature (0.0 to 1.0)
+        """
+        super().__init__()
+
         if api_key:
             genai.configure(api_key=api_key)  # type: ignore[attr-defined]
 
-        gemini_model = genai.GenerativeModel(  # type: ignore[attr-defined]
-            model_name=model
-        )
-
-        return cls(gemini_model, model, temperature)
+        self.model_name = model
+        self.temperature = temperature
+        self.model = genai.GenerativeModel(model_name=model)  # type: ignore[attr-defined]
+        self._debugger = LLMContextDebugger()
 
     async def call_tools(
         self,

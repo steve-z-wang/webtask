@@ -22,7 +22,7 @@ from webtask.integrations.llm import GeminiLLM
 wt = Webtask()
 
 # Choose your LLM
-llm = GeminiLLM.create(model="gemini-2.5-flash")
+llm = GeminiLLM(model="gemini-2.5-flash")
 
 # Create agent
 agent = await wt.create_agent(llm=llm)
