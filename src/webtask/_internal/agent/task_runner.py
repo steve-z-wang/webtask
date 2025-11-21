@@ -1,7 +1,8 @@
 """TaskRunner - executes one task with conversation-based LLM."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Type
+from pydantic import BaseModel
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -27,7 +28,6 @@ from .tools import (
     TypeTool,
     UploadTool,
     WaitTool,
-    SetOutputTool,
     CompleteWorkTool,
     AbortWorkTool,
 )
@@ -82,6 +82,7 @@ class TaskRunner:
         task: str,
         previous_runs: Optional[List[Run]] = None,
         max_steps: int = 25,
+        output_schema: Optional[Type[BaseModel]] = None,
     ) -> Run:
 
         session_start_messages = await self._build_session_start_messages(
@@ -89,7 +90,7 @@ class TaskRunner:
         )
 
         result = Result()
-        self._setup_control_tools(result)
+        self._setup_control_tools(result, output_schema)
 
         self._logger.info(f"Task start - Task: {task}")
 
@@ -171,9 +172,10 @@ class TaskRunner:
 
     ### Helper methods ###
 
-    def _setup_control_tools(self, result: Result) -> None:
-        self._tool_registry.register(SetOutputTool(result))
-        self._tool_registry.register(CompleteWorkTool(result))
+    def _setup_control_tools(
+        self, result: Result, output_schema: Optional[Type[BaseModel]] = None
+    ) -> None:
+        self._tool_registry.register(CompleteWorkTool(result, output_schema))
         self._tool_registry.register(AbortWorkTool(result))
 
     async def _build_session_start_messages(

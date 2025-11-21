@@ -1,7 +1,8 @@
 """Agent - main interface for web automation."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
+from pydantic import BaseModel
 from webtask.llm import LLM
 from webtask.browser import Context
 from webtask._internal.agent.task_runner import TaskRunner
@@ -59,8 +60,9 @@ class Agent:
         self,
         task: str,
         max_steps: int = 20,
-        resources: Optional[Dict[str, str]] = None,
         wait_after_action: Optional[float] = None,
+        resources: Optional[Dict[str, str]] = None,
+        output_schema: Optional[Type[BaseModel]] = None,
         mode: Optional[str] = None,
     ) -> Result:
         """
@@ -72,6 +74,7 @@ class Agent:
             resources: Optional dict of file resources (name -> path)
             wait_after_action: Wait time in seconds after each action (overrides agent default if provided)
             mode: DOM context mode - "accessibility" or "dom" (overrides agent default if provided)
+            output_schema: Optional Pydantic model defining the expected output structure
 
         Returns:
             Result with status, output, and feedback
@@ -96,6 +99,7 @@ class Agent:
                 task,
                 previous_runs=self._previous_runs if self.stateful else None,
                 max_steps=max_steps,
+                output_schema=output_schema,
             )
 
             if self.stateful:
@@ -106,8 +110,3 @@ class Agent:
             # Restore original wait_after_action if it was overridden
             if original_wait is not None:
                 self.browser.set_wait_after_action(original_wait)
-
-    async def close(self) -> None:
-        """Close the agent and cleanup context."""
-        if self.context:
-            await self.context.close()

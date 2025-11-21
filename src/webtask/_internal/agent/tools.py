@@ -1,7 +1,7 @@
 """Task tools - all tools available to the worker."""
 
-from typing import Dict, List, TYPE_CHECKING, Optional, Any
-from pydantic import BaseModel, Field
+from typing import Dict, List, TYPE_CHECKING, Optional, Any, Type
+from pydantic import BaseModel, Field, create_model
 from webtask.llm.tool import Tool
 from webtask.agent.result import Status, Result
 from ..utils.wait import wait
@@ -205,69 +205,73 @@ class WaitTool(Tool):
 # Control tools
 
 
-class SetOutputTool(Tool):
-    """Store structured output data that will be returned to the user."""
-
-    name = "set_output"
-    description = "Store structured output data (dict, list, etc.) that will be returned to the user as the result"
-
-    class Params(BaseModel):
-        """Parameters for set_output tool."""
-
-        data: Any = Field(
-            description="Structured data to return (e.g., dict with extracted information, list of items, etc.)"
-        )
-
-    def __init__(self, result: "Result"):
-        """Initialize with reference to worker result."""
-        self.result = result
-
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of set_output action."""
-        # Convert data to readable string representation
-        try:
-            import json
-
-            data_str = json.dumps(params.data, indent=2, ensure_ascii=False)
-        except (TypeError, ValueError):
-            # Fallback to string representation
-            data_str = str(params.data)
-
-        return f"Set output data:\n{data_str}"
-
-    async def execute(self, params: Params) -> None:
-        """Store the output data."""
-        self.result.output = params.data
-
-
 class CompleteWorkTool(Tool):
-    """Signal that the worker has successfully completed the subtask."""
+    """Signal that the worker has successfully completed the subtask with optional output data."""
 
     name = "complete_work"
-    description = "Signal that you have successfully completed the subtask"
+    description = "Signal that you have successfully completed the subtask. Optionally provide structured output data to return to the user."
     is_terminal = True
 
+    # Default Params class (will be overridden in __init__ if output_schema is provided)
     class Params(BaseModel):
         """Parameters for complete_work tool."""
 
         feedback: str = Field(
             description="Brief 1-2 sentence summary of what you accomplished"
         )
+        output: Optional[Any] = Field(
+            default=None,
+            description="Optional structured data to return to the user (e.g., extracted information, results)",
+        )
 
-    def __init__(self, result: "Result"):
-        """Initialize with reference to worker result."""
+    def __init__(
+        self, result: "Result", output_schema: Optional[Type[BaseModel]] = None
+    ):
+        """Initialize with reference to worker result and optional output schema.
+
+        Args:
+            result: Result object to store completion status and data
+            output_schema: Optional Pydantic model class defining the expected output structure
+        """
         self.result = result
+
+        # Dynamically create Params class if output_schema is provided
+        if output_schema:
+            # Inherit from base Params and only override the output field with the schema
+            # This shadows the class-level Params attribute for this instance
+            self.Params = create_model(  # type: ignore[misc]
+                "CompleteWorkParams",
+                __base__=CompleteWorkTool.Params,
+                output=(
+                    Optional[output_schema],
+                    Field(
+                        default=None,
+                        description="Structured output data matching the specified schema",
+                    ),
+                ),
+            )
+        # Otherwise, the default class-level Params will be used
 
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of complete_work action."""
-        return f"Completed work: {params.feedback}"
+        desc = f"Completed work: {params.feedback}"
+        if params.output is not None:
+            try:
+                import json
+
+                output_str = json.dumps(params.output, indent=2, ensure_ascii=False)
+                desc += f"\nOutput data:\n{output_str}"
+            except (TypeError, ValueError):
+                desc += f"\nOutput data: {params.output}"
+        return desc
 
     async def execute(self, params: Params) -> None:
-        """Signal that work is complete and store feedback."""
+        """Signal that work is complete and store feedback and optional output."""
         self.result.status = Status.COMPLETED
         self.result.feedback = params.feedback
+        if params.output is not None:
+            self.result.output = params.output
 
 
 class AbortWorkTool(Tool):
