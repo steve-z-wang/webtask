@@ -13,6 +13,7 @@ from webtask._internal.agent.agent_browser import AgentBrowser
 
 class VerificationResult(BaseModel):
     """Structured output for verification tasks."""
+
     verified: bool = Field(description="True if the condition is met, False otherwise")
 
 
