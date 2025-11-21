@@ -25,9 +25,7 @@ class Agent:
         self,
         llm: LLM,
         context: Context,
-        stateful: bool = False,
-        wait_after_action: float = 0.2,
-        mode: str = "accessibility",
+        stateful: bool = True,
     ):
         """
         Initialize agent.
@@ -35,22 +33,19 @@ class Agent:
         Args:
             llm: LLM instance for reasoning and task execution
             context: Context instance for browser management
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
-            stateful: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: True)
         """
         self.llm = llm
         self.context = context
-        self.wait_after_action = wait_after_action
-        self.mode = mode
         self.stateful = stateful
         self.logger = logging.getLogger(__name__)
 
         # Create AgentBrowser once - shared across all do() calls
         # This preserves page state between tasks
-        self.browser = AgentBrowser(
-            context=context, wait_after_action=wait_after_action
-        )
+        self.browser = AgentBrowser(context=context)
+
+        # Create TaskRunner once - stateless executor reused across all do() calls
+        self.task_runner = TaskRunner(llm=llm, browser=self.browser)
 
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
@@ -60,10 +55,10 @@ class Agent:
         self,
         task: str,
         max_steps: int = 20,
-        wait_after_action: Optional[float] = None,
+        wait_after_action: float = 0.2,
         resources: Optional[Dict[str, str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
-        mode: Optional[str] = None,
+        mode: str = "accessibility",
     ) -> Result:
         """
         Execute a task using TaskRunner.
@@ -71,45 +66,30 @@ class Agent:
         Args:
             task: Task description in natural language
             max_steps: Maximum number of steps to execute (default: 20)
+            wait_after_action: Wait time in seconds after each action (default: 0.2)
             resources: Optional dict of file resources (name -> path)
-            wait_after_action: Wait time in seconds after each action (overrides agent default if provided)
-            mode: DOM context mode - "accessibility" or "dom" (overrides agent default if provided)
             output_schema: Optional Pydantic model defining the expected output structure
+            mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
             Result with status, output, and feedback
         """
-        # Temporarily override wait_after_action if provided
-        original_wait = None
-        if wait_after_action is not None:
-            original_wait = self.browser._wait_after_action
-            self.browser.set_wait_after_action(wait_after_action)
+        # Set task-specific browser settings
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(mode)
 
-        effective_mode = mode if mode is not None else self.mode
+        run = await self.task_runner.run(
+            task,
+            max_steps,
+            previous_runs=self._previous_runs if self.stateful else None,
+            output_schema=output_schema,
+            resources=resources,
+        )
 
-        try:
-            runner = TaskRunner(
-                llm=self.llm,
-                browser=self.browser,
-                resources=resources,
-                mode=effective_mode,
-            )
+        if self.stateful:
+            self._previous_runs.append(run)
 
-            run = await runner.run(
-                task,
-                previous_runs=self._previous_runs if self.stateful else None,
-                max_steps=max_steps,
-                output_schema=output_schema,
-            )
-
-            if self.stateful:
-                self._previous_runs.append(run)
-
-            return run.result
-        finally:
-            # Restore original wait_after_action if it was overridden
-            if original_wait is not None:
-                self.browser.set_wait_after_action(original_wait)
+        return run.result
 
     def get_current_page(self) -> Optional[Page]:
         """

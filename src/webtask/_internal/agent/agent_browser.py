@@ -14,9 +14,11 @@ class AgentBrowser:
         self,
         context: Optional[Context] = None,
         wait_after_action: float = 0.2,
+        mode: str = "accessibility",
     ):
         self._context = context
         self._wait_after_action = wait_after_action
+        self._mode = mode
 
         # Page management (from SessionBrowser)
         self._pages: Dict[str, Page] = {}
@@ -48,6 +50,10 @@ class AgentBrowser:
     def set_wait_after_action(self, wait_after_action: float) -> None:
         """Set wait_after_action duration."""
         self._wait_after_action = wait_after_action
+
+    def set_mode(self, mode: str) -> None:
+        """Set DOM snapshot mode."""
+        self._mode = mode
 
     async def create_page(self, url: Optional[str] = None) -> Page:
         """Create new page and switch to it."""
@@ -152,13 +158,10 @@ class AgentBrowser:
         screenshot_bytes = await self.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    async def get_dom_snapshot(self, mode: str = "accessibility") -> str:
+    async def get_dom_snapshot(self) -> str:
         """Get DOM snapshot with interactive elements.
 
-        Args:
-            mode: "accessibility" (default) or "dom"
-                - accessibility: Clean, filtered, role-based IDs (button-0)
-                - dom: Complete, tag-based IDs (input-0), includes file inputs
+        Uses the current mode setting (set via set_mode()).
 
         Returns:
             DOM snapshot string, or message if no page is open
@@ -175,8 +178,8 @@ class AgentBrowser:
         # Build LLMDomContext from current page
         self._dom_context = await LLMDomContext.from_page(page)
 
-        # Get context string with mode
-        context_str = self._dom_context.get_context(mode=mode)
+        # Get context string with current mode
+        context_str = self._dom_context.get_context(mode=self._mode)
 
         # Format with URL and element ID explanation
         url = page.url
@@ -186,7 +189,7 @@ class AgentBrowser:
         lines.append("")
 
         # Add format explanation based on mode
-        if mode == "accessibility":
+        if self._mode == "accessibility":
             lines.append(
                 "Elements use role-based IDs (e.g., button-0, combobox-1, link-2)."
             )

@@ -54,43 +54,37 @@ class ToolCallPair:
 
 
 class TaskRunner:
-    """Task executor - executes one task with conversation-based LLM."""
+    """Task executor - executes one task with conversation-based LLM.
+
+    Stateless executor that can be reused across multiple runs.
+    """
 
     def __init__(
         self,
         llm: "LLM",
         browser: AgentBrowser,
-        resources: Optional[Dict[str, str]] = None,
-        mode: str = "accessibility",
     ):
         self._llm = llm
-        self._mode = mode
         self.browser = browser
-        self._tool_registry = ToolRegistry()
         self._logger = get_logger(__name__)
-
-        # Register normal tools (non-terminal)
-        self._tool_registry.register(WaitTool())
-        self._tool_registry.register(ClickTool(self.browser))
-        self._tool_registry.register(FillTool(self.browser))
-        self._tool_registry.register(TypeTool(self.browser))
-        self._tool_registry.register(NavigateTool(self.browser))
-        self._tool_registry.register(UploadTool(self.browser, resources))
 
     async def run(
         self,
         task: str,
+        max_steps: int,
         previous_runs: Optional[List[Run]] = None,
-        max_steps: int = 25,
         output_schema: Optional[Type[BaseModel]] = None,
+        resources: Optional[Dict[str, str]] = None,
     ) -> Run:
+        # Create result object for this run
+        result = Result()
+
+        # Setup tool registry for this run
+        tool_registry = self._setup_tools(result, resources, output_schema)
 
         session_start_messages = await self._build_session_start_messages(
             task, previous_runs
         )
-
-        result = Result()
-        self._setup_control_tools(result, output_schema)
 
         self._logger.info(f"Task start - Task: {task}")
 
@@ -103,7 +97,7 @@ class TaskRunner:
             self._logger.debug("Sending LLM request...")
             assistant_msg = await self._llm.call_tools(
                 messages=all_messages,
-                tools=self._tool_registry.get_all(),
+                tools=tool_registry.get_all(),
             )
 
             reasoning = self._extract_reasoning(assistant_msg)
@@ -117,7 +111,7 @@ class TaskRunner:
             if reasoning:
                 self._logger.info(f"Reasoning: {reasoning}")
 
-            tool_results, descriptions = await self._tool_registry.execute_tool_calls(
+            tool_results, descriptions = await tool_registry.execute_tool_calls(
                 assistant_msg.tool_calls or []
             )
 
@@ -172,11 +166,28 @@ class TaskRunner:
 
     ### Helper methods ###
 
-    def _setup_control_tools(
-        self, result: Result, output_schema: Optional[Type[BaseModel]] = None
-    ) -> None:
-        self._tool_registry.register(CompleteWorkTool(result, output_schema))
-        self._tool_registry.register(AbortWorkTool(result))
+    def _setup_tools(
+        self,
+        result: Result,
+        resources: Optional[Dict[str, str]],
+        output_schema: Optional[Type[BaseModel]],
+    ) -> ToolRegistry:
+        """Create and configure tool registry for this run."""
+        tool_registry = ToolRegistry()
+
+        # Register browser action tools
+        tool_registry.register(WaitTool())
+        tool_registry.register(ClickTool(self.browser))
+        tool_registry.register(FillTool(self.browser))
+        tool_registry.register(TypeTool(self.browser))
+        tool_registry.register(NavigateTool(self.browser))
+        tool_registry.register(UploadTool(self.browser, resources))
+
+        # Register control tools
+        tool_registry.register(CompleteWorkTool(result, output_schema))
+        tool_registry.register(AbortWorkTool(result))
+
+        return tool_registry
 
     async def _build_session_start_messages(
         self,
@@ -202,8 +213,10 @@ class TaskRunner:
             UserMessage(content=user_content),
         ]
 
-    async def _get_page_state_content(self) -> Tuple[List[Content], str, Optional[str]]:
-        dom_snapshot = await self.browser.get_dom_snapshot(mode=self._mode)
+    async def _get_page_state_content(
+        self,
+    ) -> Tuple[List[Content], str, Optional[str]]:
+        dom_snapshot = await self.browser.get_dom_snapshot()
         screenshot_b64 = await self.browser.get_screenshot()
 
         content: List[Content] = []

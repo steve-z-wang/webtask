@@ -102,8 +102,6 @@ class Webtask:
         self,
         llm: LLM,
         cookies=None,
-        wait_after_action: float = 0.2,
-        mode: str = "accessibility",
         stateful: bool = True,
     ) -> Agent:
         """Create agent with new browser context. Launches browser on first call.
@@ -111,8 +109,6 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             cookies: Optional cookies for the context
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
             stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
@@ -123,8 +119,6 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
-            wait_after_action=wait_after_action,
-            mode=mode,
             stateful=stateful,
         )
 
@@ -135,8 +129,6 @@ class Webtask:
         llm: LLM,
         browser: Union[Browser, "PlaywrightBrowser"],
         cookies=None,
-        wait_after_action: float = 0.2,
-        mode: str = "accessibility",
         stateful: bool = True,
         use_existing_context: bool = True,
     ) -> Agent:
@@ -149,8 +141,6 @@ class Webtask:
             llm: LLM instance for reasoning
             browser: Browser instance or raw Playwright Browser (already launched)
             cookies: Optional cookies for the context
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
             stateful: If True, maintain conversation history between do() calls (default: True)
             use_existing_context: Use existing context if available (default: True)
 
@@ -192,8 +182,6 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
-            wait_after_action=wait_after_action,
-            mode=mode,
             stateful=stateful,
         )
 
@@ -203,9 +191,7 @@ class Webtask:
         self,
         llm: LLM,
         context: Union[Context, "BrowserContext"],
-        wait_after_action: float = 0.2,
-        mode: str = "accessibility",
-        stateful: bool = False,
+        stateful: bool = True,
     ) -> Agent:
         """Create agent with existing context.
 
@@ -215,9 +201,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             context: Context instance or Playwright BrowserContext
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
-            stateful: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
             Agent instance with provided context
@@ -233,8 +217,6 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=wrapped_context,
-            wait_after_action=wait_after_action,
-            mode=mode,
             stateful=stateful,
         )
 
@@ -244,9 +226,7 @@ class Webtask:
         self,
         llm: LLM,
         page: Union[Page, "PlaywrightPage"],
-        wait_after_action: float = 0.2,
-        mode: str = "accessibility",
-        stateful: bool = False,
+        stateful: bool = True,
     ) -> Agent:
         """Create agent with existing page.
 
@@ -256,9 +236,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             page: Page instance or Playwright Page
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
-            stateful: If True, maintain conversation history between do() calls (default: False)
+            stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
             Agent instance with context from the provided page
@@ -272,8 +250,6 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
-            wait_after_action=wait_after_action,
-            mode=mode,
             stateful=stateful,
         )
         return agent
