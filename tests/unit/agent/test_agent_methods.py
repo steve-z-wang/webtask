@@ -1,7 +1,7 @@
 """Unit tests for Agent convenience methods."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 from webtask.agent import Agent
 from webtask.browser import Context
 from webtask._internal.agent.run import Run, TaskResult, TaskStatus
@@ -105,8 +105,8 @@ async def test_screenshot_raises_when_no_page(mocker):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_wait():
-    """Test that wait() calls the internal wait utility."""
+async def test_wait(mocker):
+    """Test that wait() calls asyncio.sleep with correct duration."""
     # Mock dependencies
     mock_llm = Mock()
     mock_context = Mock(spec=Context)
@@ -114,15 +114,14 @@ async def test_wait():
     # Create agent
     agent = Agent(llm=mock_llm, context=mock_context)
 
-    # Mock the internal wait utility
-    with patch("webtask._internal.utils.wait.wait") as mock_wait:
-        mock_wait.return_value = None
+    # Mock asyncio.sleep which is called by the wait utility
+    mock_sleep = mocker.patch("asyncio.sleep", new_callable=AsyncMock)
 
-        # Call wait
-        await agent.wait(2.5)
+    # Call wait
+    await agent.wait(2.5)
 
-        # Verify internal wait was called with correct duration
-        mock_wait.assert_called_once_with(2.5)
+    # Verify asyncio.sleep was called with correct duration
+    mock_sleep.assert_called_once_with(2.5)
 
 
 # Tests for throw-on-abort behavior
