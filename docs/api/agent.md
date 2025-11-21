@@ -87,6 +87,51 @@ Navigate to a URL.
 await agent.goto("example.com")
 ```
 
+### `screenshot()`
+
+```python
+async def screenshot(
+    path: Optional[str] = None,
+    full_page: bool = False
+) -> bytes
+```
+
+Take a screenshot of the current page.
+
+**Parameters:**
+- `path` - Optional file path to save screenshot
+- `full_page` - Screenshot the full scrollable page (default: False)
+
+**Returns:** Screenshot as bytes (PNG format)
+
+**Example:**
+```python
+# Save to file
+await agent.screenshot("page.png")
+
+# Full page screenshot
+await agent.screenshot("full.png", full_page=True)
+
+# Get bytes without saving
+screenshot_bytes = await agent.screenshot()
+```
+
+### `wait()`
+
+```python
+async def wait(seconds: float) -> None
+```
+
+Wait for a specific amount of time.
+
+**Parameters:**
+- `seconds` - Number of seconds to wait
+
+**Example:**
+```python
+await agent.wait(2.0)  # Wait 2 seconds
+```
+
 ### `get_current_page()`
 
 ```python

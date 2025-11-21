@@ -153,6 +153,36 @@ class Agent:
         """
         await self.browser.navigate(url)
 
+    async def screenshot(self, path: Optional[str] = None, full_page: bool = False) -> bytes:
+        """
+        Take a screenshot of the current page.
+
+        Args:
+            path: Optional file path to save screenshot
+            full_page: Whether to screenshot the full scrollable page (default: False)
+
+        Returns:
+            Screenshot as bytes (PNG format)
+
+        Raises:
+            RuntimeError: If no page is active
+        """
+        page = self.get_current_page()
+        if page is None:
+            raise RuntimeError("No active page. Use goto() to navigate to a page first.")
+
+        return await page.screenshot(path=path, full_page=full_page)
+
+    async def wait(self, seconds: float) -> None:
+        """
+        Wait for a specific amount of time.
+
+        Args:
+            seconds: Number of seconds to wait
+        """
+        from webtask._internal.utils.wait import wait
+        await wait(seconds)
+
     def get_current_page(self) -> Optional[Page]:
         """
         Get the current active page.
