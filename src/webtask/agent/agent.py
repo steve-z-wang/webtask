@@ -2,12 +2,18 @@
 
 import logging
 from typing import Dict, List, Optional, Type
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Result, Run
+from .result import Status, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
+
+
+class VerificationResult(BaseModel):
+    """Structured output for verification tasks."""
+    verified: bool = Field(description="True if the condition is met, False otherwise")
 
 
 class Agent:
@@ -90,6 +96,52 @@ class Agent:
             self._previous_runs.append(run)
 
         return run.result
+
+    async def verify(
+        self,
+        condition: str,
+        max_steps: int = 10,
+        wait_after_action: float = 0.2,
+        mode: str = "accessibility",
+    ) -> Verdict:
+        """
+        Verify a condition on the current page.
+
+        Args:
+            condition: Condition to verify in natural language (e.g., "cart has 7 items")
+            max_steps: Maximum number of steps to execute (default: 10)
+            wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
+
+        Returns:
+            Verdict with passed (bool), feedback (str), and status (Status)
+        """
+        # Set task-specific browser settings
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(mode)
+
+        # Run verification task with structured output
+        task = f"Check if the following condition is true: {condition}"
+        run = await self.task_runner.run(
+            task,
+            max_steps,
+            previous_runs=self._previous_runs if self.stateful else None,
+            output_schema=VerificationResult,
+            resources=None,
+        )
+
+        if self.stateful:
+            self._previous_runs.append(run)
+
+        # Convert Result to Verdict using structured output
+        if not run.result.output:
+            raise RuntimeError("Verification failed: no structured output received")
+
+        return Verdict(
+            passed=run.result.output.verified,
+            feedback=run.result.feedback or "",
+            status=run.result.status or Status.ABORTED,
+        )
 
     def get_current_page(self) -> Optional[Page]:
         """

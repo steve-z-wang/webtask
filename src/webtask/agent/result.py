@@ -27,3 +27,25 @@ class Result:
     def __str__(self) -> str:
         status_str = self.status.value if self.status else "pending"
         return f"Result(status={status_str}, output={self.output is not None})"
+
+
+@dataclass
+class Verdict:
+    """Result of a verification check."""
+
+    passed: bool
+    feedback: str
+    status: Status
+
+    def __bool__(self) -> bool:
+        """Allow using verdict in boolean context."""
+        return self.passed
+
+    def __eq__(self, other) -> bool:
+        """Allow comparing verdict with boolean."""
+        if isinstance(other, bool):
+            return self.passed == other
+        return super().__eq__(other)
+
+    def __str__(self) -> str:
+        return f"Verdict(passed={self.passed}, feedback='{self.feedback}')"
