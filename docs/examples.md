@@ -14,7 +14,7 @@ async def main():
     llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
     agent = await wt.create_agent(llm=llm)
 
-    await agent.goto("https://practicesoftwaretesting.com/")
+    await agent.goto("practicesoftwaretesting.com")
 
     await agent.do("Add 2 Flat-Head Wood Screws to the cart")
     await agent.do("Add 5 Cross-head screws to the cart")
@@ -44,7 +44,7 @@ async def extract_product():
     llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
     agent = await wt.create_agent(llm=llm)
 
-    await agent.goto("https://practicesoftwaretesting.com/")
+    await agent.goto("practicesoftwaretesting.com")
 
     result = await agent.do(
         "Extract information about the first product",
@@ -89,7 +89,7 @@ async def with_existing_browser():
 
         agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
 
-        await agent.goto("https://practicesoftwaretesting.com/")
+        await agent.goto("practicesoftwaretesting.com")
         await agent.do("Add 2 screws to the cart")
 
         await browser.close()

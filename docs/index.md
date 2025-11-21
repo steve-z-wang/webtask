@@ -25,7 +25,7 @@ wt = Webtask()
 llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
 agent = await wt.create_agent(llm=llm)
 
-await agent.goto("https://practicesoftwaretesting.com/")
+await agent.goto("practicesoftwaretesting.com")
 
 await agent.do("Add 2 Flat-Head Wood Screws to the cart")
 

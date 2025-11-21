@@ -21,7 +21,7 @@ async def main():
     llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
     agent = await wt.create_agent(llm=llm)
 
-    await agent.goto("https://practicesoftwaretesting.com/")
+    await agent.goto("practicesoftwaretesting.com")
     await agent.do("Add 2 Flat-Head Wood Screws to the cart")
 
     verdict = await agent.verify("the cart contains 2 items")
@@ -51,7 +51,7 @@ agent = await wt.create_agent(llm=llm, headless=True)
 # Stateful mode (default) - remembers context
 agent = await wt.create_agent(llm=llm, stateful=True)
 
-await agent.goto("https://practicesoftwaretesting.com/")
+await agent.goto("practicesoftwaretesting.com")
 await agent.do("Add 2 screws to the cart")  # Remembers the site
 await agent.do("Go to cart")  # Remembers previous actions
 ```

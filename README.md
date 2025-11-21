@@ -26,7 +26,7 @@ wt = Webtask()
 llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
 agent = await wt.create_agent(llm=llm)
 
-await agent.goto("https://practicesoftwaretesting.com/")
+await agent.goto("practicesoftwaretesting.com")
 
 await agent.do("Add 2 Flat-Head Wood Screws to the cart")
 
@@ -50,7 +50,7 @@ await agent.do("Go to the product page, find the blue shirt, add it to cart, and
 **Stateful agents** - Remember context across multiple tasks:
 
 ```python
-await agent.do("Go to https://practicesoftwaretesting.com/ and add 2 Flat-Head Wood Screws to the cart")
+await agent.do("Go to practicesoftwaretesting.com and add 2 Flat-Head Wood Screws to the cart")
 await agent.do("Add 5 Cross-head screws to the cart")
 await agent.do("Go to the cart page and verify the items")
 ```

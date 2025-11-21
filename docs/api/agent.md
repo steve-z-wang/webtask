@@ -84,7 +84,7 @@ Navigate to a URL.
 
 **Example:**
 ```python
-await agent.goto("https://example.com")
+await agent.goto("example.com")
 ```
 
 ### `get_current_page()`
