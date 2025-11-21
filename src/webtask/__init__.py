@@ -30,7 +30,7 @@ from .llm import (
     ToolResultStatus,
 )
 
-__version__ = "0.17.9"
+__version__ = "0.19.0"
 
 __all__ = [
     # Manager
