@@ -6,6 +6,7 @@ from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.unit
 def test_resolve_json_schema_refs_with_nested_model():
     """Test that $ref references are resolved correctly for nested models."""
     # Schema with $ref (typical output from Pydantic's model_json_schema())

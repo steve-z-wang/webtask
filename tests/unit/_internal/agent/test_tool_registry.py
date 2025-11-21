@@ -51,6 +51,7 @@ def registry():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_execute_nonexistent_tool(registry):
     """Test calling a tool that doesn't exist."""
     # Create a tool call for a non-existent tool
@@ -76,6 +77,7 @@ async def test_execute_nonexistent_tool(registry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_execute_tool_with_invalid_params(registry):
     """Test calling a tool with wrong parameters."""
     # Create a tool call with invalid params (missing required 'value' field)
@@ -100,6 +102,7 @@ async def test_execute_tool_with_invalid_params(registry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_execute_tool_with_wrong_param_type(registry):
     """Test calling a tool with wrong parameter type."""
     # Create a tool call with wrong type (count should be int, not string)
@@ -124,6 +127,7 @@ async def test_execute_tool_with_wrong_param_type(registry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_execute_valid_tool_call(registry):
     """Test successful tool execution."""
     # Create a valid tool call
@@ -147,6 +151,7 @@ async def test_execute_valid_tool_call(registry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_stop_on_first_error(registry):
     """Test that execution stops on first error."""
     # Create multiple tool calls where the first one fails
@@ -176,6 +181,7 @@ async def test_stop_on_first_error(registry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_stop_on_param_validation_error(registry):
     """Test that execution stops on parameter validation error."""
     # Create multiple tool calls where the first has invalid params

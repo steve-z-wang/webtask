@@ -1,8 +1,10 @@
 """Tests for Verdict class."""
 
+import pytest
 from webtask.agent import Verdict, Status
 
 
+@pytest.mark.unit
 def test_verdict_bool_conversion():
     """Test that Verdict can be used in boolean context."""
     passed_verdict = Verdict(
@@ -23,6 +25,7 @@ def test_verdict_bool_conversion():
     assert result == "passed"
 
 
+@pytest.mark.unit
 def test_verdict_equality_with_boolean():
     """Test that Verdict can be compared with boolean."""
     passed_verdict = Verdict(
@@ -38,6 +41,7 @@ def test_verdict_equality_with_boolean():
     assert (failed_verdict != True) is True  # noqa: E712
 
 
+@pytest.mark.unit
 def test_verdict_attributes():
     """Test Verdict attributes."""
     verdict = Verdict(passed=True, feedback="Cart has 7 items", status=Status.COMPLETED)
@@ -47,6 +51,7 @@ def test_verdict_attributes():
     assert verdict.status == Status.COMPLETED
 
 
+@pytest.mark.unit
 def test_verdict_string_representation():
     """Test Verdict string representation."""
     verdict = Verdict(passed=True, feedback="Test passed", status=Status.COMPLETED)

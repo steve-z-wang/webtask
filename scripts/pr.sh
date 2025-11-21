@@ -36,6 +36,10 @@ echo "🧪 Running unit tests..."
 pytest tests/unit/ -v --tb=short -m unit
 
 echo ""
+echo "🧪 Running integration tests..."
+pytest tests/integration/ -v --tb=short -m integration -n auto
+
+echo ""
 echo "🧪 Running e2e tests (replay mode)..."
 WEBTASK_TEST_MODE=replay pytest tests/e2e/ -v --tb=short -m e2e
 

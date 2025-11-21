@@ -19,6 +19,7 @@ class SearchResult(BaseModel):
 class TestCompleteWorkToolWithOutputSchema:
     """Test CompleteWorkTool with optional output_schema."""
 
+    @pytest.mark.unit
     def test_complete_work_with_schema(self):
         """Test complete_work with output_schema (happy path)."""
         result = Result()
