@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel
 from webtask._internal.agent.tools import CompleteWorkTool
-from webtask.agent.result import Result, Status
+from webtask._internal.agent.run import TaskResult, TaskStatus
 
 pytestmark = pytest.mark.unit
 
@@ -22,7 +22,7 @@ class TestCompleteWorkToolWithOutputSchema:
     @pytest.mark.unit
     def test_complete_work_with_schema(self):
         """Test complete_work with output_schema (happy path)."""
-        result = Result()
+        result = TaskResult()
         tool = CompleteWorkTool(result, output_schema=SearchResult)
 
         # With schema, output must match SearchResult
@@ -38,7 +38,7 @@ class TestCompleteWorkToolWithOutputSchema:
 
         asyncio.run(tool.execute(params))
 
-        assert result.status == Status.COMPLETED
+        assert result.status == TaskStatus.COMPLETED
         assert result.feedback == "Extracted search result"
 
         # Output is validated and converted to SearchResult instance by Pydantic

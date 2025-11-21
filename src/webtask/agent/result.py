@@ -1,41 +1,26 @@
-"""Task execution result and status."""
+"""User-facing result classes for Agent methods."""
 
-from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, Any
 
 
-class Status(str, Enum):
-    """Task execution status."""
-
-    COMPLETED = "completed"
-    ABORTED = "aborted"
-
-
 @dataclass
 class Result:
-    """Task execution result - lightweight result."""
+    """Result from agent.do() - always successful (throws on abort)."""
 
-    status: Optional[Status] = None
     output: Optional[Any] = None
     feedback: Optional[str] = None
 
-    @property
-    def is_completed(self) -> bool:
-        return self.status == Status.COMPLETED if self.status else False
-
     def __str__(self) -> str:
-        status_str = self.status.value if self.status else "pending"
-        return f"Result(status={status_str}, output={self.output is not None})"
+        return f"Result(output={self.output is not None}, feedback='{self.feedback}')"
 
 
 @dataclass
 class Verdict:
-    """Result of a verification check."""
+    """Result from agent.verify() - always successful (throws on abort)."""
 
     passed: bool
     feedback: str
-    status: Status
 
     def __bool__(self) -> bool:
         """Allow using verdict in boolean context."""

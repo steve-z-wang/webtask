@@ -1,12 +1,19 @@
 # Examples
 
-## Shopping Cart
+## Complete Workflow
+
+This example demonstrates all three core methods: `do()`, `extract()`, and `verify()`.
 
 ```python
 import asyncio
-from webtask import Webtask
+from webtask import Webtask, TaskAbortedError
 from webtask.integrations.llm import Gemini
+from pydantic import BaseModel
 import os
+
+class CartSummary(BaseModel):
+    item_count: int
+    total_price: float
 
 async def main():
     wt = Webtask()
@@ -16,9 +23,20 @@ async def main():
 
     await agent.goto("practicesoftwaretesting.com")
 
+    # do() - Execute tasks
     await agent.do("Add 2 Flat-Head Wood Screws to the cart")
     await agent.do("Add 5 Cross-head screws to the cart")
+    await agent.do("Go to the cart page")
 
+    # extract() - Get information from the page
+    total = await agent.extract("total price")
+    print(f"Total: {total}")
+
+    # extract() with structured output
+    summary = await agent.extract("cart summary", CartSummary)
+    print(f"Items: {summary.item_count}, Total: ${summary.total_price}")
+
+    # verify() - Check conditions
     verdict = await agent.verify("the cart contains 7 items")
     if verdict:
         print("Cart verified!")
@@ -28,33 +46,32 @@ async def main():
 asyncio.run(main())
 ```
 
-## Structured Output
+## Error Handling
 
 ```python
-from pydantic import BaseModel
+from webtask import TaskAbortedError, VerificationAbortedError, ExtractionAbortedError
 
-class ProductInfo(BaseModel):
-    name: str
-    price: float
-    in_stock: bool
-
-async def extract_product():
+async def with_error_handling():
     wt = Webtask()
-
     llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
     agent = await wt.create_agent(llm=llm)
 
-    await agent.goto("practicesoftwaretesting.com")
+    try:
+        await agent.do("Add item to cart")
+    except TaskAbortedError as e:
+        print(f"Task failed: {e}")
 
-    result = await agent.do(
-        "Extract information about the first product",
-        output_schema=ProductInfo
-    )
+    try:
+        verdict = await agent.verify("cart has items")
+    except VerificationAbortedError as e:
+        print(f"Verification failed: {e}")
 
-    print(f"{result.output.name}: ${result.output.price}")
+    try:
+        price = await agent.extract("total price")
+    except ExtractionAbortedError as e:
+        print(f"Extraction failed: {e}")
+
     await wt.close()
-
-asyncio.run(extract_product())
 ```
 
 ## Using Bedrock

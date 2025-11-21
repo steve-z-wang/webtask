@@ -63,9 +63,14 @@ if verdict:
     print("Success!")
 ```
 
-**Structured output** - Extract data with Pydantic schemas:
+**Data extraction** - Extract information from pages:
 
 ```python
+# Simple extraction returns string
+price = await agent.extract("total price")
+print(f"Price: {price}")
+
+# Structured extraction with Pydantic schema
 from pydantic import BaseModel
 
 class ProductInfo(BaseModel):
@@ -73,9 +78,19 @@ class ProductInfo(BaseModel):
     price: float
     in_stock: bool
 
-result = await agent.do("Extract product information", output_schema=ProductInfo)
+product = await agent.extract("product information", ProductInfo)
+print(f"{product.name}: ${product.price}")
+```
 
-print(f"{result.output.name}: ${result.output.price}")
+**Error handling** - Catch failures gracefully:
+
+```python
+from webtask import TaskAbortedError, VerificationAbortedError, ExtractionAbortedError
+
+try:
+    await agent.do("Add item to cart")
+except TaskAbortedError as e:
+    print(f"Task failed: {e}")
 ```
 
 **Easy integration** - Multiple ways to create agents:

@@ -10,10 +10,11 @@ Main interface for web automation.
 ```python
 async def do(
     task: str,
-    max_steps: int = 10,
+    max_steps: int = 20,
     wait_after_action: float = 0.2,
-    mode: str = "accessibility",
-    output_schema: Optional[Type[BaseModel]] = None
+    resources: Optional[Dict[str, str]] = None,
+    output_schema: Optional[Type[BaseModel]] = None,
+    mode: str = "accessibility"
 ) -> Result
 ```
 
@@ -21,16 +22,20 @@ Execute a task with natural language.
 
 **Parameters:**
 - `task` - Task description
-- `max_steps` - Maximum steps to execute (default: 10)
+- `max_steps` - Maximum steps to execute (default: 20)
 - `wait_after_action` - Wait time after each action in seconds (default: 0.2)
-- `mode` - DOM mode: "accessibility" or "all" (default: "accessibility")
+- `resources` - Optional dict of file resources (name -> path)
 - `output_schema` - Optional Pydantic model for structured output
+- `mode` - DOM mode: "accessibility" or "dom" (default: "accessibility")
 
-**Returns:** Result with status and feedback
+**Returns:** Result with optional output and feedback
+
+**Raises:** `TaskAbortedError` if task is aborted
 
 **Example:**
 ```python
-await agent.do("Add 2 screws to the cart")
+result = await agent.do("Add 2 screws to the cart")
+print(result.feedback)
 
 # With structured output
 from pydantic import BaseModel
@@ -64,6 +69,8 @@ Check if a condition is true.
 
 **Returns:** Verdict that can be used as boolean
 
+**Raises:** `VerificationAbortedError` if verification is aborted
+
 **Example:**
 ```python
 verdict = await agent.verify("the cart contains 7 items")
@@ -72,6 +79,49 @@ if verdict:
     print("Success!")
 
 assert verdict == True
+```
+
+### `extract()`
+
+```python
+async def extract(
+    what: str,
+    output_schema: Optional[Type[BaseModel]] = None,
+    max_steps: int = 10,
+    wait_after_action: float = 0.2,
+    mode: str = "accessibility"
+) -> str | BaseModel
+```
+
+Extract information from the current page.
+
+**Parameters:**
+- `what` - What to extract in natural language
+- `output_schema` - Optional Pydantic model for structured output
+- `max_steps` - Maximum steps (default: 10)
+- `wait_after_action` - Wait time after each action (default: 0.2)
+- `mode` - DOM mode (default: "accessibility")
+
+**Returns:** str if no output_schema provided, otherwise instance of output_schema
+
+**Raises:** `ExtractionAbortedError` if extraction is aborted
+
+**Example:**
+```python
+# Simple string extraction
+price = await agent.extract("total price")
+print(f"Price: {price}")
+
+# Structured extraction
+from pydantic import BaseModel
+
+class ProductInfo(BaseModel):
+    name: str
+    price: float
+    in_stock: bool
+
+product = await agent.extract("product information", ProductInfo)
+print(f"{product.name}: ${product.price}")
 ```
 
 ### `goto()`

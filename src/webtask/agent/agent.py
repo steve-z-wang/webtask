@@ -6,8 +6,13 @@ from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
-from webtask._internal.agent.run import Result, Run
-from .result import Status, Verdict
+from webtask._internal.agent.run import Run, TaskStatus
+from webtask.exceptions import (
+    TaskAbortedError,
+    VerificationAbortedError,
+    ExtractionAbortedError,
+)
+from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
 
 
@@ -58,6 +63,53 @@ class Agent:
         # Accumulates runs from all do() calls for multi-turn conversations
         self._previous_runs: List[Run] = []
 
+    async def _run_task(
+        self,
+        task: str,
+        max_steps: int,
+        wait_after_action: float,
+        mode: str,
+        output_schema: Optional[Type[BaseModel]] = None,
+        resources: Optional[Dict[str, str]] = None,
+        exception_class: Type[Exception] = TaskAbortedError,
+    ) -> Run:
+        """
+        Internal method to run a task and throw on abort.
+
+        Args:
+            task: Task description
+            max_steps: Maximum steps
+            wait_after_action: Wait time after each action
+            mode: DOM context mode
+            output_schema: Optional output schema
+            resources: Optional file resources
+            exception_class: Exception class to raise on abort
+
+        Returns:
+            Run object with completed result
+
+        Raises:
+            exception_class: If task is aborted
+        """
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(mode)
+
+        run = await self.task_runner.run(
+            task,
+            max_steps,
+            previous_runs=self._previous_runs if self.stateful else None,
+            output_schema=output_schema,
+            resources=resources,
+        )
+
+        if self.stateful:
+            self._previous_runs.append(run)
+
+        if run.result.status == TaskStatus.ABORTED:
+            raise exception_class(run.result.feedback or "Task aborted")
+
+        return run
+
     async def do(
         self,
         task: str,
@@ -79,24 +131,22 @@ class Agent:
             mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
-            Result with status, output, and feedback
-        """
-        # Set task-specific browser settings
-        self.browser.set_wait_after_action(wait_after_action)
-        self.browser.set_mode(mode)
+            Result with output and feedback
 
-        run = await self.task_runner.run(
-            task,
-            max_steps,
-            previous_runs=self._previous_runs if self.stateful else None,
+        Raises:
+            TaskAbortedError: If task is aborted
+        """
+        run = await self._run_task(
+            task=task,
+            max_steps=max_steps,
+            wait_after_action=wait_after_action,
+            mode=mode,
             output_schema=output_schema,
             resources=resources,
+            exception_class=TaskAbortedError,
         )
 
-        if self.stateful:
-            self._previous_runs.append(run)
-
-        return run.result
+        return Result(output=run.result.output, feedback=run.result.feedback)
 
     async def verify(
         self,
@@ -115,34 +165,77 @@ class Agent:
             mode: DOM context mode - "accessibility" (default) or "dom"
 
         Returns:
-            Verdict with passed (bool), feedback (str), and status (Status)
-        """
-        # Set task-specific browser settings
-        self.browser.set_wait_after_action(wait_after_action)
-        self.browser.set_mode(mode)
+            Verdict with passed (bool) and feedback (str)
 
-        # Run verification task with structured output
+        Raises:
+            VerificationAbortedError: If verification is aborted
+        """
         task = f"Check if the following condition is true: {condition}"
-        run = await self.task_runner.run(
-            task,
-            max_steps,
-            previous_runs=self._previous_runs if self.stateful else None,
+        run = await self._run_task(
+            task=task,
+            max_steps=max_steps,
+            wait_after_action=wait_after_action,
+            mode=mode,
             output_schema=VerificationResult,
-            resources=None,
+            exception_class=VerificationAbortedError,
         )
 
-        if self.stateful:
-            self._previous_runs.append(run)
-
-        # Convert Result to Verdict using structured output
         if not run.result.output:
             raise RuntimeError("Verification failed: no structured output received")
 
         return Verdict(
             passed=run.result.output.verified,
             feedback=run.result.feedback or "",
-            status=run.result.status or Status.ABORTED,
         )
+
+    async def extract(
+        self,
+        what: str,
+        output_schema: Optional[Type[BaseModel]] = None,
+        max_steps: int = 10,
+        wait_after_action: float = 0.2,
+        mode: str = "accessibility",
+    ):
+        """
+        Extract information from the current page.
+
+        Args:
+            what: What to extract in natural language (e.g., "total price", "product name")
+            output_schema: Optional Pydantic model for structured output
+            max_steps: Maximum steps to execute (default: 10)
+            wait_after_action: Wait time in seconds after each action (default: 0.2)
+            mode: DOM context mode - "accessibility" (default) or "dom"
+
+        Returns:
+            str if no output_schema provided, otherwise instance of output_schema
+
+        Raises:
+            ExtractionAbortedError: If extraction is aborted
+        """
+
+        # Default to str schema if none provided
+        class StrOutput(BaseModel):
+            """String output for extraction."""
+
+            value: str = Field(description=f"The extracted {what}")
+
+        schema = output_schema or StrOutput
+        task = f"Extract the following information: {what}"
+
+        run = await self._run_task(
+            task=task,
+            max_steps=max_steps,
+            wait_after_action=wait_after_action,
+            mode=mode,
+            output_schema=schema,
+            exception_class=ExtractionAbortedError,
+        )
+
+        # Return extracted value directly
+        if output_schema:
+            return run.result.output
+        else:
+            return run.result.output.value if run.result.output else ""
 
     async def goto(self, url: str) -> None:
         """
@@ -153,7 +246,9 @@ class Agent:
         """
         await self.browser.navigate(url)
 
-    async def screenshot(self, path: Optional[str] = None, full_page: bool = False) -> bytes:
+    async def screenshot(
+        self, path: Optional[str] = None, full_page: bool = False
+    ) -> bytes:
         """
         Take a screenshot of the current page.
 
@@ -169,7 +264,9 @@ class Agent:
         """
         page = self.get_current_page()
         if page is None:
-            raise RuntimeError("No active page. Use goto() to navigate to a page first.")
+            raise RuntimeError(
+                "No active page. Use goto() to navigate to a page first."
+            )
 
         return await page.screenshot(path=path, full_page=full_page)
 
@@ -181,6 +278,7 @@ class Agent:
             seconds: Number of seconds to wait
         """
         from webtask._internal.utils.wait import wait
+
         await wait(seconds)
 
     def get_current_page(self) -> Optional[Page]:

@@ -19,8 +19,7 @@ from .tool_registry import ToolRegistry
 from ..prompts.worker_prompt import build_worker_prompt
 from ..utils.logger import get_logger
 from .agent_browser import AgentBrowser
-from .run import Run
-from webtask.agent.result import Status, Result
+from .run import Run, TaskResult, TaskStatus
 from .tools import (
     NavigateTool,
     ClickTool,
@@ -77,7 +76,7 @@ class TaskRunner:
         resources: Optional[Dict[str, str]] = None,
     ) -> Run:
         # Create result object for this run
-        result = Result()
+        result = TaskResult()
 
         # Setup tool registry for this run
         tool_registry = self._setup_tools(result, resources, output_schema)
@@ -137,7 +136,7 @@ class TaskRunner:
                 break
         else:
             self._logger.info("Task end - Reason: max_steps_reached")
-            result.status = Status.ABORTED
+            result.status = TaskStatus.ABORTED
             result.feedback = "Reached maximum steps"
             steps_used = max_steps
 
@@ -168,7 +167,7 @@ class TaskRunner:
 
     def _setup_tools(
         self,
-        result: Result,
+        result: TaskResult,
         resources: Optional[Dict[str, str]],
         output_schema: Optional[Type[BaseModel]],
     ) -> ToolRegistry:

@@ -1,7 +1,13 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
 from .webtask import Webtask
-from .agent import Agent, Status, Result, Tool
+from .agent import Agent, Result, Verdict, Tool
+from .exceptions import (
+    WebtaskError,
+    TaskAbortedError,
+    VerificationAbortedError,
+    ExtractionAbortedError,
+)
 
 from .browser import (
     Browser,
@@ -31,9 +37,14 @@ __all__ = [
     "Webtask",
     # Agent
     "Agent",
-    "Status",
     "Result",
+    "Verdict",
     "Tool",
+    # Exceptions
+    "WebtaskError",
+    "TaskAbortedError",
+    "VerificationAbortedError",
+    "ExtractionAbortedError",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Context",

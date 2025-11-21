@@ -105,18 +105,10 @@ async def test_shopping_cart_automation():
         )
 
         # Verify task completed successfully
+        # Note: do() throws RuntimeError on abort, so if we get here it succeeded
         assert result is not None
-
-        # The task should have completed (not aborted)
-        print(f"\nTask Status: {result.status}")
+        print("\nTask completed!")
         print(f"Feedback: {result.feedback}")
-
-        # Verify task completed (not aborted)
-        from webtask.agent.result import Status
-
-        assert (
-            result.status == Status.COMPLETED
-        ), f"Task should have completed successfully, but status is {result.status}"
 
     finally:
         # Cleanup

@@ -3,7 +3,7 @@
 from typing import Dict, List, TYPE_CHECKING, Optional, Any, Type
 from pydantic import BaseModel, Field, create_model
 from webtask.llm.tool import Tool
-from webtask.agent.result import Status, Result
+from .run import TaskResult, TaskStatus
 from ..utils.wait import wait
 
 if TYPE_CHECKING:
@@ -225,12 +225,12 @@ class CompleteWorkTool(Tool):
         )
 
     def __init__(
-        self, result: "Result", output_schema: Optional[Type[BaseModel]] = None
+        self, result: "TaskResult", output_schema: Optional[Type[BaseModel]] = None
     ):
         """Initialize with reference to worker result and optional output schema.
 
         Args:
-            result: Result object to store completion status and data
+            result: TaskResult object to store completion status and data
             output_schema: Optional Pydantic model class defining the expected output structure
         """
         self.result = result
@@ -268,7 +268,7 @@ class CompleteWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is complete and store feedback and optional output."""
-        self.result.status = Status.COMPLETED
+        self.result.status = TaskStatus.COMPLETED
         self.result.feedback = params.feedback
         if params.output is not None:
             self.result.output = params.output
@@ -288,7 +288,7 @@ class AbortWorkTool(Tool):
             description="Explain why you cannot continue and provide any relevant context about what went wrong or what is blocking you"
         )
 
-    def __init__(self, result: "Result"):
+    def __init__(self, result: "TaskResult"):
         """Initialize with reference to worker result."""
         self.result = result
 
@@ -299,5 +299,5 @@ class AbortWorkTool(Tool):
 
     async def execute(self, params: Params) -> None:
         """Signal that work is aborted and store reason as feedback."""
-        self.result.status = Status.ABORTED
+        self.result.status = TaskStatus.ABORTED
         self.result.feedback = params.reason

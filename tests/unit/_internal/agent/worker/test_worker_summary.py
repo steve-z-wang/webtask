@@ -2,8 +2,7 @@
 
 import pytest
 from webtask._internal.agent.task_runner import TaskRunner, ToolCallPair
-from webtask._internal.agent.run import Run
-from webtask.agent.result import Result, Status
+from webtask._internal.agent.run import Run, TaskResult, TaskStatus
 from webtask.llm import AssistantMessage, ToolResultMessage, TextContent
 
 pytestmark = pytest.mark.unit
@@ -195,8 +194,9 @@ class TestTaskRunnerPreviousRuns:
         runs = [
             Run(
                 task_description="Navigate to google.com and search for 'python'",
-                result=Result(
-                    status=Status.COMPLETED, feedback="Search completed successfully"
+                result=TaskResult(
+                    status=TaskStatus.COMPLETED,
+                    feedback="Search completed successfully",
                 ),
                 summary="- Navigated to google.com\n  - Loaded homepage\n- Searched for python\n  - Entered text\n  - Clicked search",
                 messages=[],
@@ -205,7 +205,9 @@ class TestTaskRunnerPreviousRuns:
             ),
             Run(
                 task_description="Click on the first result",
-                result=Result(status=Status.ABORTED, feedback="Element not found"),
+                result=TaskResult(
+                    status=TaskStatus.ABORTED, feedback="Element not found"
+                ),
                 summary="- Attempted to click first result\n  - Could not locate element",
                 messages=[],
                 steps_used=1,
