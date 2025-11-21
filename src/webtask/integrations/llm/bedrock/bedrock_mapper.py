@@ -12,6 +12,7 @@ from webtask.llm import (
     ImageContent,
     ToolCall,
 )
+from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool
@@ -136,6 +137,9 @@ def build_tool_config(tools: List["Tool"]) -> Dict[str, Any]:
     for tool in tools:
         # Convert Pydantic model to JSON schema
         params_schema = tool.Params.model_json_schema()
+
+        # Resolve $ref references (Bedrock doesn't support $ref)
+        params_schema = resolve_json_schema_refs(params_schema)
 
         # Build input schema (Bedrock format)
         input_schema = {

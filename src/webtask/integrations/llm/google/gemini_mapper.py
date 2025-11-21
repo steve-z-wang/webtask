@@ -15,6 +15,7 @@ from webtask.llm import (
     ImageContent,
     ToolCall,
 )
+from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool
@@ -126,9 +127,18 @@ def clean_schema_for_gemini(schema: Dict[str, Any]) -> Dict[str, Any]:
     """
     Clean Pydantic JSON schema to be compatible with Gemini.
 
-    Gemini only accepts a subset of JSON schema fields. We need to remove
-    unsupported fields like title, maximum, minimum, maxLength, etc.
+    Gemini only accepts a subset of JSON schema fields and doesn't support $ref.
+    This function resolves $ref references and removes unsupported fields.
+
+    Args:
+        schema: The schema to clean
+
+    Returns:
+        Cleaned schema compatible with Gemini
     """
+    # First resolve all $ref references using shared utility
+    schema = resolve_json_schema_refs(schema)
+
     # Fields that Gemini supports
     allowed_fields = {
         "type",
@@ -157,6 +167,19 @@ def clean_schema_for_gemini(schema: Dict[str, Any]) -> Dict[str, Any]:
                 cleaned[key] = clean_schema_for_gemini(value)
             else:
                 cleaned[key] = value
+        elif key == "anyOf":
+            # Handle anyOf (used for Optional types)
+            # Filter out null type and use the first non-null type
+            if isinstance(value, list):
+                non_null_schemas = [s for s in value if s.get("type") != "null"]
+                if non_null_schemas:
+                    # Use the first non-null schema (recursively clean it)
+                    non_null_schema = clean_schema_for_gemini(non_null_schemas[0])
+                    # Merge the non-null schema into cleaned (flattening anyOf)
+                    cleaned.update(non_null_schema)
+                    # Mark as nullable if there was a null option
+                    if len(value) > len(non_null_schemas):
+                        cleaned["nullable"] = True
 
     return cleaned
 
