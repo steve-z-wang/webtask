@@ -1,160 +1,59 @@
 # Architecture
 
-Understanding how webtask works internally.
-
-## System Overview
+## Overview
 
 ```
-┌──────────────────────────────────────────────────┐
-│                    Webtask                       │
-│              (Browser Manager)                   │
-└─────────────────────┬────────────────────────────┘
-                      │ creates
-                      ↓
-┌──────────────────────────────────────────────────┐
-│                    Agent                         │
-│          • execute(task) ← User calls this       │
-│          • navigate(), select()                  │
-└─────────────────────┬────────────────────────────┘
-                      │
-                      ↓
-┌──────────────────────────────────────────────────┐
-│                TaskExecutor                      │
-│         Orchestrates Worker-Verifier loop        │
-└──────────────────────────────────────────────────┘
-             │
-             ↓
-      ┌──────────────┐
-      │   Worker     │
-      │  (Execute    │
-      │   Actions)   │
-      └──────┬───────┘
-             │
-             │ complete_work
-             ↓
-      ┌──────────────┐
-      │   Verifier   │
-      │  (Check &    │
-      │   Decide)    │
-      └──────┬───────┘
-             │
-             ├─ complete_task → DONE ✓
-             ├─ abort_task → FAILED ✗
-             └─ request_correction → back to Worker
+┌──────────────┐
+│   Webtask    │  Browser lifecycle management
+└──────┬───────┘
+       │ creates
+       ↓
+┌──────────────┐
+│    Agent     │  Task execution with LLM
+└──────┬───────┘
+       │ uses
+       ↓
+┌──────────────┐
+│ TaskRunner   │  Executes steps with tools
+└──────┬───────┘
+       │ controls
+       ↓
+┌──────────────┐
+│AgentBrowser  │  Page management & DOM access
+└──────────────┘
 ```
 
-## Worker-Verifier Pattern
+## Components
 
-When you call `agent.execute(task)`, the system uses a simple two-role pattern:
+**Webtask** - Manages browser lifecycle, creates agents
 
-### Worker
-- **Role**: Execute browser actions to complete the task
-- **Input**: Task description, current page state
-- **Output**: Action results, final page state
-- **Tools**: navigate, click, fill, type, upload, wait, complete_work, abort_work
-- **Conversation-based**: Maintains conversation history, continues on corrections
+**Agent** - Main interface with `do()`, `verify()`, `goto()` methods
 
-### Verifier
-- **Role**: Check if task succeeded, request corrections if needed
-- **Input**: Task description, worker summary, final page state
-- **Output**: Decision (complete/correct/abort), feedback
-- **Tools**: observe, wait, complete_task, request_correction, abort_task
-- **Conversation-based**: Maintains separate conversation history
+**TaskRunner** - Executes tasks by calling LLM with available tools
 
-### Correction Loop
-1. Worker executes task → complete_work
-2. Verifier checks result
-3. If incorrect: Verifier provides feedback → Worker retries (max 3 attempts)
-4. If correct: Task complete
-5. If impossible: Abort
+**AgentBrowser** - Manages pages, builds DOM context, executes actions
 
-## Conversation-Based Interface
+## How it Works
 
-Both Worker and Verifier use standard LLM conversation format:
+1. User calls `agent.do("task description")`
+2. TaskRunner builds context from current page (DOM + screenshot)
+3. LLM decides which tools to call (navigate, click, fill, verify)
+4. TaskRunner executes tools via AgentBrowser
+5. Repeat until task complete or max steps reached
 
-**Message types:**
-- SystemMessage: Role instructions
-- UserMessage: Task + observations (DOM + screenshot)
-- AssistantMessage: Tool calls from LLM
-- ToolResultMessage: Execution results + new observations
+## Tools
 
-**Context management:**
-- Worker keeps last 2 observations
-- Verifier keeps last 1 observation
-- Tagged content filtering prevents unbounded growth
+Available tools for the LLM:
 
-## Multimodal Context
+- `navigate` - Go to URL
+- `click` - Click element
+- `fill` - Fill form field
+- `type` - Type text
+- `upload` - Upload file
+- `wait` - Wait for time
+- `complete_work` - Mark task as done
+- `abort_work` - Give up on task
 
-The agent sees both text and visual context:
+## Stateful Mode
 
-1. **Text context**: Filtered DOM tree with element IDs
-2. **Visual context**: Screenshot with bounding boxes around interactive elements
-
-This multimodal approach improves accuracy for complex UIs.
-
-## Element Selection
-
-**High-level**: `agent.select("search box")`
-
-1. Agent captures page state (DOM + screenshot)
-2. LLM sees element IDs in text + bounding boxes in image
-3. LLM returns element ID
-4. Agent maps element ID → XPath
-5. Browser selects element using XPath
-
-**Low-level**: Element selection happens automatically during autonomous execution
-
-## XPath from Original DOM
-
-Important implementation detail:
-- **Shown to LLM**: Filtered DOM (only interactive/visible elements)
-- **Used for selection**: XPath computed from original unfiltered DOM
-- This ensures XPath matches the actual browser state
-
-## Direct Control Mode
-
-When you use `agent.navigate()` and `agent.select()`, you bypass the autonomous loop and directly control the browser:
-
-```python
-# Direct control - you decide the steps
-await agent.navigate("https://example.com")
-search = await agent.select("search box")
-await search.fill("cats")
-button = await agent.select("search button")
-await button.click()
-```
-
-## Extension Points
-
-### Custom LLM
-
-Implement the `LLM` abstract class:
-
-```python
-from webtask.llm import LLM
-
-class MyCustomLLM(LLM):
-    async def call_tools(self, messages, tools):
-        # For Worker/Verifier (tool calling)
-        pass
-
-    async def generate_response(self, messages, response_model):
-        # For structured JSON output
-        pass
-```
-
-### Custom Browser
-
-Implement the `Browser`, `Session`, `Page`, and `Element` abstract classes:
-
-```python
-from webtask.browser import Browser, Session, Page, Element
-
-class MyCustomBrowser(Browser):
-    # Implement abstract methods
-    pass
-```
-
-## More Details
-
-For detailed internal architecture, see `CLAUDE.md` in the repository root.
+When `stateful=True` (default), Agent maintains conversation history across `do()` calls, allowing context to carry over between tasks.

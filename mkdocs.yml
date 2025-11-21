@@ -70,17 +70,22 @@ nav:
   - Documentation:
     - Getting Started: getting-started.md
     - Examples: examples.md
+    - Using Cookies: guides/cookies.md
+    - Custom LLM: guides/custom-llm.md
     - MCP Server: mcp-server.md
     - Architecture: architecture.md
     - API Reference:
       - Overview: api/index.md
       - Webtask: api/webtask.md
-      - Agent: api/agent.md
-      - Page: api/page.md
-      - Element: api/element.md
+      - Agent:
+        - Agent: api/agent.md
+        - Result: api/data-classes.md
+      - Browser:
+        - Browser: api/browser.md
+        - Context: api/context.md
+        - Page: api/page.md
+        - Element: api/element.md
       - LLM: api/llm.md
-      - Data Classes: api/data-classes.md
-  - Blog: blog.md
   - Community: community.md
 
 copyright: Copyright &copy; 2024 - MIT License

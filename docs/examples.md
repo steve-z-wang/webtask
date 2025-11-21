@@ -1,124 +1,102 @@
-
 # Examples
 
-Complete code examples for common use cases.
-
-
-## E-commerce Cart
+## Shopping Cart
 
 ```python
-async def add_to_cart():
-    wt = Webtask(headless=False)
-    llm = Gemini.create(model="gemini-2.5-flash")
-    agent = await wt.create_agent(llm=llm, action_delay=1.5)
+import asyncio
+from webtask import Webtask
+from webtask.integrations.llm import Gemini
+import os
 
-    result = await agent.execute(
-        "Go to example-shop.com, find a blue shirt, add it to cart"
+async def main():
+    wt = Webtask()
+
+    llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+    agent = await wt.create_agent(llm=llm)
+
+    await agent.goto("https://practicesoftwaretesting.com/")
+
+    await agent.do("Add 2 Flat-Head Wood Screws to the cart")
+    await agent.do("Add 5 Cross-head screws to the cart")
+
+    verdict = await agent.verify("the cart contains 7 items")
+    if verdict:
+        print("Cart verified!")
+
+    await wt.close()
+
+asyncio.run(main())
+```
+
+## Structured Output
+
+```python
+from pydantic import BaseModel
+
+class ProductInfo(BaseModel):
+    name: str
+    price: float
+    in_stock: bool
+
+async def extract_product():
+    wt = Webtask()
+
+    llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+    agent = await wt.create_agent(llm=llm)
+
+    await agent.goto("https://practicesoftwaretesting.com/")
+
+    result = await agent.do(
+        "Extract information about the first product",
+        output_schema=ProductInfo
     )
 
-    from webtask import TaskStatus
+    print(f"{result.output.name}: ${result.output.price}")
+    await wt.close()
 
-    if result.status == TaskStatus.COMPLETED:
-        print("Item added to cart!")
-        await agent.screenshot("cart.png")
+asyncio.run(extract_product())
+```
+
+## Using Bedrock
+
+```python
+from webtask.integrations.llm import Bedrock
+
+async def with_bedrock():
+    wt = Webtask()
+    llm = Bedrock(model="us.anthropic.claude-haiku-4-5-20251001-v1:0", region="us-east-1")
+    agent = await wt.create_agent(llm=llm)
+
+    await agent.goto("https://google.com")
+    await agent.do("Search for web automation")
 
     await wt.close()
 
-asyncio.run(add_to_cart())
+asyncio.run(with_bedrock())
 ```
 
-
-## Multi-Page Navigation
+## Integration with Existing Browser
 
 ```python
-async def multiple_tabs():
-    wt = Webtask(headless=False)
-    llm = Gemini.create(model="gemini-2.5-flash")
-    agent = await wt.create_agent(llm=llm)
+from playwright.async_api import async_playwright
 
-    # First page
-    await agent.navigate("https://google.com")
+async def with_existing_browser():
+    wt = Webtask()
+    llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
 
-    # Open second page
-    page2 = await agent.open_page()
-    agent.set_page(1)  # Switch to second page
-    await agent.navigate("https://github.com")
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
 
-    # Switch back to first page
-    agent.set_page(0)
-    await agent.execute("search for 'web automation'")
+        agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
 
-    # List all pages
-    pages = agent.get_pages()
-    print(f"Total pages: {len(pages)}")
+        await agent.goto("https://practicesoftwaretesting.com/")
+        await agent.do("Add 2 screws to the cart")
 
-    # Close second page
-    await agent.close_page(1)
+        await browser.close()
 
-    await wt.close()
-
-asyncio.run(multiple_tabs())
+asyncio.run(with_existing_browser())
 ```
-
-
-## Using OpenAI Instead of Gemini
-
-```python
-from webtask.integrations.llm import OpenAILLM
-
-async def with_openai():
-    wt = Webtask(headless=False)
-
-    # Use GPT-4 Vision
-    llm = OpenAILLM.create(model="gpt-4o")
-
-    agent = await wt.create_agent(llm=llm)
-
-    result = await agent.execute("Go to google.com and search for AI news")
-
-    await wt.close()
-
-asyncio.run(with_openai())
-```
-
-
-## Error Handling
-
-```python
-async def with_error_handling():
-    wt = Webtask(headless=False)
-    llm = Gemini.create(model="gemini-2.5-flash")
-    agent = await wt.create_agent(llm=llm)
-
-    try:
-        result = await agent.execute(
-            "Go to example.com and click the non-existent button",
-            max_cycles=5
-        )
-
-        from webtask import TaskStatus
-
-        if result.status != TaskStatus.COMPLETED:
-            print("Task did not complete successfully")
-            print(f"Sessions executed: {len(result.history)}")
-
-            # Save screenshot for debugging
-            await agent.screenshot("error.png")
-
-    except Exception as e:
-        print(f"Error: {e}")
-
-    finally:
-        await wt.close()
-
-asyncio.run(with_error_handling())
-```
-
 
 ## More Examples
 
-See the `examples/` directory in the GitHub repository:
-- [tool_website_demo.ipynb](https://github.com/steve-z-wang/webtask/blob/main/examples/tool_website_demo.ipynb) - Jupyter notebook demonstration
-- [google_search.ipynb](https://github.com/steve-z-wang/webtask/blob/main/examples/google_search.ipynb) - Google search example
-- [existing_browser_integration.py](https://github.com/steve-z-wang/webtask/blob/main/examples/existing_browser_integration.py) - Connect to existing browser
-
+See the [examples directory](https://github.com/steve-z-wang/webtask/tree/main/examples) for Jupyter notebooks and additional examples.

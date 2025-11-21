@@ -143,6 +143,15 @@ class Agent:
             status=run.result.status or Status.ABORTED,
         )
 
+    async def goto(self, url: str) -> None:
+        """
+        Navigate to a URL.
+
+        Args:
+            url: URL to navigate to
+        """
+        await self.browser.navigate(url)
+
     def get_current_page(self) -> Optional[Page]:
         """
         Get the current active page.

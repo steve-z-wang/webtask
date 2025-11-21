@@ -3,62 +3,108 @@
 [![PyPI version](https://img.shields.io/pypi/v/pywebtask.svg)](https://pypi.org/project/pywebtask/)
 [![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://steve-z-wang.github.io/webtask/)
 
-LLM-powered web automation with autonomous agents.
+Easy to use LLM-powered web automation.
 
-**[📚 Documentation](https://steve-z-wang.github.io/webtask/)** | **[🐍 PyPI](https://pypi.org/project/pywebtask/)** | **[📊 Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)**
-
----
-
-## Quick Start
+## Installation
 
 ```bash
 pip install pywebtask
 playwright install chromium
-export GEMINI_API_KEY="your-key"  # or OPENAI_API_KEY
 ```
 
-**Autonomous mode** - Give it a task, let the agent figure out the steps:
+## Quick Start
+
 ```python
 from webtask import Webtask
 from webtask.integrations.llm import Gemini
-from playwright.async_api import async_playwright
+import os
 
-async with async_playwright() as p:
-    browser = await p.chromium.launch(headless=False)
-    llm = Gemini(model="gemini-2.5-flash")
+wt = Webtask()
 
-    agent = await Webtask().create_agent_with_browser(llm=llm, browser=browser)
+llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+agent = await wt.create_agent(llm=llm)
 
-    result = await agent.do("search for cats and click the first result")
+await agent.goto("https://practicesoftwaretesting.com/")
+
+await agent.do("Add 2 Flat-Head Wood Screws to the cart")
+
+verdict = await agent.verify("the cart contains 2 items")
+if verdict:
+    print("Success!")
 ```
-
----
 
 ## Features
 
-- **Multimodal by default** - Sees screenshots with bounding boxes + DOM text
-- **Extensible** - Pluggable LLM and browser interfaces
-- **Batteries included** - OpenAI, Gemini LLMs and Playwright browser provided
-- **Isolated sessions** - Separate cookies and storage per agent
+**Simple or complex tasks** - From single actions to multi-step workflows:
 
----
+```python
+# Simple action
+await agent.do("Click the login button")
 
-## Documentation
+# Complex multi-step task
+await agent.do("Go to the product page, find the blue shirt, add it to cart, and proceed to checkout")
+```
 
-**[Full Documentation](https://steve-z-wang.github.io/webtask/)**
+**Stateful agents** - Remember context across multiple tasks:
 
-- [Getting Started](https://steve-z-wang.github.io/webtask/getting-started/)
-- [Examples](https://steve-z-wang.github.io/webtask/examples/)
-- [API Reference](https://steve-z-wang.github.io/webtask/api/)
+```python
+await agent.do("Go to https://practicesoftwaretesting.com/ and add 2 Flat-Head Wood Screws to the cart")
+await agent.do("Add 5 Cross-head screws to the cart")
+await agent.do("Go to the cart page and verify the items")
+```
 
----
+**Verification** - Simple boolean checks with natural language:
 
-## Benchmarks
+```python
+verdict = await agent.verify("the cart contains 7 items")
+if verdict:
+    print("Success!")
+```
 
-[webtask-benchmarks](https://github.com/steve-z-wang/webtask-benchmarks) - Evaluation on Mind2Web and other benchmarks
+**Structured output** - Extract data with Pydantic schemas:
 
----
+```python
+from pydantic import BaseModel
+
+class ProductInfo(BaseModel):
+    name: str
+    price: float
+    in_stock: bool
+
+result = await agent.do("Extract product information", output_schema=ProductInfo)
+
+print(f"{result.output.name}: ${result.output.price}")
+```
+
+**Easy integration** - Multiple ways to create agents:
+
+```python
+# Create with new browser
+agent = await wt.create_agent(llm=llm)
+
+# Use existing browser
+agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
+
+# Use existing context
+agent = wt.create_agent_with_context(llm=llm, context=context)
+
+# Use existing page
+agent = wt.create_agent_with_page(llm=llm, page=page)
+```
+
+## TODO
+
+- Unlimited context - Compact conversation history with LLM for extended sessions
+- Computer Use model integration - Pixel-based interaction with Claude Computer Use
+- Mind2Web benchmark - Evaluation on Mind2Web dataset
+
+## Links
+
+- [Documentation](https://steve-z-wang.github.io/webtask/)
+- [Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)
+- [MCP Server](https://steve-z-wang.github.io/webtask/mcp/)
 
 ## License
 

@@ -1,59 +1,48 @@
 
 # API Reference
 
-Complete API documentation for webtask.
+## [Webtask](webtask.md)
 
+Manages browser lifecycle and creates agents.
 
-### [Agent](agent.md)
-Main interface for web automation with two interaction modes.
+```python
+wt = Webtask()
+agent = await wt.create_agent(llm=llm)
+```
 
-**Autonomous mode:**
-- `execute()` - Give it a task, agent figures out the steps
+## [Agent](agent.md)
 
-**Direct control mode:**
-- `navigate()` - Navigate to URL
-- `select()` - Select element by natural language
-- `wait()` / `wait_for_idle()` - Wait for conditions
-- `screenshot()` - Capture screenshot
+Main interface for web automation.
 
-**Multi-page management:**
-- `open_page()` / `close_page()` - Manage pages
-- `get_pages()` / `get_current_page()` - Access pages
+```python
+await agent.goto("https://example.com")
+await agent.do("Click the login button")
+verdict = await agent.verify("user is logged in")
+```
 
+## Browser
 
-### [Element](element.md)
-Browser element. Returned by `agent.select()` or `page.select_one()`.
+Low-level browser components for advanced use cases.
 
-**Action methods:**
-- `click()` - Click element
-- `fill()` - Fill form field (instant)
-- `type()` - Type text character-by-character
-- `upload_file()` - Upload files
+- **[Browser](browser.md)** - Browser lifecycle management
+- **[Context](context.md)** - Isolated browsing sessions
+- **[Page](page.md)** - Page operations
+- **[Element](element.md)** - Element interactions
 
-**Inspection methods:**
-- `get_tag_name()` - Get tag name
-- `get_attribute()` / `get_attributes()` - Get attributes
-- `get_html()` - Get HTML content
-- `get_parent()` / `get_children()` - Navigate DOM tree
+## [LLM](llm.md)
 
+LLM providers and custom model integration.
 
-## Data Structures
+```python
+from webtask.integrations.llm import Gemini
 
-### [Data Classes](data-classes.md)
-Data structures returned by webtask methods.
+llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+```
 
-**TaskExecution:**
-- Returned from `agent.execute()`
-- Contains task status, history, and subtask queue
-- Fields: `status`, `history`, `subtask_queue`, `failure_reason`
+## [Result](data-classes.md)
 
-**TaskStatus:**
-- Enum for task status
-- Values: `IN_PROGRESS`, `COMPLETED`, `ABORTED`
+Data classes returned by agent methods.
 
-
-## Next Steps
-
-- [Getting Started](../getting-started.md) - Installation and first steps
-- [Examples](../examples.md) - Complete code examples
-- [Architecture](../architecture.md) - Internal design
+- `Result` - Returned by `agent.do()`
+- `Verdict` - Returned by `agent.verify()`
+- `Status` - Task status enum

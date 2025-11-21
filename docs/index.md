@@ -1,50 +1,54 @@
 ---
 hide:
   - navigation
+  - toc
 ---
 
 # webtask
 
-[![PyPI version](https://badge.fury.io/py/pywebtask.svg)](https://badge.fury.io/py/pywebtask)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://img.shields.io/pypi/v/pywebtask.svg)](https://pypi.org/project/pywebtask/)
+[![Tests](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml/badge.svg)](https://github.com/steve-z-wang/webtask/actions/workflows/pr.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://steve-z-wang.github.io/webtask/)
 
-LLM-powered web automation library with autonomous agents.
+Easy to use LLM-powered web automation.
 
-
-## Quick Example
+## Quick Start
 
 ```python
 from webtask import Webtask
 from webtask.integrations.llm import Gemini
+import os
 
-# Create Webtask manager
 wt = Webtask()
 
-# Choose your LLM
-llm = Gemini(model="gemini-2.5-flash")
-
-# Create agent
+llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
 agent = await wt.create_agent(llm=llm)
 
-# Execute task
-result = await agent.do("search for cats and click the first result")
-print(f"Status: {result.status}")
+await agent.goto("https://practicesoftwaretesting.com/")
+
+await agent.do("Add 2 Flat-Head Wood Screws to the cart")
+
+verdict = await agent.verify("the cart contains 2 items")
+if verdict:
+    print("Success!")
 ```
 
+## Features
 
-## Key Features
+**Simple or complex tasks** - From single actions to multi-step workflows
 
-- **Autonomous agents**: Give it a task, let it figure out the steps
-- **Multimodal understanding**: Visual (screenshots) + text (DOM) context
-- **Extensible**: Pluggable LLM and browser interfaces - use provided implementations or bring your own
-- **Batteries included**: Ships with Gemini LLM and Playwright browser
-- **Stateful mode**: Maintain conversation history across multiple tasks
+**Stateful agents** - Remember context across multiple tasks
 
+**Verification** - Simple boolean checks with natural language
 
-## Status
+**Structured output** - Extract data with Pydantic schemas
 
-🚧 Work in progress
+**Easy integration** - Multiple ways to create agents
 
-Core implementation complete. See [Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks) for evaluation framework.
+## Get Started
 
+- [Installation & Getting Started](getting-started.md)
+- [Examples](examples.md)
+- [API Reference](api/index.md)
+- [MCP Server](mcp-server.md)

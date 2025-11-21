@@ -1,65 +1,59 @@
 
-# LLM Classes
+# LLM
 
-webtask supports multiple LLM providers for multimodal reasoning.
-
-
-## OpenAILLM
-
-OpenAI GPT integration with multimodal support.
-
-### `create()`
+## Gemini
 
 ```python
-@staticmethod
-def create(
-    model: str = "gpt-4o",
-    api_key: str = None
-) -> OpenAILLM
-```
+from webtask.integrations.llm import Gemini
+import os
 
-Create OpenAI LLM instance.
-
-**Parameters:**
-- `model` (str): Model name. Default: `"gpt-4o"`
-- `api_key` (str): API key. If None, uses `OPENAI_API_KEY` environment variable
-
-**Returns:** OpenAILLM instance
-
-**Example:**
-```python
-from webtask.integrations.llm import OpenAILLM
-
-# Using environment variable
-llm = OpenAILLM.create(model="gpt-4o")
-
-# With explicit API key
-llm = OpenAILLM.create(
-    model="gpt-4o-mini",
-    api_key="your-api-key"
+llm = Gemini(
+    model="gemini-2.5-flash",
+    api_key=os.getenv("GEMINI_API_KEY")
 )
+
+agent = await wt.create_agent(llm=llm)
 ```
 
-### Available Models
+Available models: `gemini-2.5-flash`, `gemini-2.5-pro`
 
-- **`gpt-4o`** - Recommended, multimodal, good balance of speed and capability
-- **`gpt-4o-mini`** - Faster, cheaper, good for simple tasks
+## Bedrock
 
-### Setup
+```python
+from webtask.integrations.llm import Bedrock
 
-```bash
-export OPENAI_API_KEY="your-api-key"
+llm = Bedrock(
+    model="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    region="us-east-1"
+)
+
+agent = await wt.create_agent(llm=llm)
 ```
 
+## Custom LLM
 
-## Choosing an LLM
+To use your own model, implement the `LLM` base class:
 
-| Provider | Model | Speed | Cost | Best For |
-|----------|-------|-------|------|----------|
-| Gemini | gemini-2.5-flash | Fast | Low | General use, quick tasks |
-| Gemini | gemini-2.5-pro | Medium | Medium | Complex reasoning |
-| OpenAI | gpt-4o | Medium | Medium | Balanced performance |
-| OpenAI | gpt-4o-mini | Fast | Low | Simple tasks, high volume |
+```python
+from webtask.llm import LLM
+from webtask.llm.message import Message, AssistantMessage
+from webtask.llm.tool import Tool
+from typing import List
 
-**Recommendation:** Start with **gemini-2.5-flash** for cost-effectiveness, upgrade to **gpt-4o** or **gemini-2.5-pro** if you need better reasoning.
+class CustomLLM(LLM):
+    async def call_tools(
+        self,
+        messages: List[Message],
+        tools: List[Tool],
+    ) -> AssistantMessage:
+        # Your implementation here
+        # Convert messages to your API format
+        # Call your LLM API
+        # Convert response to AssistantMessage
+        pass
+
+# Use it
+llm = CustomLLM()
+agent = await wt.create_agent(llm=llm)
+```
 
