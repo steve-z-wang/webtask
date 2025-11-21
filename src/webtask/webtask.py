@@ -21,19 +21,19 @@ class Webtask:
     Browser is launched lazily on first agent creation.
     """
 
-    def __init__(self, headless: bool = False, browser_type: str = "chromium"):
+    def __init__(self):
         """Initialize Webtask. Browser launches lazily on first agent creation."""
-        self.headless = headless
-        self.browser_type = browser_type
         self.browser: Optional[Browser] = None
 
-    async def _ensure_browser(self) -> Browser:
+    async def _ensure_browser(
+        self, headless: bool = False, browser_type: str = "chromium"
+    ) -> Browser:
         """Ensure browser is created (lazy initialization)."""
         if self.browser is None:
             from .integrations.browser.playwright import PlaywrightBrowser
 
             self.browser = await PlaywrightBrowser.create(
-                headless=self.headless, browser_type=self.browser_type
+                headless=headless, browser_type=browser_type
             )
 
         return self.browser
@@ -101,21 +101,25 @@ class Webtask:
     async def create_agent(
         self,
         llm: LLM,
-        cookies=None,
         stateful: bool = True,
+        headless: bool = False,
+        browser_type: str = "chromium",
     ) -> Agent:
         """Create agent with new browser context. Launches browser on first call.
 
         Args:
             llm: LLM instance for reasoning
-            cookies: Optional cookies for the context
             stateful: If True, maintain conversation history between do() calls (default: True)
+            headless: Run browser in headless mode without GUI (default: False, shows browser window)
+            browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
 
         Returns:
             Agent instance with new context
         """
-        browser = await self._ensure_browser()
-        context = await browser.create_context(cookies=cookies)
+        browser = await self._ensure_browser(
+            headless=headless, browser_type=browser_type
+        )
+        context = await browser.create_context()
         agent = Agent(
             llm=llm,
             context=context,
@@ -128,7 +132,6 @@ class Webtask:
         self,
         llm: LLM,
         browser: Union[Browser, "PlaywrightBrowser"],
-        cookies=None,
         stateful: bool = True,
         use_existing_context: bool = True,
     ) -> Agent:
@@ -140,7 +143,6 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             browser: Browser instance or raw Playwright Browser (already launched)
-            cookies: Optional cookies for the context
             stateful: If True, maintain conversation history between do() calls (default: True)
             use_existing_context: Use existing context if available (default: True)
 
@@ -173,10 +175,10 @@ class Webtask:
             context = wrapped_browser.get_default_context()
             if context is None:
                 # Fallback: create new context
-                context = await wrapped_browser.create_context(cookies=cookies)
+                context = await wrapped_browser.create_context()
         else:
             # Create new isolated context
-            context = await wrapped_browser.create_context(cookies=cookies)
+            context = await wrapped_browser.create_context()
 
         # Create agent with context
         agent = Agent(

@@ -93,7 +93,7 @@ async def test_shopping_cart_automation():
     )
 
     # Create Webtask
-    wt = Webtask(headless=True)
+    wt = Webtask()
 
     try:
         # Create agent with recording wrappers
