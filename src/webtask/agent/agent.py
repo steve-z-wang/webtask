@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Optional, Type
 from pydantic import BaseModel
 from webtask.llm import LLM
-from webtask.browser import Context
+from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Result, Run
 from webtask._internal.agent.agent_browser import AgentBrowser
@@ -110,3 +110,12 @@ class Agent:
             # Restore original wait_after_action if it was overridden
             if original_wait is not None:
                 self.browser.set_wait_after_action(original_wait)
+
+    def get_current_page(self) -> Optional[Page]:
+        """
+        Get the current active page.
+
+        Returns:
+            Current Page instance, or None if no page is active
+        """
+        return self.browser.get_current_page()
