@@ -227,9 +227,7 @@ class TaskRunner:
             lines.append(f"Status: {run.result.status.value.capitalize()}")
             if run.result.feedback:
                 lines.append(f"Feedback: {run.result.feedback}")
-            lines.append("")
-            lines.append(run.summary)
-            lines.append("")  # Blank line between sessions
+            lines.append("")  # Blank line between tasks
         return "\n".join(lines)
 
     def _build_summary(self, pairs: List[ToolCallPair]) -> str:

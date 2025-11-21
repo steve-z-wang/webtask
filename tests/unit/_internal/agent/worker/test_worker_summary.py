@@ -2,6 +2,8 @@
 
 import pytest
 from webtask._internal.agent.task_runner import TaskRunner, ToolCallPair
+from webtask._internal.agent.run import Run
+from webtask.agent.result import Result, Status
 from webtask.llm import AssistantMessage, ToolResultMessage, TextContent
 
 pytestmark = pytest.mark.unit
@@ -165,3 +167,57 @@ class TestTaskRunnerSummary:
         ]
 
         assert summary == "\n".join(expected_lines)
+
+
+class TestTaskRunnerPreviousRuns:
+    """Test TaskRunner._format_previous_runs() generates correct format."""
+
+    @pytest.fixture
+    def task_runner(self, mocker):
+        """Create a TaskRunner instance with mocked dependencies."""
+        mock_llm = mocker.Mock()
+        mock_browser = mocker.Mock()
+        return TaskRunner(
+            llm=mock_llm,
+            browser=mock_browser,
+        )
+
+    def test_format_previous_runs(self, task_runner):
+        """Test that previous runs are formatted with task, status, and feedback only."""
+        runs = [
+            Run(
+                task_description="Navigate to google.com and search for 'python'",
+                result=Result(status=Status.COMPLETED, feedback="Search completed successfully"),
+                summary="- Navigated to google.com\n  - Loaded homepage\n- Searched for python\n  - Entered text\n  - Clicked search",
+                messages=[],
+                steps_used=3,
+                max_steps=10,
+            ),
+            Run(
+                task_description="Click on the first result",
+                result=Result(status=Status.ABORTED, feedback="Element not found"),
+                summary="- Attempted to click first result\n  - Could not locate element",
+                messages=[],
+                steps_used=1,
+                max_steps=10,
+            ),
+        ]
+
+        formatted = task_runner._format_previous_runs(runs)
+
+        # Verify it contains task descriptions
+        assert "Navigate to google.com and search for 'python'" in formatted
+        assert "Click on the first result" in formatted
+
+        # Verify it contains status
+        assert "Status: Completed" in formatted
+        assert "Status: Aborted" in formatted
+
+        # Verify it contains feedback
+        assert "Feedback: Search completed successfully" in formatted
+        assert "Feedback: Element not found" in formatted
+
+        # Verify it does NOT contain the detailed summary
+        assert "Navigated to google.com" not in formatted
+        assert "Entered text" not in formatted
+        assert "Could not locate element" not in formatted
