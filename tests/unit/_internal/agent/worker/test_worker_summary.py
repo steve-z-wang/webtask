@@ -187,7 +187,9 @@ class TestTaskRunnerPreviousRuns:
         runs = [
             Run(
                 task_description="Navigate to google.com and search for 'python'",
-                result=Result(status=Status.COMPLETED, feedback="Search completed successfully"),
+                result=Result(
+                    status=Status.COMPLETED, feedback="Search completed successfully"
+                ),
                 summary="- Navigated to google.com\n  - Loaded homepage\n- Searched for python\n  - Entered text\n  - Clicked search",
                 messages=[],
                 steps_used=3,
