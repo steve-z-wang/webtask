@@ -32,6 +32,7 @@ from .tools import (
     CompleteWorkTool,
     AbortWorkTool,
 )
+from .file_manager import FileManager
 
 if TYPE_CHECKING:
     from webtask.llm.llm import LLM
@@ -75,16 +76,19 @@ class TaskRunner:
         max_steps: int,
         previous_runs: Optional[List[Run]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
-        resources: Optional[Dict[str, str]] = None,
+        files: Optional[List[str]] = None,
     ) -> Run:
         # Create result object for this run
         result = TaskResult()
 
+        # Create file manager for this run
+        file_manager = FileManager(files)
+
         # Setup tool registry for this run
-        tool_registry = self._setup_tools(result, resources, output_schema)
+        tool_registry = self._setup_tools(result, file_manager, output_schema)
 
         session_start_messages = await self._build_session_start_messages(
-            task, previous_runs
+            task, previous_runs, file_manager
         )
 
         self._logger.info(f"Task start - Task: {task}")
@@ -170,7 +174,7 @@ class TaskRunner:
     def _setup_tools(
         self,
         result: TaskResult,
-        resources: Optional[Dict[str, str]],
+        file_manager: FileManager,
         output_schema: Optional[Type[BaseModel]],
     ) -> ToolRegistry:
         """Create and configure tool registry for this run."""
@@ -182,7 +186,7 @@ class TaskRunner:
         tool_registry.register(FillTool(self.browser))
         tool_registry.register(TypeTool(self.browser))
         tool_registry.register(GotoTool(self.browser))
-        tool_registry.register(UploadTool(self.browser, resources))
+        tool_registry.register(UploadTool(self.browser, file_manager))
 
         # Register tab management tools
         tool_registry.register(OpenTabTool(self.browser))
@@ -198,6 +202,7 @@ class TaskRunner:
         self,
         task: str,
         previous_runs: Optional[List[Run]] = None,
+        file_manager: Optional[FileManager] = None,
     ) -> List[Message]:
         user_content: List[Content] = []
 
@@ -207,6 +212,10 @@ class TaskRunner:
             user_content.append(TextContent(text=formatted_sessions))
 
         user_content.append(TextContent(text=f"## Current task:\n{task}"))
+
+        # Add files context if provided
+        if file_manager and not file_manager.is_empty():
+            user_content.append(TextContent(text=file_manager.format_context()))
 
         # Add current page state (DOM + screenshot)
         page_state_content, _, _ = await self._get_page_state_content()

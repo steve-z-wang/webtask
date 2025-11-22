@@ -70,7 +70,7 @@ class Agent:
         wait_after_action: float,
         mode: str,
         output_schema: Optional[Type[BaseModel]] = None,
-        resources: Optional[Dict[str, str]] = None,
+        files: Optional[List[str]] = None,
         exception_class: Type[Exception] = TaskAbortedError,
     ) -> Run:
         """
@@ -82,7 +82,7 @@ class Agent:
             wait_after_action: Wait time after each action
             mode: DOM context mode
             output_schema: Optional output schema
-            resources: Optional file resources
+            files: Optional list of file paths for upload
             exception_class: Exception class to raise on abort
 
         Returns:
@@ -99,7 +99,7 @@ class Agent:
             max_steps,
             previous_runs=self._previous_runs if self.stateful else None,
             output_schema=output_schema,
-            resources=resources,
+            files=files,
         )
 
         if self.stateful:
@@ -115,7 +115,7 @@ class Agent:
         task: str,
         max_steps: int = 20,
         wait_after_action: float = 0.2,
-        resources: Optional[Dict[str, str]] = None,
+        files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         mode: str = "accessibility",
     ) -> Result:
@@ -126,7 +126,7 @@ class Agent:
             task: Task description in natural language
             max_steps: Maximum number of steps to execute (default: 20)
             wait_after_action: Wait time in seconds after each action (default: 0.2)
-            resources: Optional dict of file resources (name -> path)
+            files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
             mode: DOM context mode - "accessibility" (default) or "dom"
 
@@ -142,7 +142,7 @@ class Agent:
             wait_after_action=wait_after_action,
             mode=mode,
             output_schema=output_schema,
-            resources=resources,
+            files=files,
             exception_class=TaskAbortedError,
         )
 

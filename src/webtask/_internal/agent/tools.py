@@ -8,6 +8,7 @@ from ..utils.wait import wait
 
 if TYPE_CHECKING:
     from .agent_browser import AgentBrowser
+    from .file_manager import FileManager
 
 
 # Browser action tools
@@ -125,19 +126,19 @@ class TypeTool(Tool):
 
 
 class UploadTool(Tool):
-    """Upload file resources to a file input element."""
+    """Upload files to a file input element."""
 
     name = "upload"
-    description = "Upload file resources to a file input element. Use resource names that were provided with the task."
+    description = "Upload files to a file input element. Use file indexes shown in the Files section."
 
     class Params(BaseModel):
         """Parameters for upload tool."""
 
         element_id: str = Field(
-            description="Element ID of the file input (e.g., 'input-5')"
+            description="Element ID of the file input (e.g., '[input-5]')"
         )
-        resource_names: List[str] = Field(
-            description="List of resource names to upload (e.g., ['photo1', 'photo2'])"
+        file_indexes: List[int] = Field(
+            description="List of file indexes to upload (e.g., [0] or [0, 1])"
         )
         description: str = Field(
             description="Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')"
@@ -146,31 +147,26 @@ class UploadTool(Tool):
     def __init__(
         self,
         browser: "AgentBrowser",
-        resources: Optional[Dict[str, str]] = None,
+        file_manager: "FileManager",
     ):
-        """Initialize upload tool with worker browser and resources."""
+        """Initialize upload tool with worker browser and file manager."""
         self.browser = browser
-        self.resources = resources
+        self.file_manager = file_manager
 
     def is_enabled(self) -> bool:
-        """Only enabled if resources are provided."""
-        return self.resources is not None
+        """Only enabled if files are provided."""
+        return not self.file_manager.is_empty()
 
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of upload action."""
-        resources_str = ", ".join(params.resource_names)
-        return f"Uploaded {resources_str} to {params.description}"
+        indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
+        return f"Uploaded files {indexes_str} to {params.description}"
 
     async def execute(self, params: Params) -> None:
         """Execute file upload."""
-        # Resolve resource names to file paths
-        paths = []
-        for resource_name in params.resource_names:
-            path = self.resources.get(resource_name)
-            if path is None:
-                raise ValueError(f"Resource not found: {resource_name}")
-            paths.append(path)
+        # Resolve file indexes to paths
+        paths = self.file_manager.get_paths(params.file_indexes)
 
         # Upload files (single file or multiple)
         file_path = paths if len(paths) > 1 else paths[0]
