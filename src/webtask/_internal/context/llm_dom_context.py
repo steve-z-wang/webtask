@@ -189,7 +189,7 @@ class LLMDomContext:
                 return
 
             role_id = node.metadata["role_id"]
-            parts = [role_id] if include_element_ids else [role]
+            parts = [f"[{role_id}]"] if include_element_ids else [role]
 
             if node.name and node.name.value:
                 parts.append(f'"{node.name.value}"')
@@ -275,7 +275,7 @@ class LLMDomContext:
 
             indent = "  " * depth
             tag_id = node.metadata.get("tag_id", "unknown")
-            parts = [tag_id]
+            parts = [f"[{tag_id}]"]
 
             # Add attributes
             for attr_name, attr_value in node.attrib.items():
