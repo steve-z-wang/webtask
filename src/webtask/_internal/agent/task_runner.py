@@ -27,6 +27,8 @@ from .tools import (
     TypeTool,
     UploadTool,
     WaitTool,
+    OpenTabTool,
+    SwitchTabTool,
     CompleteWorkTool,
     AbortWorkTool,
 )
@@ -182,6 +184,10 @@ class TaskRunner:
         tool_registry.register(NavigateTool(self.browser))
         tool_registry.register(UploadTool(self.browser, resources))
 
+        # Register tab management tools
+        tool_registry.register(OpenTabTool(self.browser))
+        tool_registry.register(SwitchTabTool(self.browser))
+
         # Register control tools
         tool_registry.register(CompleteWorkTool(result, output_schema))
         tool_registry.register(AbortWorkTool(result))
@@ -215,11 +221,15 @@ class TaskRunner:
     async def _get_page_state_content(
         self,
     ) -> Tuple[List[Content], str, Optional[str]]:
+        # Get tabs context and DOM snapshot
+        tabs_context = self.browser.get_tabs_context()
         dom_snapshot = await self.browser.get_dom_snapshot()
         screenshot_b64 = await self.browser.get_screenshot()
 
         content: List[Content] = []
-        content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
+        content.append(TextContent(text=tabs_context, tag="tabs_context"))
+        if dom_snapshot:
+            content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
 
         # Only add screenshot if we have one (page is open)
         if screenshot_b64 is not None:
@@ -231,7 +241,9 @@ class TaskRunner:
                 )
             )
 
-        return content, dom_snapshot, screenshot_b64
+        # Combine for return value (used in Run for final state)
+        full_context = f"{tabs_context}\n\n{dom_snapshot}"
+        return content, full_context, screenshot_b64
 
     def _format_previous_runs(self, runs: List[Run]) -> str:
         lines = ["## Previous tasks:", ""]
@@ -316,7 +328,7 @@ class TaskRunner:
         # Purge old content
         all_messages = purge_messages_content(
             all_messages,
-            by_tags=["dom_snapshot"],
+            by_tags=["tabs_context", "dom_snapshot"],
             message_types=[ToolResultMessage, UserMessage],
             keep_last_messages=1,
         )

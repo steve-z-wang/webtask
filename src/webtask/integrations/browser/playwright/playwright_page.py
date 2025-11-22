@@ -27,6 +27,23 @@ class PlaywrightPage(Page):
         """
         self._page = page
 
+    def __eq__(self, other: object) -> bool:
+        """Check if this is the same page as another."""
+        if not isinstance(other, PlaywrightPage):
+            return False
+        return self._page is other._page
+
+    def __hash__(self) -> int:
+        """Hash based on underlying Playwright page identity."""
+        return hash(id(self._page))
+
+    @property
+    def context(self):
+        """Get the context this page belongs to."""
+        from .playwright_context import PlaywrightContext
+
+        return PlaywrightContext(self._page.context)
+
     def __str__(self) -> str:
         """String representation of the page."""
         title = self._page.title()

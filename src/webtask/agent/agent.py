@@ -289,3 +289,12 @@ class Agent:
             Current Page instance, or None if no page is active
         """
         return self.browser.get_current_page()
+
+    def focus_tab(self, page: Page) -> None:
+        """
+        Focus a specific tab.
+
+        Args:
+            page: Page instance to focus
+        """
+        self.browser.focus_tab(page)

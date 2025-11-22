@@ -254,6 +254,10 @@ class Webtask:
             context=context,
             stateful=stateful,
         )
+
+        # Focus the provided tab
+        agent.focus_tab(wrapped_page)
+
         return agent
 
     async def close(self) -> None:

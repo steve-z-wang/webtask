@@ -1,9 +1,12 @@
 """Page base class for browser page management."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Union
 from pathlib import Path
 from .element import Element
+
+if TYPE_CHECKING:
+    from .context import Context
 
 
 class Page(ABC):
@@ -12,6 +15,22 @@ class Page(ABC):
 
     Simple adapter over browser automation libraries (Playwright, Selenium, etc.).
     """
+
+    @abstractmethod
+    def __eq__(self, other: object) -> bool:
+        """Check if this is the same page as another."""
+        pass
+
+    @abstractmethod
+    def __hash__(self) -> int:
+        """Hash for use in sets/dicts."""
+        pass
+
+    @property
+    @abstractmethod
+    def context(self) -> "Context":
+        """Get the context this page belongs to."""
+        pass
 
     def __str__(self) -> str:
         """String representation of the page."""

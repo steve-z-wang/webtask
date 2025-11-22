@@ -202,6 +202,69 @@ class WaitTool(Tool):
         await wait(params.seconds)
 
 
+# Page management tools
+
+
+class OpenTabTool(Tool):
+    """Open a new browser tab."""
+
+    name = "open_tab"
+    description = "Open a new blank browser tab and switch to it"
+
+    class Params(BaseModel):
+        """Parameters for open_tab tool."""
+
+        description: str = Field(
+            description="Why you are opening a new tab (e.g., 'Open new tab to search for product')"
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize open_tab tool with browser."""
+        self.browser = browser
+
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of open_tab action."""
+        return f"Opened new tab: {params.description}"
+
+    async def execute(self, params: Params) -> None:
+        """Open a new tab."""
+        await self.browser.open_tab()
+
+
+class SwitchTabTool(Tool):
+    """Switch to a different browser tab."""
+
+    name = "switch_tab"
+    description = (
+        "Switch to a different browser tab by its number (shown in Tabs section)"
+    )
+
+    class Params(BaseModel):
+        """Parameters for switch_tab tool."""
+
+        tab_number: int = Field(
+            description="The tab number to switch to (1-based, as shown in Tabs section)",
+            ge=1,
+        )
+        description: str = Field(
+            description="Why you are switching to this tab (e.g., 'Switch back to main tab')"
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize switch_tab tool with browser."""
+        self.browser = browser
+
+    @staticmethod
+    def describe(params: Params) -> str:
+        """Generate description of switch_tab action."""
+        return f"Switched to tab {params.tab_number}: {params.description}"
+
+    async def execute(self, params: Params) -> None:
+        """Switch to specified tab."""
+        self.browser.focus_tab(params.tab_number)
+
+
 # Control tools
 
 

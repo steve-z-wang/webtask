@@ -1,6 +1,6 @@
 """AgentBrowser - browser interface for agent with page management and LLMDomContext."""
 
-from typing import Dict, List, Optional
+from typing import List, Optional, Union
 from webtask.browser import Page, Context
 from ..context import LLMDomContext
 from ..utils.wait import wait
@@ -20,28 +20,59 @@ class AgentBrowser:
         self._wait_after_action = wait_after_action
         self._mode = mode
 
-        # Page management (from SessionBrowser)
-        self._pages: Dict[str, Page] = {}
-        self._page_counter = 0
-        self._current_page_id: Optional[str] = None
+        # Page management - ordered list of pages
+        self._pages: List[Page] = []
+        self._current_page_index: Optional[int] = None
 
         # DOM context for element mapping
         self._dom_context: Optional[LLMDomContext] = None
 
     # Page management methods
 
+    def _sync_pages(self) -> None:
+        """Sync internal page list with context.pages.
+
+        Adds new pages from context, removes closed pages.
+        Maintains our own ordering (new pages appended).
+        """
+        if self._context is None:
+            return
+
+        context_pages = self._context.pages
+
+        # Wrap raw pages if needed (context.pages may return raw Playwright pages)
+        from webtask.integrations.browser.playwright import PlaywrightPage
+
+        wrapped_context_pages = []
+        for p in context_pages:
+            if isinstance(p, Page):
+                wrapped_context_pages.append(p)
+            else:
+                # Assume it's a raw Playwright page
+                wrapped_context_pages.append(PlaywrightPage(p))
+
+        # Remove pages that no longer exist in context
+        self._pages = [
+            p for p in self._pages if any(p == cp for cp in wrapped_context_pages)
+        ]
+
+        # Add new pages from context (append to maintain order)
+        for cp in wrapped_context_pages:
+            if not any(cp == p for p in self._pages):
+                self._pages.append(cp)
+
+        # Fix current_page_index if it's now invalid
+        if self._current_page_index is not None:
+            if self._current_page_index >= len(self._pages):
+                self._current_page_index = len(self._pages) - 1 if self._pages else None
+
     def get_current_page(self) -> Optional[Page]:
         """Get current page or None if no page is active."""
-        if self._current_page_id is None:
+        if self._current_page_index is None:
             return None
-        return self._pages[self._current_page_id]
-
-    def _get_page_id(self, page: Page) -> Optional[str]:
-        """Get page ID for a given page."""
-        for page_id, p in self._pages.items():
-            if p == page:
-                return page_id
-        return None
+        if self._current_page_index >= len(self._pages):
+            return None
+        return self._pages[self._current_page_index]
 
     def set_context(self, context: Context) -> None:
         """Set or update the context."""
@@ -55,70 +86,71 @@ class AgentBrowser:
         """Set DOM snapshot mode."""
         self._mode = mode
 
-    async def create_page(self, url: Optional[str] = None) -> Page:
-        """Create new page and switch to it."""
+    async def open_tab(self) -> Page:
+        """Open a new blank tab and focus it."""
         if self._context is None:
             raise RuntimeError(
-                "Cannot create page: no context available. "
-                "Use set_context() first, or inject a page with set_page()."
+                "Cannot open tab: no context available. Use set_context() first."
             )
 
         page = await self._context.create_page()
-        page_id = f"page-{self._page_counter}"
-        self._page_counter += 1
-        self._pages[page_id] = page
-        self._current_page_id = page_id
-
-        if url:
-            await page.navigate(url)
-            await wait(self._wait_after_action)
+        self._pages.append(page)
+        self._current_page_index = len(self._pages) - 1
 
         return page
 
-    def set_page(self, page: Page) -> None:
-        """Set page as current page."""
-        page_id = self._get_page_id(page)
+    def focus_tab(self, tab: Union[int, Page]) -> None:
+        """Focus a tab by number (1-based) or page reference.
 
-        if page_id is None:
-            page_id = f"page-{self._page_counter}"
-            self._page_counter += 1
-            self._pages[page_id] = page
+        Args:
+            tab: Either a 1-based tab number or a Page object
+        """
+        self._sync_pages()
 
-        self._current_page_id = page_id
+        if isinstance(tab, int):
+            # By number (1-based)
+            if tab < 1 or tab > len(self._pages):
+                raise IndexError(
+                    f"Tab number {tab} out of range (1-{len(self._pages)})"
+                )
+            self._current_page_index = tab - 1
+        else:
+            # By page reference
+            for i, p in enumerate(self._pages):
+                if p == tab:
+                    self._current_page_index = i
+                    return
+            raise ValueError("Tab not found")
 
-    async def close_page(self, page: Optional[Page] = None) -> None:
-        """Close page."""
-        if page is None:
-            if self._current_page_id is None:
-                return
-            page = self._pages[self._current_page_id]
+    def get_tabs_context(self) -> str:
+        """Get tabs context string for LLM.
 
-        page_id = self._get_page_id(page)
-        if page_id is None:
-            raise ValueError("Page not managed by WorkerBrowser")
+        Returns:
+            Formatted tabs section showing all open tabs with 1-based numbers.
+            Example:
+                Tabs:
+                1. https://google.com
+                2. https://example.com (current)
+        """
+        self._sync_pages()
 
-        await page.close()
-        del self._pages[page_id]
+        if not self._pages:
+            return "Tabs:\n(no pages open)"
 
-        if self._current_page_id == page_id:
-            if self._pages:
-                self._current_page_id = next(iter(self._pages.keys()))
-            else:
-                self._current_page_id = None
+        lines = ["Tabs:"]
+        for idx, page in enumerate(self._pages):
+            url = page.url if page.url else "about:blank"
+            current_marker = " (current)" if idx == self._current_page_index else ""
+            lines.append(f"{idx + 1}. {url}{current_marker}")
 
-    def get_pages(self) -> List[Page]:
-        """Get all managed pages."""
-        return list(self._pages.values())
-
-    @property
-    def page_count(self) -> int:
-        """Get number of managed pages."""
-        return len(self._pages)
+        return "\n".join(lines)
 
     async def close(self) -> None:
         """Close all managed pages."""
-        for page in list(self._pages.values()):
-            await self.close_page(page)
+        for page in list(self._pages):
+            await page.close()
+        self._pages = []
+        self._current_page_index = None
 
     # Browser operation methods
 
@@ -164,13 +196,11 @@ class AgentBrowser:
         Uses the current mode setting (set via set_mode()).
 
         Returns:
-            DOM snapshot string, or message if no page is open
+            DOM snapshot string, or empty string if no page is open
         """
         page = self.get_current_page()
         if page is None:
-            return (
-                "No page is currently open. Use the navigate tool to open a page first."
-            )
+            return ""
 
         # Wait for page to be fully loaded before capturing (safety check)
         await self.wait_for_load(timeout=10000)
@@ -181,26 +211,10 @@ class AgentBrowser:
         # Get context string with current mode
         context_str = self._dom_context.get_context(mode=self._mode)
 
-        # Format with URL and element ID explanation
-        url = page.url
-        lines = ["Page:"]
-        if url:
-            lines.append(f"  URL: {url}")
-        lines.append("")
-
-        # Add format explanation based on mode
-        if self._mode == "accessibility":
-            lines.append(
-                "Elements use role-based IDs (e.g., button-0, combobox-1, link-2)."
-            )
-            lines.append("Always use the exact element IDs shown below.")
-        else:  # dom mode
-            lines.append("Elements use tag-based IDs (e.g., input-0, button-1, a-2).")
-            lines.append("Always use the exact element IDs shown below.")
-        lines.append("")
-
+        # Simple format: Current Tab: followed by DOM content
+        lines = ["Current Tab:"]
         if not context_str:
-            lines.append("ERROR: No interactive elements found.")
+            lines.append("(no interactive elements found)")
         else:
             lines.append(context_str)
 
@@ -252,10 +266,10 @@ class AgentBrowser:
         if page is None:
             if self._context is None:
                 raise RuntimeError(
-                    "Cannot navigate: no page available and no context to create one. "
-                    "Use set_page() to inject a page, or set_context() to enable page creation."
+                    "Cannot navigate: no tab available and no context to create one. "
+                    "Use focus_tab() to select a tab, or set_context() to enable tab creation."
                 )
-            page = await self.create_page()
+            page = await self.open_tab()
 
         await page.navigate(url)
         self._dom_context = None
