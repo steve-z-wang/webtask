@@ -100,20 +100,20 @@ class AgentBrowser:
         return page
 
     def focus_tab(self, tab: Union[int, Page]) -> None:
-        """Focus a tab by number (1-based) or page reference.
+        """Focus a tab by index (0-based) or page reference.
 
         Args:
-            tab: Either a 1-based tab number or a Page object
+            tab: Either a 0-based tab index or a Page object
         """
         self._sync_pages()
 
         if isinstance(tab, int):
-            # By number (1-based)
-            if tab < 1 or tab > len(self._pages):
+            # By index (0-based)
+            if tab < 0 or tab >= len(self._pages):
                 raise IndexError(
-                    f"Tab number {tab} out of range (1-{len(self._pages)})"
+                    f"Tab index {tab} out of range (0-{len(self._pages) - 1})"
                 )
-            self._current_page_index = tab - 1
+            self._current_page_index = tab
         else:
             # By page reference
             for i, p in enumerate(self._pages):
@@ -126,22 +126,22 @@ class AgentBrowser:
         """Get tabs context string for LLM.
 
         Returns:
-            Formatted tabs section showing all open tabs with 1-based numbers.
+            Formatted tabs section showing all open tabs with 0-based indexes.
             Example:
                 Tabs:
-                1. https://google.com
-                2. https://example.com (current)
+                - [0] https://google.com
+                - [1] https://example.com (current)
         """
         self._sync_pages()
 
         if not self._pages:
-            return "Tabs:\n(no pages open)"
+            return "Tabs:\n(no tabs open)"
 
         lines = ["Tabs:"]
         for idx, page in enumerate(self._pages):
             url = page.url if page.url else "about:blank"
             current_marker = " (current)" if idx == self._current_page_index else ""
-            lines.append(f"{idx + 1}. {url}{current_marker}")
+            lines.append(f"- [{idx}] {url}{current_marker}")
 
         return "\n".join(lines)
 

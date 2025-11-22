@@ -237,15 +237,15 @@ class SwitchTabTool(Tool):
 
     name = "switch_tab"
     description = (
-        "Switch to a different browser tab by its number (shown in Tabs section)"
+        "Switch to a different browser tab by its index (shown in Tabs section)"
     )
 
     class Params(BaseModel):
         """Parameters for switch_tab tool."""
 
-        tab_number: int = Field(
-            description="The tab number to switch to (1-based, as shown in Tabs section)",
-            ge=1,
+        tab_index: int = Field(
+            description="The tab index to switch to (0-based, as shown in Tabs section)",
+            ge=0,
         )
         description: str = Field(
             description="Why you are switching to this tab (e.g., 'Switch back to main tab')"
@@ -258,11 +258,11 @@ class SwitchTabTool(Tool):
     @staticmethod
     def describe(params: Params) -> str:
         """Generate description of switch_tab action."""
-        return f"Switched to tab {params.tab_number}: {params.description}"
+        return f"Switched to tab [{params.tab_index}]: {params.description}"
 
     async def execute(self, params: Params) -> None:
         """Switch to specified tab."""
-        self.browser.focus_tab(params.tab_number)
+        self.browser.focus_tab(params.tab_index)
 
 
 # Control tools

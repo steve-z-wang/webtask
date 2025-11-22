@@ -116,8 +116,8 @@ async def test_open_tab(browser, mock_context):
 
 @pytest.mark.asyncio
 @pytest.mark.unit
-async def test_focus_tab_by_number(browser, mock_context):
-    """Test focusing a tab by 1-based number."""
+async def test_focus_tab_by_index(browser, mock_context):
+    """Test focusing a tab by 0-based index."""
     # Open two tabs
     page1 = await browser.open_tab()
     page1.url = "https://page1.com"
@@ -127,8 +127,8 @@ async def test_focus_tab_by_number(browser, mock_context):
     # Current should be page2 (last opened)
     assert browser.get_current_page() == page2
 
-    # Focus tab 1 by number
-    browser.focus_tab(1)
+    # Focus tab 0 by index
+    browser.focus_tab(0)
 
     # Verify page1 is now current
     assert browser.get_current_page() == page1
@@ -170,16 +170,16 @@ async def test_get_tabs_context(browser, mock_context):
 
     # Verify format
     assert "Tabs:" in tabs_context
-    assert "1. https://google.com" in tabs_context
-    assert "2. https://github.com (current)" in tabs_context
+    assert "- [0] https://google.com" in tabs_context
+    assert "- [1] https://github.com (current)" in tabs_context
 
-    # Focus tab 1 and verify marker moves
-    browser.focus_tab(1)
+    # Focus tab 0 and verify marker moves
+    browser.focus_tab(0)
     tabs_context = browser.get_tabs_context()
 
-    assert "1. https://google.com (current)" in tabs_context
-    assert "2. https://github.com" in tabs_context
-    assert "(current)" not in tabs_context.split("\n")[2]  # tab 2 line
+    assert "- [0] https://google.com (current)" in tabs_context
+    assert "- [1] https://github.com" in tabs_context
+    assert "(current)" not in tabs_context.split("\n")[2]  # tab 1 line
 
 
 @pytest.mark.asyncio
