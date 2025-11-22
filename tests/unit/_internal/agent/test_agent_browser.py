@@ -39,7 +39,7 @@ class MockPage(Page):
     async def close(self):
         self._closed = True
 
-    async def navigate(self, url):
+    async def goto(self, url):
         self._url = url
 
     async def get_cdp_dom_snapshot(self):

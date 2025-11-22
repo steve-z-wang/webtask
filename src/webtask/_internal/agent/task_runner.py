@@ -21,7 +21,7 @@ from ..utils.logger import get_logger
 from .agent_browser import AgentBrowser
 from .run import Run, TaskResult, TaskStatus
 from .tools import (
-    NavigateTool,
+    GotoTool,
     ClickTool,
     FillTool,
     TypeTool,
@@ -181,7 +181,7 @@ class TaskRunner:
         tool_registry.register(ClickTool(self.browser))
         tool_registry.register(FillTool(self.browser))
         tool_registry.register(TypeTool(self.browser))
-        tool_registry.register(NavigateTool(self.browser))
+        tool_registry.register(GotoTool(self.browser))
         tool_registry.register(UploadTool(self.browser, resources))
 
         # Register tab management tools

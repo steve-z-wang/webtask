@@ -49,22 +49,22 @@ def sample_tools():
         async def execute(self, params: ClickParams) -> None:
             pass
 
-    class NavigateParams(BaseModel):
-        url: str = Field(description="URL to navigate to")
+    class GotoParams(BaseModel):
+        url: str = Field(description="URL to go to")
 
-    class NavigateTool(Tool):
-        name = "navigate"
-        description = "Navigate to a URL"
-        Params = NavigateParams
+    class GotoTool(Tool):
+        name = "goto"
+        description = "Go to a URL"
+        Params = GotoParams
 
         @staticmethod
-        def describe(params: NavigateParams) -> str:
-            return f"Navigated to {params.url}"
+        def describe(params: GotoParams) -> str:
+            return f"Went to {params.url}"
 
-        async def execute(self, params: NavigateParams) -> None:
+        async def execute(self, params: GotoParams) -> None:
             pass
 
-    return [ClickTool(), NavigateTool()]
+    return [ClickTool(), GotoTool()]
 
 
 @pytest.mark.asyncio
@@ -85,10 +85,10 @@ async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
     assert response.tool_calls is not None
     assert len(response.tool_calls) > 0
 
-    # First tool call should be navigate
+    # First tool call should be goto
     first_call = response.tool_calls[0]
     assert isinstance(first_call, ToolCall)
-    assert first_call.name == "navigate"
+    assert first_call.name == "goto"
     assert "url" in first_call.arguments
     assert "example.com" in first_call.arguments["url"]
 
@@ -138,5 +138,5 @@ async def test_bedrock_handles_multiple_tools(bedrock_llm, sample_tools):
     assert response.tool_calls is not None
     assert len(response.tool_calls) >= 1
 
-    # First call should be navigate
-    assert response.tool_calls[0].name == "navigate"
+    # First call should be goto
+    assert response.tool_calls[0].name == "goto"

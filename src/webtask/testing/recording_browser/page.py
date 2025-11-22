@@ -29,18 +29,33 @@ class RecordingPage(Page):
         self._instance_id = instance_id or str(uuid.uuid4())
         self._call_index = 0
 
-    async def navigate(self, url: str):
-        """Navigate to URL."""
+    def __eq__(self, other: object) -> bool:
+        """Check if this is the same page as another."""
+        if not isinstance(other, RecordingPage):
+            return False
+        return self._instance_id == other._instance_id
+
+    def __hash__(self) -> int:
+        """Hash based on instance ID."""
+        return hash(self._instance_id)
+
+    @property
+    def context(self) -> "RecordingContext":
+        """Get the context this page belongs to."""
+        return self._context
+
+    async def goto(self, url: str):
+        """Go to URL."""
         if self._context._browser._is_replaying:
             self._current_url = url
-            self._get_next_result("navigate")
+            self._get_next_result("goto")
             return
 
-        result = await self._page.navigate(url)
+        result = await self._page.goto(url)
         self._current_url = url
 
         if self._context._browser._is_recording:
-            self._record_call("navigate", {"url": url}, None)
+            self._record_call("goto", {"url": url}, None)
 
         return result
 

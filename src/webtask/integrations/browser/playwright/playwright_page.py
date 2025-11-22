@@ -51,14 +51,14 @@ class PlaywrightPage(Page):
             return f"PlaywrightPage(url={self.url!r}, title={title!r})"
         return f"PlaywrightPage(url={self.url!r})"
 
-    async def navigate(self, url: str):
+    async def goto(self, url: str):
         """
-        Navigate to a URL.
+        Go to a URL.
 
         Automatically adds https:// if no protocol is specified.
 
         Args:
-            url: URL to navigate to (e.g., "google.com" or "https://google.com")
+            url: URL to go to (e.g., "google.com" or "https://google.com")
         """
         url = normalize_url(url)
         await self._page.goto(url)

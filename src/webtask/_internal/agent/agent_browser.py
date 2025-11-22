@@ -260,17 +260,17 @@ class AgentBrowser:
         await element.upload_file(file_path)
         await wait(self._wait_after_action)
 
-    async def navigate(self, url: str) -> None:
-        """Navigate to URL and clear context."""
+    async def goto(self, url: str) -> None:
+        """Go to URL and clear context."""
         page = self.get_current_page()
         if page is None:
             if self._context is None:
                 raise RuntimeError(
-                    "Cannot navigate: no tab available and no context to create one. "
+                    "Cannot goto: no tab available and no context to create one. "
                     "Use focus_tab() to select a tab, or set_context() to enable tab creation."
                 )
             page = await self.open_tab()
 
-        await page.navigate(url)
+        await page.goto(url)
         self._dom_context = None
         await wait(self._wait_after_action)

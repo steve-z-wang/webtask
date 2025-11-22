@@ -31,8 +31,8 @@ class TestTaskRunnerSummary:
                     tool_calls=[],
                 ),
                 tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Navigated to https://example.com"],
-                reasoning="I need to navigate first",
+                descriptions=["Went to https://example.com"],
+                reasoning="I need to go to the page first",
             ),
             ToolCallPair(
                 assistant_msg=AssistantMessage(content=[], tool_calls=[]),
@@ -45,9 +45,9 @@ class TestTaskRunnerSummary:
         summary = task_runner._build_summary(pairs)
 
         # Verify format (reasoning as main bullet, actions indented)
-        assert "- I need to navigate first" in summary
+        assert "- I need to go to the page first" in summary
         assert "- Now I'll interact with the page" in summary
-        assert "  - Navigated to https://example.com" in summary
+        assert "  - Went to https://example.com" in summary
         assert "  - Clicked button-5" in summary
         assert "  - Filled input-1 with 'test'" in summary
 
@@ -152,8 +152,8 @@ class TestTaskRunnerSummary:
             ToolCallPair(
                 assistant_msg=AssistantMessage(content=[], tool_calls=[]),
                 tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Navigated to https://example.com/login"],
-                reasoning="I need to navigate to the login page first before I can enter credentials.",
+                descriptions=["Went to https://example.com/login"],
+                reasoning="I need to go to the login page first before I can enter credentials.",
             ),
             ToolCallPair(
                 assistant_msg=AssistantMessage(content=[], tool_calls=[]),
@@ -166,8 +166,8 @@ class TestTaskRunnerSummary:
         summary = task_runner._build_summary(pairs)
 
         expected_lines = [
-            "- I need to navigate to the login page first before I can enter credentials.",
-            "  - Navigated to https://example.com/login",
+            "- I need to go to the login page first before I can enter credentials.",
+            "  - Went to https://example.com/login",
             "- The login page has loaded successfully. I can see two input fields (input-1 and input-2) and a submit button (button-5). I'll fill in the username field first with 'testuser'.",
             "  - Filled input-1 with 'testuser'",
         ]

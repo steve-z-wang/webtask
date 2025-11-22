@@ -37,12 +37,12 @@ class Page(ABC):
         return f"Page(url={self.url!r})"
 
     @abstractmethod
-    async def navigate(self, url: str):
+    async def goto(self, url: str):
         """
-        Navigate to a URL.
+        Go to a URL.
 
         Args:
-            url: URL to navigate to
+            url: URL to go to
         """
         pass
 

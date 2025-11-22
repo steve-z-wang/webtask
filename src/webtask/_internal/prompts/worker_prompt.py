@@ -27,7 +27,7 @@ def build_worker_prompt() -> str:
             "**Think out loud** - Write text explaining what you see in the screenshot and what you plan to do next"
         )
         .add_numbered(
-            "**Execute actions** - Call the necessary browser tools (click, type, fill, navigate, wait)"
+            "**Execute actions** - Call the necessary browser tools (click, type, fill, goto, wait)"
         )
         .add_numbered(
             "**Wait when needed** - Call wait only after actions that trigger page updates (see Q&A for details)"

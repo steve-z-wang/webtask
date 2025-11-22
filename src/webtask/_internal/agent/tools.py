@@ -13,29 +13,29 @@ if TYPE_CHECKING:
 # Browser action tools
 
 
-class NavigateTool(Tool):
-    """Navigate to a URL."""
+class GotoTool(Tool):
+    """Go to a URL."""
 
-    name = "navigate"
-    description = "Navigate to a URL"
+    name = "goto"
+    description = "Go to a URL"
 
     class Params(BaseModel):
-        """Parameters for navigate tool."""
+        """Parameters for goto tool."""
 
-        url: str = Field(description="URL to navigate to")
+        url: str = Field(description="URL to go to")
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize navigate tool with worker browser."""
+        """Initialize goto tool with worker browser."""
         self.browser = browser
 
     @staticmethod
     def describe(params: Params) -> str:
-        """Generate description of navigation action."""
-        return f"Navigated to {params.url}"
+        """Generate description of goto action."""
+        return f"Went to {params.url}"
 
     async def execute(self, params: Params) -> None:
-        """Execute navigation."""
-        await self.browser.navigate(params.url)
+        """Execute goto."""
+        await self.browser.goto(params.url)
 
 
 class ClickTool(Tool):

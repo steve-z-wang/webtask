@@ -239,12 +239,12 @@ class Agent:
 
     async def goto(self, url: str) -> None:
         """
-        Navigate to a URL.
+        Go to a URL.
 
         Args:
-            url: URL to navigate to
+            url: URL to go to
         """
-        await self.browser.navigate(url)
+        await self.browser.goto(url)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False
