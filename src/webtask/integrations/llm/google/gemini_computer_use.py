@@ -146,7 +146,7 @@ class GeminiComputerUse(LLM):
         tool_calls = []
         content_parts = []
 
-        if response.candidates and response.candidates[0].content:
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 # Check for text content
                 if hasattr(part, "text") and part.text:
