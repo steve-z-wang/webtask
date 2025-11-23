@@ -1,10 +1,10 @@
-"""Mappers for transforming between webtask and Gemini formats."""
+"""Mappers for transforming between webtask and Gemini formats (google-genai SDK)."""
 
 import base64
-import io
 from typing import Any, Dict, List, TYPE_CHECKING
-from PIL import Image as PILImage
-from google.generativeai import types, protos
+
+from google.genai import types
+
 from webtask.llm import (
     Message,
     SystemMessage,
@@ -21,74 +21,78 @@ if TYPE_CHECKING:
     from webtask.llm.tool import Tool
 
 
-def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDict]:
+def messages_to_gemini_content(
+    messages: List[Message],
+) -> tuple[List[types.Content], str | None]:
     """
     Convert Message history to Gemini's content format.
 
     Gemini uses alternating user/model roles. System messages are
-    combined with the first user message.
+    extracted separately for use with GenerateContentConfig.system_instruction.
+
+    Returns:
+        Tuple of (gemini_contents, system_instruction)
     """
     gemini_messages = []
-    system_text = None
+    system_instruction = None
 
     for msg in messages:
         if isinstance(msg, SystemMessage):
-            # Extract system text (to be prepended to first user message)
+            # Extract system instruction (to be passed to config separately)
             if msg.content:
-                system_text = "\n\n".join([part.text for part in msg.content])
+                system_instruction = "\n\n".join([part.text for part in msg.content])
 
         elif isinstance(msg, UserMessage):
             # Build parts list (text and images)
             parts = []
 
-            # Prepend system text to first user message
-            if system_text:
-                parts.append(system_text)
-                system_text = None  # Only add once
-
             if msg.content:
                 for content_part in msg.content:
                     if isinstance(content_part, TextContent):
-                        parts.append(content_part.text)
+                        parts.append(types.Part.from_text(text=content_part.text))
                     elif isinstance(content_part, ImageContent):
-                        # Convert base64 to PIL Image
-                        image_bytes = base64.b64decode(content_part.data)
-                        pil_image = PILImage.open(io.BytesIO(image_bytes))
-                        parts.append(pil_image)
+                        # Convert base64 to inline data
+                        parts.append(
+                            types.Part.from_bytes(
+                                data=base64.b64decode(content_part.data),
+                                mime_type=content_part.mime_type.value,
+                            )
+                        )
 
             # Only add message if parts is not empty (Gemini requires at least one part)
             if parts:
-                gemini_messages.append({"role": "user", "parts": parts})
+                gemini_messages.append(types.Content(role="user", parts=parts))
 
         elif isinstance(msg, AssistantMessage):
             # Assistant message with tool calls
-            # Gemini expects function calls in a specific format
             parts = []
 
             # Include content if present
             if msg.content:
                 for content_part in msg.content:
                     if isinstance(content_part, TextContent):
-                        parts.append(content_part.text)
+                        parts.append(types.Part.from_text(text=content_part.text))
                     elif isinstance(content_part, ImageContent):
-                        image_bytes = base64.b64decode(content_part.data)
-                        pil_image = PILImage.open(io.BytesIO(image_bytes))
-                        parts.append(pil_image)
+                        parts.append(
+                            types.Part.from_bytes(
+                                data=base64.b64decode(content_part.data),
+                                mime_type=content_part.mime_type.value,
+                            )
+                        )
 
             # Add tool calls as function call parts
             if msg.tool_calls:
                 for tool_call in msg.tool_calls:
                     parts.append(
-                        protos.Part(
-                            function_call=protos.FunctionCall(
-                                name=tool_call.name, args=tool_call.arguments
-                            )
+                        types.Part.from_function_call(
+                            name=tool_call.name,
+                            args=tool_call.arguments,
                         )
                     )
 
             # Only add message if parts is not empty (Gemini requires at least one part)
             if parts:
-                gemini_messages.append({"role": "model", "parts": parts})
+                gemini_messages.append(types.Content(role="model", parts=parts))
 
         elif isinstance(msg, ToolResultMessage):
             # Tool results message - convert to Gemini function response
@@ -101,10 +105,9 @@ def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDic
                     response_data["error"] = result.error
 
                 parts.append(
-                    protos.Part(
-                        function_response=protos.FunctionResponse(
-                            name=result.name, response=response_data
-                        )
+                    types.Part.from_function_response(
+                        name=result.name,
+                        response=response_data,
                     )
                 )
 
@@ -112,15 +115,18 @@ def messages_to_gemini_content(messages: List[Message]) -> List[types.ContentDic
             if msg.content:
                 for content_part in msg.content:
                     if isinstance(content_part, TextContent):
-                        parts.append(content_part.text)
+                        parts.append(types.Part.from_text(text=content_part.text))
                     elif isinstance(content_part, ImageContent):
-                        image_bytes = base64.b64decode(content_part.data)
-                        pil_image = PILImage.open(io.BytesIO(image_bytes))
-                        parts.append(pil_image)
+                        parts.append(
+                            types.Part.from_bytes(
+                                data=base64.b64decode(content_part.data),
+                                mime_type=content_part.mime_type.value,
+                            )
+                        )
 
-            gemini_messages.append({"role": "user", "parts": parts})
+            gemini_messages.append(types.Content(role="user", parts=parts))
 
-    return gemini_messages
+    return gemini_messages, system_instruction
 
 
 def clean_schema_for_gemini(schema: Dict[str, Any]) -> Dict[str, Any]:
@@ -184,49 +190,8 @@ def clean_schema_for_gemini(schema: Dict[str, Any]) -> Dict[str, Any]:
     return cleaned
 
 
-def convert_gemini_types(value: Any) -> Any:
-    """
-    Recursively convert Gemini-specific types to standard Python types.
-
-    Converts:
-    - MapComposite → dict
-    - RepeatedComposite → list
-    - Nested structures recursively
-    - Primitives (str, int, float, bool, None) remain as-is
-
-    Args:
-        value: Value to convert (may be MapComposite, RepeatedComposite, dict, list, or primitive)
-
-    Returns:
-        Standard Python type (dict, list, or primitive)
-    """
-    # Check if it's a MapComposite (dict-like Gemini type)
-    if (
-        hasattr(value, "__iter__")
-        and hasattr(value, "keys")
-        and not isinstance(value, (str, bytes))
-    ):
-        # Convert to dict and recursively convert all values
-        return {k: convert_gemini_types(v) for k, v in dict(value).items()}
-
-    # Check if it's a RepeatedComposite or list
-    elif isinstance(value, (list, tuple)) or (
-        hasattr(value, "__iter__") and not isinstance(value, (str, bytes, dict))
-    ):
-        # Convert to list and recursively convert all items
-        try:
-            return [convert_gemini_types(item) for item in value]
-        except TypeError:
-            # Not iterable in the way we expect, return as-is
-            return value
-
-    # Primitives (str, int, float, bool, None) - return as-is
-    else:
-        return value
-
-
-def build_tool_declarations(tools: List["Tool"]) -> types.Tool:
-    """Build Gemini function declarations from tools."""
+def build_tool_config(tools: List["Tool"]) -> types.Tool:
+    """Build Gemini Tool with function declarations from tools."""
     function_declarations = []
 
     for tool in tools:
@@ -254,14 +219,18 @@ def gemini_response_to_assistant_message(response) -> "AssistantMessage":
 
     if response.candidates and response.candidates[0].content:
         for part in response.candidates[0].content.parts:
+            # Check for text content
             if hasattr(part, "text") and part.text:
                 content_parts.append(TextContent(text=part.text))
+            # Check for function call
             elif hasattr(part, "function_call") and part.function_call:
-                # Convert arguments recursively to handle nested MapComposite/RepeatedComposite
+                fc = part.function_call
+                # Convert args to dict - in new SDK args is already a dict-like object
+                args = dict(fc.args) if fc.args else {}
                 tool_calls.append(
                     ToolCall(
-                        name=part.function_call.name,
-                        arguments=convert_gemini_types(part.function_call.args),
+                        name=fc.name,
+                        arguments=args,
                     )
                 )
 

@@ -2,15 +2,15 @@
 
 from typing import Optional, List, TYPE_CHECKING
 
-import google.generativeai as genai
-from google.generativeai import protos
+from google import genai
+from google.genai import types
 
 from webtask.llm import LLM
 from webtask.llm.message import Message, AssistantMessage
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .gemini_mapper import (
     messages_to_gemini_content,
-    build_tool_declarations,
+    build_tool_config,
     gemini_response_to_assistant_message,
 )
 
@@ -36,12 +36,11 @@ class Gemini(LLM):
         """
         super().__init__()
 
-        if api_key:
-            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
+        # Create client - will use GEMINI_API_KEY or GOOGLE_API_KEY env var if not provided
+        self._client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
         self.model_name = model
         self.temperature = temperature
-        self.model = genai.GenerativeModel(model_name=model)  # type: ignore[attr-defined]
         self._debugger = LLMContextDebugger()
 
     async def call_tools(
@@ -50,24 +49,23 @@ class Gemini(LLM):
         tools: List["Tool"],
     ) -> AssistantMessage:
         """Generate response with tool calling."""
-        gemini_content = messages_to_gemini_content(messages)
-        gemini_tools = build_tool_declarations(tools)
+        gemini_content, system_instruction = messages_to_gemini_content(messages)
+        tool_config = build_tool_config(tools)
 
-        generation_config = genai.GenerationConfig(  # type: ignore[attr-defined]
-            temperature=self.temperature
+        config = types.GenerateContentConfig(
+            temperature=self.temperature,
+            system_instruction=system_instruction,
+            tools=[tool_config],
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=True  # We handle function calling ourselves
+            ),
         )
 
-        tool_config = protos.ToolConfig(
-            function_calling_config=protos.FunctionCallingConfig(
-                mode=protos.FunctionCallingConfig.Mode.AUTO,
-            )
-        )
-
-        response = await self.model.generate_content_async(
-            gemini_content,
-            generation_config=generation_config,
-            tools=[gemini_tools],
-            tool_config=tool_config,
+        # Use async client
+        response = await self._client.aio.models.generate_content(
+            model=self.model_name,
+            contents=gemini_content,
+            config=config,
         )
 
         # Log token usage
