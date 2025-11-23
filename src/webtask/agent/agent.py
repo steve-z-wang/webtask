@@ -4,9 +4,21 @@ import logging
 from typing import List, Optional, Type
 from pydantic import BaseModel, Field
 from webtask.llm import LLM
+from webtask.llm.tool import Tool
 from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Run, TaskStatus
+from webtask._internal.agent.file_manager import FileManager
+from webtask._internal.agent.tools import (
+    GotoTool,
+    ClickTool,
+    FillTool,
+    TypeTool,
+    UploadTool,
+    WaitTool,
+    OpenTabTool,
+    SwitchTabTool,
+)
 from webtask.exceptions import (
     TaskAbortedError,
     VerificationAbortedError,
@@ -56,12 +68,36 @@ class Agent:
         # This preserves page state between tasks
         self.browser = AgentBrowser(context=context)
 
-        # Create TaskRunner once - stateless executor reused across all do() calls
-        self.task_runner = TaskRunner(llm=llm, browser=self.browser)
-
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
         self._previous_runs: List[Run] = []
+
+    def _create_browser_tools(
+        self, file_manager: Optional[FileManager] = None
+    ) -> List[Tool]:
+        """Create browser tools for task execution.
+
+        Args:
+            file_manager: Optional FileManager for upload tool
+
+        Returns:
+            List of browser tools
+        """
+        tools: List[Tool] = [
+            GotoTool(self.browser),
+            ClickTool(self.browser),
+            FillTool(self.browser),
+            TypeTool(self.browser),
+            WaitTool(),
+            OpenTabTool(self.browser),
+            SwitchTabTool(self.browser),
+        ]
+
+        # Add upload tool only if file_manager is provided
+        if file_manager is not None:
+            tools.append(UploadTool(self.browser, file_manager))
+
+        return tools
 
     async def _run_task(
         self,
@@ -91,15 +127,43 @@ class Agent:
         Raises:
             exception_class: If task is aborted
         """
+        from webtask.llm.message import Content, TextContent
+
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(mode)
 
-        run = await self.task_runner.run(
+        # Create file manager for this run
+        file_manager = FileManager(files) if files else None
+
+        # Create browser tools (including upload tool if files provided)
+        tools = self._create_browser_tools(file_manager)
+
+        # Create get_context callback that includes page context + file context
+        async def get_context() -> List[Content]:
+            content: List[Content] = []
+
+            # Add file context first (if files provided)
+            if file_manager and not file_manager.is_empty():
+                content.append(TextContent(text=file_manager.format_context()))
+
+            # Add page context (tabs, DOM, screenshot)
+            page_context = await self.browser.get_page_context()
+            content.extend(page_context)
+
+            return content
+
+        # Create TaskRunner for this run with tools and context callback
+        task_runner = TaskRunner(
+            llm=self.llm,
+            tools=tools,
+            get_context=get_context,
+        )
+
+        run = await task_runner.run(
             task,
             max_steps,
             previous_runs=self._previous_runs if self.stateful else None,
             output_schema=output_schema,
-            files=files,
         )
 
         if self.stateful:

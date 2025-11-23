@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from webtask._internal.agent.tools import UploadTool
 from webtask._internal.agent.file_manager import FileManager
+from webtask.llm.message import ToolResultStatus
 
 pytestmark = pytest.mark.unit
 
@@ -20,27 +21,6 @@ def mock_browser():
 class TestUploadTool:
     """Tests for UploadTool."""
 
-    @pytest.mark.unit
-    def test_is_enabled_with_files(self, mock_browser):
-        """Test tool is enabled when files are provided."""
-        fm = FileManager(["/path/to/file.jpg"])
-        tool = UploadTool(mock_browser, fm)
-        assert tool.is_enabled() is True
-
-    @pytest.mark.unit
-    def test_is_disabled_without_files(self, mock_browser):
-        """Test tool is disabled when no files are provided."""
-        fm = FileManager(None)
-        tool = UploadTool(mock_browser, fm)
-        assert tool.is_enabled() is False
-
-    @pytest.mark.unit
-    def test_is_disabled_with_empty_files(self, mock_browser):
-        """Test tool is disabled when files list is empty."""
-        fm = FileManager([])
-        tool = UploadTool(mock_browser, fm)
-        assert tool.is_enabled() is False
-
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_upload_single_file(self, mock_browser):
@@ -55,9 +35,12 @@ class TestUploadTool:
             description="Profile photo upload",
         )
 
-        await tool.execute(params)
+        result = await tool.execute(params)
 
         mock_browser.upload.assert_called_once_with("[input-0]", "/path/to/photo.jpg")
+        assert result.status == ToolResultStatus.SUCCESS
+        assert "Uploaded files [0]" in result.description
+        assert "Profile photo upload" in result.description
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -73,11 +56,15 @@ class TestUploadTool:
             description="Photo gallery upload",
         )
 
-        await tool.execute(params)
+        result = await tool.execute(params)
 
         mock_browser.upload.assert_called_once_with(
             "[input-0]", ["/path/to/photo1.jpg", "/path/to/photo3.jpg"]
         )
+        assert result.status == ToolResultStatus.SUCCESS
+        assert "[0]" in result.description
+        assert "[2]" in result.description
+        assert "Photo gallery upload" in result.description
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -94,27 +81,3 @@ class TestUploadTool:
 
         with pytest.raises(ValueError, match="File index 5 out of range"):
             await tool.execute(params)
-
-    @pytest.mark.unit
-    def test_describe_single_file(self):
-        """Test description generation for single file."""
-        params = UploadTool.Params(
-            element_id="[input-0]",
-            file_indexes=[0],
-            description="Profile photo",
-        )
-
-        desc = UploadTool.describe(params)
-        assert desc == "Uploaded files [0] to Profile photo"
-
-    @pytest.mark.unit
-    def test_describe_multiple_files(self):
-        """Test description generation for multiple files."""
-        params = UploadTool.Params(
-            element_id="[input-0]",
-            file_indexes=[0, 1, 2],
-            description="Photo gallery",
-        )
-
-        desc = UploadTool.describe(params)
-        assert desc == "Uploaded files [0], [1], [2] to Photo gallery"

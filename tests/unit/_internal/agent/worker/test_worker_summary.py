@@ -1,11 +1,37 @@
 """Unit tests for TaskRunner summary generation with reasoning."""
 
 import pytest
-from webtask._internal.agent.task_runner import TaskRunner, ToolCallPair
+from webtask._internal.agent.task_runner import TaskRunner, MessagePair
 from webtask._internal.agent.run import Run, TaskResult, TaskStatus
 from webtask.llm import AssistantMessage, ToolResultMessage, TextContent
+from webtask.llm.message import ToolResult, ToolResultStatus
 
 pytestmark = pytest.mark.unit
+
+
+def create_message_pair(
+    reasoning: str | None = None,
+    descriptions: list[str] | None = None,
+) -> MessagePair:
+    """Helper to create a MessagePair (tuple of AssistantMessage, ToolResultMessage)."""
+    # Create assistant message with reasoning as text content
+    content = [TextContent(text=reasoning)] if reasoning else []
+    assistant_msg = AssistantMessage(content=content, tool_calls=[])
+
+    # Create tool results with descriptions
+    results = []
+    for desc in descriptions or []:
+        results.append(
+            ToolResult(
+                name="test_tool",
+                status=ToolResultStatus.SUCCESS,
+                description=desc,
+            )
+        )
+
+    tool_result_msg = ToolResultMessage(results=results, content=[])
+
+    return (assistant_msg, tool_result_msg)
 
 
 class TestTaskRunnerSummary:
@@ -15,30 +41,25 @@ class TestTaskRunnerSummary:
     def task_runner(self, mocker):
         """Create a TaskRunner instance with mocked dependencies."""
         mock_llm = mocker.Mock()
-        mock_browser = mocker.Mock()
+        mock_tools = []
+        mock_get_context = mocker.AsyncMock(return_value=[])
         return TaskRunner(
             llm=mock_llm,
-            browser=mock_browser,
+            tools=mock_tools,
+            get_context=mock_get_context,
         )
 
     @pytest.mark.unit
     def test_build_summary_with_reasoning_and_actions(self, task_runner):
         """Test summary includes reasoning and actions in correct format."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(
-                    content=[TextContent(text="I need to navigate first")],
-                    tool_calls=[],
-                ),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Went to https://example.com"],
+            create_message_pair(
                 reasoning="I need to go to the page first",
+                descriptions=["Went to https://example.com"],
             ),
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Clicked button-5", "Filled input-1 with 'test'"],
+            create_message_pair(
                 reasoning="Now I'll interact with the page",
+                descriptions=["Clicked button-5", "Filled input-1 with 'test'"],
             ),
         ]
 
@@ -55,11 +76,9 @@ class TestTaskRunnerSummary:
     def test_build_summary_with_multiline_reasoning(self, task_runner):
         """Test summary handles multiline reasoning correctly."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Clicked button-1"],
+            create_message_pair(
                 reasoning="First line of reasoning\nSecond line of reasoning\nThird line",
+                descriptions=["Clicked button-1"],
             ),
         ]
 
@@ -75,11 +94,9 @@ class TestTaskRunnerSummary:
     def test_build_summary_without_reasoning(self, task_runner):
         """Test summary works when reasoning is None."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Waited 1.0 seconds"],
+            create_message_pair(
                 reasoning=None,
+                descriptions=["Waited 1.0 seconds"],
             ),
         ]
 
@@ -98,23 +115,14 @@ class TestTaskRunnerSummary:
     def test_build_summary_multiple_steps(self, task_runner):
         """Test summary handles multiple pairs correctly."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Action 1"],
-                reasoning="Step 1 reasoning",
+            create_message_pair(
+                reasoning="Step 1 reasoning", descriptions=["Action 1"]
             ),
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Action 2"],
-                reasoning="Step 2 reasoning",
+            create_message_pair(
+                reasoning="Step 2 reasoning", descriptions=["Action 2"]
             ),
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Action 3"],
-                reasoning="Step 3 reasoning",
+            create_message_pair(
+                reasoning="Step 3 reasoning", descriptions=["Action 3"]
             ),
         ]
 
@@ -132,11 +140,9 @@ class TestTaskRunnerSummary:
     def test_build_summary_with_no_actions(self, task_runner):
         """Test summary when step has reasoning but no actions."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=[],
+            create_message_pair(
                 reasoning="Thinking but no actions taken",
+                descriptions=[],
             ),
         ]
 
@@ -149,17 +155,13 @@ class TestTaskRunnerSummary:
     def test_summary_format_matches_specification(self, task_runner):
         """Test that the summary format exactly matches the implemented format."""
         pairs = [
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Went to https://example.com/login"],
+            create_message_pair(
                 reasoning="I need to go to the login page first before I can enter credentials.",
+                descriptions=["Went to https://example.com/login"],
             ),
-            ToolCallPair(
-                assistant_msg=AssistantMessage(content=[], tool_calls=[]),
-                tool_result_msg=ToolResultMessage(results=[], content=[]),
-                descriptions=["Filled input-1 with 'testuser'"],
+            create_message_pair(
                 reasoning="The login page has loaded successfully. I can see two input fields (input-1 and input-2) and a submit button (button-5). I'll fill in the username field first with 'testuser'.",
+                descriptions=["Filled input-1 with 'testuser'"],
             ),
         ]
 
@@ -182,10 +184,12 @@ class TestTaskRunnerPreviousRuns:
     def task_runner(self, mocker):
         """Create a TaskRunner instance with mocked dependencies."""
         mock_llm = mocker.Mock()
-        mock_browser = mocker.Mock()
+        mock_tools = []
+        mock_get_context = mocker.AsyncMock(return_value=[])
         return TaskRunner(
             llm=mock_llm,
-            browser=mock_browser,
+            tools=mock_tools,
+            get_context=mock_get_context,
         )
 
     @pytest.mark.unit

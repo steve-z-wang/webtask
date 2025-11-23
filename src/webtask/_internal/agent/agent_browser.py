@@ -2,6 +2,7 @@
 
 from typing import List, Optional, Union
 from webtask.browser import Page, Context
+from webtask.llm.message import Content, TextContent, ImageContent, ImageMimeType
 from ..context import LLMDomContext
 from ..utils.wait import wait
 import base64
@@ -274,3 +275,34 @@ class AgentBrowser:
         await page.goto(url)
         self._dom_context = None
         await wait(self._wait_after_action)
+
+    async def get_page_context(self) -> List[Content]:
+        """Get current page context (tabs, DOM, screenshot) as Content list.
+
+        Returns:
+            List of Content objects containing:
+            - TextContent with tabs info (tag="tabs_context")
+            - TextContent with DOM snapshot (tag="dom_snapshot")
+            - ImageContent with screenshot (tag="screenshot")
+        """
+        content: List[Content] = []
+
+        # Add tabs context
+        tabs_context = self.get_tabs_context()
+        content.append(TextContent(text=tabs_context, tag="tabs_context"))
+
+        # Add DOM snapshot
+        dom_snapshot = await self.get_dom_snapshot()
+        if dom_snapshot:
+            content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
+
+        # Add screenshot
+        screenshot_b64 = await self.get_screenshot()
+        if screenshot_b64:
+            content.append(
+                ImageContent(
+                    data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="screenshot"
+                )
+            )
+
+        return content

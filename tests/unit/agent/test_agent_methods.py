@@ -1,10 +1,11 @@
 """Unit tests for Agent convenience methods."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from webtask.agent import Agent
 from webtask.browser import Context
 from webtask._internal.agent.run import Run, TaskResult, TaskStatus
+from webtask._internal.agent.task_runner import TaskRunner
 from webtask.exceptions import (
     TaskAbortedError,
     VerificationAbortedError,
@@ -136,7 +137,7 @@ async def test_do_throws_on_abort(mocker):
 
     agent = Agent(llm=mock_llm, context=mock_context)
 
-    # Mock task_runner.run to return aborted result
+    # Mock TaskRunner.run to return aborted result
     mock_run = Run(
         result=TaskResult(
             status=TaskStatus.ABORTED, feedback="Could not complete task"
@@ -147,12 +148,12 @@ async def test_do_throws_on_abort(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    with pytest.raises(TaskAbortedError, match="Could not complete task"):
-        await agent.do("test task")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
+
+        with pytest.raises(TaskAbortedError, match="Could not complete task"):
+            await agent.do("test task")
 
 
 @pytest.mark.unit
@@ -164,7 +165,7 @@ async def test_do_returns_result_on_success(mocker):
 
     agent = Agent(llm=mock_llm, context=mock_context)
 
-    # Mock task_runner.run to return completed result
+    # Mock TaskRunner.run to return completed result
     mock_run = Run(
         result=TaskResult(
             status=TaskStatus.COMPLETED,
@@ -177,14 +178,14 @@ async def test_do_returns_result_on_success(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    result = await agent.do("test task")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
 
-    assert result.feedback == "Task completed successfully"
-    assert result.output == {"key": "value"}
+        result = await agent.do("test task")
+
+        assert result.feedback == "Task completed successfully"
+        assert result.output == {"key": "value"}
 
 
 @pytest.mark.unit
@@ -196,7 +197,7 @@ async def test_verify_throws_on_abort(mocker):
 
     agent = Agent(llm=mock_llm, context=mock_context)
 
-    # Mock task_runner.run to return aborted result
+    # Mock TaskRunner.run to return aborted result
     mock_run = Run(
         result=TaskResult(status=TaskStatus.ABORTED, feedback="Could not verify"),
         summary="",
@@ -205,12 +206,12 @@ async def test_verify_throws_on_abort(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    with pytest.raises(VerificationAbortedError, match="Could not verify"):
-        await agent.verify("cart has 7 items")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
+
+        with pytest.raises(VerificationAbortedError, match="Could not verify"):
+            await agent.verify("cart has 7 items")
 
 
 @pytest.mark.unit
@@ -239,15 +240,15 @@ async def test_verify_returns_verdict_on_success(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    verdict = await agent.verify("cart has 7 items")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
 
-    assert verdict.passed is True
-    assert verdict.feedback == "Condition is true"
-    assert bool(verdict) is True
+        verdict = await agent.verify("cart has 7 items")
+
+        assert verdict.passed is True
+        assert verdict.feedback == "Condition is true"
+        assert bool(verdict) is True
 
 
 @pytest.mark.unit
@@ -259,7 +260,7 @@ async def test_extract_throws_on_abort(mocker):
 
     agent = Agent(llm=mock_llm, context=mock_context)
 
-    # Mock task_runner.run to return aborted result
+    # Mock TaskRunner.run to return aborted result
     mock_run = Run(
         result=TaskResult(status=TaskStatus.ABORTED, feedback="Could not extract"),
         summary="",
@@ -268,12 +269,12 @@ async def test_extract_throws_on_abort(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    with pytest.raises(ExtractionAbortedError, match="Could not extract"):
-        await agent.extract("total price")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
+
+        with pytest.raises(ExtractionAbortedError, match="Could not extract"):
+            await agent.extract("total price")
 
 
 @pytest.mark.unit
@@ -301,13 +302,13 @@ async def test_extract_returns_string_on_success(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    result = await agent.extract("total price")
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
 
-    assert result == "$99.99"
+        result = await agent.extract("total price")
+
+        assert result == "$99.99"
 
 
 @pytest.mark.unit
@@ -340,12 +341,12 @@ async def test_extract_returns_structured_output_with_schema(mocker):
         steps_used=1,
         max_steps=10,
     )
-    mocker.patch.object(agent.task_runner, "run", return_value=mock_run)
-    mocker.patch.object(agent.browser, "set_wait_after_action")
-    mocker.patch.object(agent.browser, "set_mode")
 
-    result = await agent.extract("product info", ProductInfo)
+    with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
+        mock_task_run.return_value = mock_run
 
-    assert isinstance(result, ProductInfo)
-    assert result.name == "Widget"
-    assert result.price == 29.99
+        result = await agent.extract("product info", ProductInfo)
+
+        assert isinstance(result, ProductInfo)
+        assert result.name == "Widget"
+        assert result.price == 29.99

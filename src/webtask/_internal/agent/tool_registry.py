@@ -1,9 +1,9 @@
 """Tool registry for agent tools."""
 
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List
 from webtask.llm.tool import Tool
-from webtask.llm import ToolResult, ToolResultStatus
+from webtask.llm.message import ToolResult, ToolResultStatus
 
 
 class ToolRegistry:
@@ -26,19 +26,16 @@ class ToolRegistry:
         return self._tools[name]
 
     def get_all(self) -> List[Tool]:
-        """Get all enabled tools."""
-        return [tool for tool in self._tools.values() if tool.is_enabled()]
+        """Get all registered tools."""
+        return list(self._tools.values())
 
     def clear(self) -> None:
         """Clear all registered tools from the registry."""
         self._tools.clear()
 
-    async def execute_tool_calls(
-        self, tool_calls: List
-    ) -> Tuple[List["ToolResult"], List[str]]:
-        """Execute multiple tool calls in batch, stopping early if any tool fails or terminal tool succeeds."""
+    async def execute_tool_calls(self, tool_calls: List) -> List[ToolResult]:
+        """Execute multiple tool calls in batch, stopping early if any tool fails or is terminal."""
         results = []
-        descriptions = []
         executed_count = 0
 
         for idx, tool_call in enumerate(tool_calls):
@@ -54,13 +51,13 @@ class ToolRegistry:
                         name=tool_call.name,
                         status=ToolResultStatus.ERROR,
                         error=error_msg,
+                        description=f"{tool_call.name} (ERROR: Tool not found)",
                     )
                     results.append(result)
-                    descriptions.append(f"{tool_call.name} (ERROR: Tool not found)")
                     executed_count = idx + 1
                     break  # Stop on tool not found
 
-                # Validate parameters and execute tool
+                # Validate parameters
                 params = tool.Params(**tool_call.arguments)
 
                 # Log tool execution start
@@ -68,26 +65,17 @@ class ToolRegistry:
                     f"Executing tool: {tool_call.name} with params: {tool_call.arguments}"
                 )
 
-                # Execute tool and capture output
-                await tool.execute(params)
-
-                # Create success result
-                result = ToolResult(
-                    tool_call_id=tool_call.id,
-                    name=tool_call.name,
-                    status=ToolResultStatus.SUCCESS,
-                )
+                # Execute tool and get result
+                result = await tool.execute(params)
+                result.tool_call_id = tool_call.id
                 results.append(result)
                 executed_count = idx + 1
 
-                description = tool.describe(params)
-                descriptions.append(description)
-
                 # Log tool execution success
-                self._logger.info(f"Tool executed successfully: {description}")
+                self._logger.info(f"Tool executed successfully: {result.description}")
 
-                # If terminal tool succeeded, stop execution
-                if tool.is_terminal:
+                # If terminal tool succeeded or error occurred, stop execution
+                if result.terminal or result.status == ToolResultStatus.ERROR:
                     break
 
             except Exception as e:
@@ -101,9 +89,9 @@ class ToolRegistry:
                     name=tool_call.name,
                     status=ToolResultStatus.ERROR,
                     error=error_msg,
+                    description=f"{tool_call.name} (ERROR: {error_msg})",
                 )
                 results.append(result)
-                descriptions.append(f"{tool_call.name} (ERROR: {error_msg})")
                 executed_count = idx + 1
                 break  # Stop on any error
 
@@ -113,10 +101,12 @@ class ToolRegistry:
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 status=ToolResultStatus.ERROR,
-                error="Skipped due to previous tool failure",
+                error="Skipped due to previous tool failure or terminal action",
+                description=f"{tool_call.name} (SKIPPED)",
             )
             results.append(result)
-            descriptions.append(f"{tool_call.name} (SKIPPED)")
-            self._logger.info(f"Tool skipped: {tool_call.name} (previous tool failed)")
+            self._logger.info(
+                f"Tool skipped: {tool_call.name} (previous tool failed or terminal)"
+            )
 
-        return results, descriptions
+        return results

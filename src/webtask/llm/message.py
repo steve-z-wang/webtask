@@ -67,17 +67,21 @@ class ToolCall(BaseModel):
 
 
 class ToolResult(BaseModel):
-    """Acknowledgment of tool execution."""
+    """Result of tool execution."""
 
     tool_call_id: Optional[str] = None  # Match by ID if available (OpenAI/Anthropic)
     name: str  # Tool name
     status: ToolResultStatus  # Execution status
     error: Optional[str] = None  # Error message if status is ERROR
+    description: str = ""  # Human-readable description of action taken
+    terminal: bool = False  # If True, task should stop after this tool
 
     def __str__(self) -> str:
         parts = [f"{self.name}: {self.status.value}"]
         if self.error:
             parts.append(f"error={self.error}")
+        if self.terminal:
+            parts.append("terminal")
         return f"ToolResult({', '.join(parts)})"
 
 

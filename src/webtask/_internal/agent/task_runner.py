@@ -1,7 +1,6 @@
 """TaskRunner - executes one task with conversation-based LLM."""
 
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, TYPE_CHECKING, Type
+from typing import Awaitable, Callable, List, Optional, Tuple, TYPE_CHECKING, Type
 from pydantic import BaseModel
 from webtask.llm import (
     Message,
@@ -11,63 +10,45 @@ from webtask.llm import (
     ToolResultMessage,
     Content,
     TextContent,
-    ImageContent,
-    ImageMimeType,
 )
+from webtask.llm.tool import Tool
 from webtask._internal.llm import purge_messages_content
 from .tool_registry import ToolRegistry
 from ..prompts.worker_prompt import build_worker_prompt
 from ..utils.logger import get_logger
-from .agent_browser import AgentBrowser
 from .run import Run, TaskResult, TaskStatus
-from .tools import (
-    GotoTool,
-    ClickTool,
-    FillTool,
-    TypeTool,
-    UploadTool,
-    WaitTool,
-    OpenTabTool,
-    SwitchTabTool,
-    CompleteWorkTool,
-    AbortWorkTool,
-)
-from .file_manager import FileManager
+from .tools import CompleteWorkTool, AbortWorkTool
 
 if TYPE_CHECKING:
     from webtask.llm.llm import LLM
 
-
-@dataclass
-class ToolCallPair:
-    """Pair of assistant message and tool result message from one execution step.
-
-    This is the single source of truth for a step's execution, containing:
-    - The assistant's tool calls
-    - The results of executing those tools
-    - Human-readable descriptions of the actions taken
-    - The assistant's reasoning/thoughts before taking actions
-    """
-
-    assistant_msg: AssistantMessage
-    tool_result_msg: ToolResultMessage
-    descriptions: List[str]  # Action descriptions for summary generation
-    reasoning: Optional[str] = None  # LLM's thoughts/reasoning before actions
+# Type alias for message pairs
+MessagePair = Tuple[AssistantMessage, ToolResultMessage]
 
 
 class TaskRunner:
     """Task executor - executes one task with conversation-based LLM.
 
-    Stateless executor that can be reused across multiple runs.
+    Accepts browser tools and a context callback from outside.
+    Creates control tools (complete_work, abort_work) internally.
     """
 
     def __init__(
         self,
         llm: "LLM",
-        browser: AgentBrowser,
+        tools: List[Tool],
+        get_context: Callable[[], Awaitable[List[Content]]],
     ):
+        """Initialize TaskRunner.
+
+        Args:
+            llm: LLM instance for making tool calls
+            tools: List of browser tools (click, fill, goto, etc.)
+            get_context: Async callback that returns page context as Content list
+        """
         self._llm = llm
-        self.browser = browser
+        self._tools = tools
+        self._get_context = get_context
         self._logger = get_logger(__name__)
 
     async def run(
@@ -76,24 +57,20 @@ class TaskRunner:
         max_steps: int,
         previous_runs: Optional[List[Run]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
-        files: Optional[List[str]] = None,
     ) -> Run:
         # Create result object for this run
         result = TaskResult()
 
-        # Create file manager for this run
-        file_manager = FileManager(files)
-
-        # Setup tool registry for this run
-        tool_registry = self._setup_tools(result, file_manager, output_schema)
+        # Setup tool registry for this run (browser tools + control tools)
+        tool_registry = self._setup_tools(result, output_schema)
 
         session_start_messages = await self._build_session_start_messages(
-            task, previous_runs, file_manager
+            task, previous_runs
         )
 
         self._logger.info(f"Task start - Task: {task}")
 
-        pairs: List[ToolCallPair] = []
+        pairs: List[MessagePair] = []
         for step in range(max_steps):
             self._logger.info(f"Step {step + 1} - Start")
 
@@ -116,23 +93,18 @@ class TaskRunner:
             if reasoning:
                 self._logger.info(f"Reasoning: {reasoning}")
 
-            tool_results, descriptions = await tool_registry.execute_tool_calls(
+            tool_results = await tool_registry.execute_tool_calls(
                 assistant_msg.tool_calls or []
             )
 
-            content, dom_snapshot, screenshot_b64 = await self._get_page_state_content()
+            # Get page context after tool execution
+            page_context = await self._get_context()
 
             tool_result_msg = ToolResultMessage(
                 results=tool_results,
-                content=content,
+                content=page_context,
             )
-            pair = ToolCallPair(
-                assistant_msg=assistant_msg,
-                tool_result_msg=tool_result_msg,
-                descriptions=descriptions,
-                reasoning=reasoning,
-            )
-            pairs.append(pair)
+            pairs.append((assistant_msg, tool_result_msg))
 
             self._logger.info(f"Step {step + 1} - End")
 
@@ -152,10 +124,23 @@ class TaskRunner:
         summary = self._build_summary(pairs)
 
         # Convert pairs to full message list
-        messages = []
-        for pair in pairs:
-            messages.append(pair.assistant_msg)
-            messages.append(pair.tool_result_msg)
+        messages: List[Message] = []
+        for assistant_msg, tool_result_msg in pairs:
+            messages.append(assistant_msg)
+            messages.append(tool_result_msg)
+
+        # Extract final state from last pair
+        final_dom = ""
+        final_screenshot = None
+        if pairs:
+            _, last_tool_result = pairs[-1]
+            if last_tool_result.content:
+                for content in last_tool_result.content:
+                    if hasattr(content, "tag"):
+                        if content.tag == "dom_snapshot" and hasattr(content, "text"):
+                            final_dom = content.text
+                        elif content.tag == "screenshot" and hasattr(content, "data"):
+                            final_screenshot = content.data
 
         # Build and return Run with embedded Result
         return Run(
@@ -165,8 +150,8 @@ class TaskRunner:
             task_description=task,
             steps_used=steps_used,
             max_steps=max_steps,
-            final_dom=dom_snapshot,
-            final_screenshot=screenshot_b64,
+            final_dom=final_dom,
+            final_screenshot=final_screenshot,
         )
 
     ### Helper methods ###
@@ -174,25 +159,19 @@ class TaskRunner:
     def _setup_tools(
         self,
         result: TaskResult,
-        file_manager: FileManager,
         output_schema: Optional[Type[BaseModel]],
     ) -> ToolRegistry:
-        """Create and configure tool registry for this run."""
+        """Create and configure tool registry for this run.
+
+        Registers browser tools (passed via constructor) and control tools.
+        """
         tool_registry = ToolRegistry()
 
-        # Register browser action tools
-        tool_registry.register(WaitTool())
-        tool_registry.register(ClickTool(self.browser))
-        tool_registry.register(FillTool(self.browser))
-        tool_registry.register(TypeTool(self.browser))
-        tool_registry.register(GotoTool(self.browser))
-        tool_registry.register(UploadTool(self.browser, file_manager))
+        # Register browser tools (injected from outside)
+        for tool in self._tools:
+            tool_registry.register(tool)
 
-        # Register tab management tools
-        tool_registry.register(OpenTabTool(self.browser))
-        tool_registry.register(SwitchTabTool(self.browser))
-
-        # Register control tools
+        # Register control tools (created internally)
         tool_registry.register(CompleteWorkTool(result, output_schema))
         tool_registry.register(AbortWorkTool(result))
 
@@ -202,7 +181,6 @@ class TaskRunner:
         self,
         task: str,
         previous_runs: Optional[List[Run]] = None,
-        file_manager: Optional[FileManager] = None,
     ) -> List[Message]:
         user_content: List[Content] = []
 
@@ -213,46 +191,15 @@ class TaskRunner:
 
         user_content.append(TextContent(text=f"## Current task:\n{task}"))
 
-        # Add files context if provided
-        if file_manager and not file_manager.is_empty():
-            user_content.append(TextContent(text=file_manager.format_context()))
-
-        # Add current page state (DOM + screenshot)
-        page_state_content, _, _ = await self._get_page_state_content()
-        user_content.extend(page_state_content)
+        # Add context (page state + files) via get_context callback
+        context = await self._get_context()
+        user_content.extend(context)
 
         # Build session start messages (never compacted)
         return [
             SystemMessage(content=[TextContent(text=build_worker_prompt())]),
             UserMessage(content=user_content),
         ]
-
-    async def _get_page_state_content(
-        self,
-    ) -> Tuple[List[Content], str, Optional[str]]:
-        # Get tabs context and DOM snapshot
-        tabs_context = self.browser.get_tabs_context()
-        dom_snapshot = await self.browser.get_dom_snapshot()
-        screenshot_b64 = await self.browser.get_screenshot()
-
-        content: List[Content] = []
-        content.append(TextContent(text=tabs_context, tag="tabs_context"))
-        if dom_snapshot:
-            content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
-
-        # Only add screenshot if we have one (page is open)
-        if screenshot_b64 is not None:
-            content.append(
-                ImageContent(
-                    data=screenshot_b64,
-                    mime_type=ImageMimeType.PNG,
-                    tag="screenshot",
-                )
-            )
-
-        # Combine for return value (used in Run for final state)
-        full_context = f"{tabs_context}\n\n{dom_snapshot}"
-        return content, full_context, screenshot_b64
 
     def _format_previous_runs(self, runs: List[Run]) -> str:
         lines = ["## Previous tasks:", ""]
@@ -265,15 +212,18 @@ class TaskRunner:
             lines.append("")  # Blank line between tasks
         return "\n".join(lines)
 
-    def _build_summary(self, pairs: List[ToolCallPair]) -> str:
+    def _build_summary(self, pairs: List[MessagePair]) -> str:
         if not pairs:
             return ""
 
         lines = []
-        for pair in pairs:
+        for assistant_msg, tool_result_msg in pairs:
+            # Extract reasoning from assistant message
+            reasoning = self._extract_reasoning(assistant_msg)
+
             # Add reasoning as main bullet point if present
-            if pair.reasoning:
-                reasoning = pair.reasoning.strip()
+            if reasoning:
+                reasoning = reasoning.strip()
                 # Single line reasoning
                 if "\n" not in reasoning:
                     lines.append(f"- {reasoning}")
@@ -284,29 +234,22 @@ class TaskRunner:
                     for reasoning_line in reasoning_lines[1:]:
                         lines.append(f"  {reasoning_line}")
 
-            # Add actions as nested list (indented)
-            if pair.descriptions or pair.tool_result_msg.results:
-                # Match descriptions with tool results
-                for i, description in enumerate(pair.descriptions):
-                    # Get corresponding tool result if available
-                    if i < len(pair.tool_result_msg.results):
-                        result = pair.tool_result_msg.results[i]
-                        if result.status.value == "error":
-                            lines.append(f"  - {description} [FAILED: {result.error}]")
-                        else:
-                            lines.append(f"  - {description}")
-                    else:
-                        lines.append(f"  - {description}")
+            # Add actions as nested list (indented) - descriptions are in ToolResult
+            for result in tool_result_msg.results:
+                if result.status.value == "error":
+                    lines.append(f"  - {result.description} [FAILED: {result.error}]")
+                else:
+                    lines.append(f"  - {result.description}")
 
         return "\n".join(lines)
 
     def _prepare_messages(
-        self, session_start_messages: List[Message], pairs: List[ToolCallPair]
+        self, session_start_messages: List[Message], pairs: List[MessagePair]
     ) -> List[Message]:
         keep_last_n_pairs = 5
 
         # Convert pairs to messages (with optional compacting)
-        tool_messages = []
+        tool_messages: List[Message] = []
 
         # If we have more pairs than keep_last_n_pairs, build summary from old ones
         if len(pairs) > keep_last_n_pairs:
@@ -327,9 +270,9 @@ class TaskRunner:
         recent_pairs = (
             pairs[-keep_last_n_pairs:] if len(pairs) > keep_last_n_pairs else pairs
         )
-        for pair in recent_pairs:
-            tool_messages.append(pair.assistant_msg)
-            tool_messages.append(pair.tool_result_msg)
+        for assistant_msg, tool_result_msg in recent_pairs:
+            tool_messages.append(assistant_msg)
+            tool_messages.append(tool_result_msg)
 
         # Combine session start + tool messages
         all_messages = session_start_messages + tool_messages

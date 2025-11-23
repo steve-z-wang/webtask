@@ -1,8 +1,9 @@
 """Task tools - all tools available to the worker."""
 
-from typing import List, TYPE_CHECKING, Optional, Any, Type
+from typing import Any, List, TYPE_CHECKING, Optional, Type
 from pydantic import BaseModel, Field, create_model
 from webtask.llm.tool import Tool
+from webtask.llm.message import ToolResult, ToolResultStatus
 from .run import TaskResult, TaskStatus
 from ..utils.wait import wait
 
@@ -29,14 +30,14 @@ class GotoTool(Tool):
         """Initialize goto tool with worker browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of goto action."""
-        return f"Went to {params.url}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Execute goto."""
         await self.browser.goto(params.url)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Went to {params.url}",
+        )
 
 
 class ClickTool(Tool):
@@ -57,14 +58,14 @@ class ClickTool(Tool):
         """Initialize click tool with worker browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of click action."""
-        return f"Clicked {params.description}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Execute click on element."""
         await self.browser.click(params.element_id)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Clicked {params.description}",
+        )
 
 
 class FillTool(Tool):
@@ -86,14 +87,14 @@ class FillTool(Tool):
         """Initialize fill tool with worker browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of fill action."""
-        return f"Filled {params.description} with '{params.value}'"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Execute fill on element."""
         await self.browser.fill(params.element_id, params.value)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Filled {params.description} with '{params.value}'",
+        )
 
 
 class TypeTool(Tool):
@@ -115,14 +116,14 @@ class TypeTool(Tool):
         """Initialize type tool with worker browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of type action."""
-        return f"Typed '{params.text}' into {params.description}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Execute type on element."""
         await self.browser.type(params.element_id, params.text)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Typed '{params.text}' into {params.description}",
+        )
 
 
 class UploadTool(Tool):
@@ -153,17 +154,7 @@ class UploadTool(Tool):
         self.browser = browser
         self.file_manager = file_manager
 
-    def is_enabled(self) -> bool:
-        """Only enabled if files are provided."""
-        return not self.file_manager.is_empty()
-
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of upload action."""
-        indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
-        return f"Uploaded files {indexes_str} to {params.description}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Execute file upload."""
         # Resolve file indexes to paths
         paths = self.file_manager.get_paths(params.file_indexes)
@@ -171,6 +162,13 @@ class UploadTool(Tool):
         # Upload files (single file or multiple)
         file_path = paths if len(paths) > 1 else paths[0]
         await self.browser.upload(params.element_id, file_path)
+
+        indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Uploaded files {indexes_str} to {params.description}",
+        )
 
 
 class WaitTool(Tool):
@@ -188,14 +186,14 @@ class WaitTool(Tool):
             le=10.0,
         )
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of wait action."""
-        return f"Waited {params.seconds} seconds"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Wait for the specified duration."""
         await wait(params.seconds)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Waited {params.seconds} seconds",
+        )
 
 
 # Page management tools
@@ -218,14 +216,14 @@ class OpenTabTool(Tool):
         """Initialize open_tab tool with browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of open_tab action."""
-        return f"Opened new tab: {params.description}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Open a new tab."""
         await self.browser.open_tab()
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Opened new tab: {params.description}",
+        )
 
 
 class SwitchTabTool(Tool):
@@ -251,14 +249,14 @@ class SwitchTabTool(Tool):
         """Initialize switch_tab tool with browser."""
         self.browser = browser
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of switch_tab action."""
-        return f"Switched to tab [{params.tab_index}]: {params.description}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Switch to specified tab."""
         self.browser.focus_tab(params.tab_index)
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Switched to tab [{params.tab_index}]: {params.description}",
+        )
 
 
 # Control tools
@@ -269,7 +267,6 @@ class CompleteWorkTool(Tool):
 
     name = "complete_work"
     description = "Signal that you have successfully completed the subtask. Optionally provide structured output data to return to the user."
-    is_terminal = True
 
     # Default Params class (will be overridden in __init__ if output_schema is provided)
     class Params(BaseModel):
@@ -284,15 +281,15 @@ class CompleteWorkTool(Tool):
         )
 
     def __init__(
-        self, result: "TaskResult", output_schema: Optional[Type[BaseModel]] = None
+        self, task_result: "TaskResult", output_schema: Optional[Type[BaseModel]] = None
     ):
         """Initialize with reference to worker result and optional output schema.
 
         Args:
-            result: TaskResult object to store completion status and data
+            task_result: TaskResult object to store completion status and data
             output_schema: Optional Pydantic model class defining the expected output structure
         """
-        self.result = result
+        self.task_result = task_result
 
         # Dynamically create Params class if output_schema is provided
         if output_schema:
@@ -311,10 +308,14 @@ class CompleteWorkTool(Tool):
             )
         # Otherwise, the default class-level Params will be used
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of complete_work action."""
-        desc = f"Completed work: {params.feedback}"
+    async def execute(self, params: Params) -> ToolResult:
+        """Signal that work is complete and store feedback and optional output."""
+        self.task_result.status = TaskStatus.COMPLETED
+        self.task_result.feedback = params.feedback
+        if params.output is not None:
+            self.task_result.output = params.output
+
+        desc = f"Completed: {params.feedback}"
         if params.output is not None:
             try:
                 import json
@@ -323,14 +324,13 @@ class CompleteWorkTool(Tool):
                 desc += f"\nOutput data:\n{output_str}"
             except (TypeError, ValueError):
                 desc += f"\nOutput data: {params.output}"
-        return desc
 
-    async def execute(self, params: Params) -> None:
-        """Signal that work is complete and store feedback and optional output."""
-        self.result.status = TaskStatus.COMPLETED
-        self.result.feedback = params.feedback
-        if params.output is not None:
-            self.result.output = params.output
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=desc,
+            terminal=True,
+        )
 
 
 class AbortWorkTool(Tool):
@@ -338,7 +338,6 @@ class AbortWorkTool(Tool):
 
     name = "abort_work"
     description = "Signal that you cannot proceed further with this subtask (stuck, blocked, error, or impossible to complete)"
-    is_terminal = True
 
     class Params(BaseModel):
         """Parameters for abort_work tool."""
@@ -347,16 +346,18 @@ class AbortWorkTool(Tool):
             description="Explain why you cannot continue and provide any relevant context about what went wrong or what is blocking you"
         )
 
-    def __init__(self, result: "TaskResult"):
+    def __init__(self, task_result: "TaskResult"):
         """Initialize with reference to worker result."""
-        self.result = result
+        self.task_result = task_result
 
-    @staticmethod
-    def describe(params: Params) -> str:
-        """Generate description of abort_work action."""
-        return f"Aborted work: {params.reason}"
-
-    async def execute(self, params: Params) -> None:
+    async def execute(self, params: Params) -> ToolResult:
         """Signal that work is aborted and store reason as feedback."""
-        self.result.status = TaskStatus.ABORTED
-        self.result.feedback = params.reason
+        self.task_result.status = TaskStatus.ABORTED
+        self.task_result.feedback = params.reason
+
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Aborted: {params.reason}",
+            terminal=True,
+        )
