@@ -28,20 +28,9 @@ from webtask._internal.agent.tools import (
     GoForwardTool,
     KeyCombinationTool,
 )
-from webtask.exceptions import (
-    TaskAbortedError,
-    VerificationAbortedError,
-    ExtractionAbortedError,
-)
+from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
-
-
-class VerificationResult(BaseModel):
-    """Structured output for verification tasks."""
-
-    verified: bool = Field(
-        description="True if the condition is met, False otherwise")
 
 
 class Agent:
@@ -89,8 +78,7 @@ class Agent:
         coordinate_scale = getattr(llm, "coordinate_scale", None)
 
         # Create AgentBrowser once - shared across all do() calls
-        self.browser = AgentBrowser(
-            context=context, coordinate_scale=coordinate_scale)
+        self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
@@ -288,8 +276,16 @@ class Agent:
             Verdict with passed (bool) and feedback (str)
 
         Raises:
-            VerificationAbortedError: If verification is aborted
+            TaskAbortedError: If verification is aborted
         """
+
+        class VerificationResult(BaseModel):
+            """Structured output for verification."""
+
+            verified: bool = Field(
+                description="True if the condition is met, False otherwise"
+            )
+
         task = f"Check if the following condition is true: {condition}"
         run = await self._run_task(
             task=task,
@@ -297,12 +293,11 @@ class Agent:
             wait_after_action=wait_after_action,
             dom_mode=dom_mode,
             output_schema=VerificationResult,
-            exception_class=VerificationAbortedError,
+            exception_class=TaskAbortedError,
         )
 
         if not run.result.output:
-            raise RuntimeError(
-                "Verification failed: no structured output received")
+            raise RuntimeError("Verification failed: no structured output received")
 
         return Verdict(
             passed=run.result.output.verified,
@@ -331,7 +326,7 @@ class Agent:
             str if no output_schema provided, otherwise instance of output_schema
 
         Raises:
-            ExtractionAbortedError: If extraction is aborted
+            TaskAbortedError: If extraction is aborted
         """
 
         # Default to str schema if none provided
@@ -349,7 +344,7 @@ class Agent:
             wait_after_action=wait_after_action,
             dom_mode=dom_mode,
             output_schema=schema,
-            exception_class=ExtractionAbortedError,
+            exception_class=TaskAbortedError,
         )
 
         # Return extracted value directly

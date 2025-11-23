@@ -5,8 +5,6 @@ from .agent import Agent, Result, Verdict, Tool
 from .exceptions import (
     WebtaskError,
     TaskAbortedError,
-    VerificationAbortedError,
-    ExtractionAbortedError,
 )
 
 from .browser import (
@@ -43,8 +41,6 @@ __all__ = [
     # Exceptions
     "WebtaskError",
     "TaskAbortedError",
-    "VerificationAbortedError",
-    "ExtractionAbortedError",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Context",
