@@ -101,6 +101,7 @@ class Webtask:
     async def create_agent(
         self,
         llm: LLM,
+        mode: str = "text",
         stateful: bool = True,
         headless: bool = False,
         browser_type: str = "chromium",
@@ -109,6 +110,7 @@ class Webtask:
 
         Args:
             llm: LLM instance for reasoning
+            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
             stateful: If True, maintain conversation history between do() calls (default: True)
             headless: Run browser in headless mode without GUI (default: False, shows browser window)
             browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
@@ -123,6 +125,7 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
+            mode=mode,
             stateful=stateful,
         )
 
@@ -132,6 +135,7 @@ class Webtask:
         self,
         llm: LLM,
         browser: Union[Browser, "PlaywrightBrowser"],
+        mode: str = "text",
         stateful: bool = True,
         use_existing_context: bool = True,
     ) -> Agent:
@@ -143,6 +147,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             browser: Browser instance or raw Playwright Browser (already launched)
+            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
             stateful: If True, maintain conversation history between do() calls (default: True)
             use_existing_context: Use existing context if available (default: True)
 
@@ -184,6 +189,7 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
+            mode=mode,
             stateful=stateful,
         )
 
@@ -193,6 +199,7 @@ class Webtask:
         self,
         llm: LLM,
         context: Union[Context, "BrowserContext"],
+        mode: str = "text",
         stateful: bool = True,
     ) -> Agent:
         """Create agent with existing context.
@@ -203,6 +210,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             context: Context instance or Playwright BrowserContext
+            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
             stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
@@ -219,6 +227,7 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=wrapped_context,
+            mode=mode,
             stateful=stateful,
         )
 
@@ -228,6 +237,7 @@ class Webtask:
         self,
         llm: LLM,
         page: Union[Page, "PlaywrightPage"],
+        mode: str = "text",
         stateful: bool = True,
     ) -> Agent:
         """Create agent with existing page.
@@ -238,6 +248,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             page: Page instance or Playwright Page
+            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
             stateful: If True, maintain conversation history between do() calls (default: True)
 
         Returns:
@@ -252,6 +263,7 @@ class Webtask:
         agent = Agent(
             llm=llm,
             context=context,
+            mode=mode,
             stateful=stateful,
         )
 

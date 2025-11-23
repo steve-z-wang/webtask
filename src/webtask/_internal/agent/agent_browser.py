@@ -113,21 +113,32 @@ class AgentBrowser:
 
     # Context building
 
-    async def get_page_context(self) -> List[Content]:
-        """Get current page context (tabs, DOM, screenshot) as Content list."""
+    async def get_page_context(
+        self, include_dom: bool = True, include_screenshot: bool = True
+    ) -> List[Content]:
+        """Get current page context as Content list.
+
+        Args:
+            include_dom: Include DOM snapshot (default: True)
+            include_screenshot: Include screenshot (default: True)
+        """
         content: List[Content] = []
         tabs_context = self._get_tabs_context()
         content.append(TextContent(text=tabs_context, tag="tabs_context"))
-        dom_snapshot = await self._get_dom_snapshot()
-        if dom_snapshot:
-            content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
-        screenshot_b64 = await self._get_screenshot()
-        if screenshot_b64:
-            content.append(
-                ImageContent(
-                    data=screenshot_b64, mime_type=ImageMimeType.PNG, tag="screenshot"
+        if include_dom:
+            dom_snapshot = await self._get_dom_snapshot()
+            if dom_snapshot:
+                content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
+        if include_screenshot:
+            screenshot_b64 = await self._get_screenshot()
+            if screenshot_b64:
+                content.append(
+                    ImageContent(
+                        data=screenshot_b64,
+                        mime_type=ImageMimeType.PNG,
+                        tag="screenshot",
+                    )
                 )
-            )
         return content
 
     async def wait_for_load(self, timeout: int = 10000) -> None:
