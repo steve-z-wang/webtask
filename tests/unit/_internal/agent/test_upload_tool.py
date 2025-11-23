@@ -14,7 +14,10 @@ pytestmark = pytest.mark.unit
 def mock_browser():
     """Create a mock browser."""
     browser = MagicMock()
-    browser.upload = AsyncMock()
+    mock_element = MagicMock()
+    mock_element.upload_file = AsyncMock()
+    browser.select = AsyncMock(return_value=mock_element)
+    browser.wait = AsyncMock()
     return browser
 
 
@@ -37,7 +40,9 @@ class TestUploadTool:
 
         result = await tool.execute(params)
 
-        mock_browser.upload.assert_called_once_with("[input-0]", "/path/to/photo.jpg")
+        mock_browser.select.assert_called_once_with("[input-0]")
+        element = await mock_browser.select("[input-0]")
+        element.upload_file.assert_called_with("/path/to/photo.jpg")
         assert result.status == ToolResultStatus.SUCCESS
         assert "Uploaded files [0]" in result.description
         assert "Profile photo upload" in result.description
@@ -58,8 +63,10 @@ class TestUploadTool:
 
         result = await tool.execute(params)
 
-        mock_browser.upload.assert_called_once_with(
-            "[input-0]", ["/path/to/photo1.jpg", "/path/to/photo3.jpg"]
+        mock_browser.select.assert_called_once_with("[input-0]")
+        element = await mock_browser.select("[input-0]")
+        element.upload_file.assert_called_with(
+            ["/path/to/photo1.jpg", "/path/to/photo3.jpg"]
         )
         assert result.status == ToolResultStatus.SUCCESS
         assert "[0]" in result.description

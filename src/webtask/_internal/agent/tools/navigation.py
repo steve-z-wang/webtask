@@ -21,12 +21,16 @@ class GotoTool(Tool):
         url: str = Field(description="URL to go to")
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize goto tool with worker browser."""
+        """Initialize goto tool with browser."""
         self.browser = browser
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute goto."""
-        await self.browser.goto(params.url)
+        if not self.browser.has_current_page():
+            await self.browser.open_tab()
+        page = self.browser.get_current_page()
+        await page.goto(params.url)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -53,7 +57,9 @@ class GoBackTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute go back."""
-        await self.browser.go_back()
+        page = self.browser.get_current_page()
+        await page.go_back()
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -80,7 +86,9 @@ class GoForwardTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute go forward."""
-        await self.browser.go_forward()
+        page = self.browser.get_current_page()
+        await page.go_forward()
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -107,7 +115,11 @@ class SearchTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute search navigation."""
-        await self.browser.search()
+        if not self.browser.has_current_page():
+            await self.browser.open_tab()
+        page = self.browser.get_current_page()
+        await page.goto("https://www.google.com")
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -139,8 +151,9 @@ class KeyCombinationTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute key combination."""
-        keys_list = params.keys.split("+")
-        await self.browser.key_combination(keys_list)
+        page = self.browser.get_current_page()
+        await page.keyboard_press(params.keys)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,

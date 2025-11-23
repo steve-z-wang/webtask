@@ -310,7 +310,10 @@ class Agent:
         Args:
             url: URL to go to
         """
-        await self.browser.goto(url)
+        if not self.browser.has_current_page():
+            await self.browser.open_tab()
+        page = self.browser.get_current_page()
+        await page.goto(url)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False
@@ -354,6 +357,8 @@ class Agent:
         Returns:
             Current Page instance, or None if no page is active
         """
+        if not self.browser.has_current_page():
+            return None
         return self.browser.get_current_page()
 
     def focus_tab(self, page: Page) -> None:

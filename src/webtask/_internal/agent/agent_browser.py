@@ -1,7 +1,7 @@
 """AgentBrowser - browser interface for agent with page management and LLMDomContext."""
 
-from typing import List, Literal, Optional, Tuple, Union
-from webtask.browser import Page, Context
+from typing import List, Optional, Tuple, Union
+from webtask.browser import Page, Context, Element
 from webtask.llm.message import Content, TextContent, ImageContent, ImageMimeType
 from ..context import LLMDomContext
 from ..utils.wait import wait
@@ -46,18 +46,27 @@ class AgentBrowser:
 
     # Getters
 
-    def get_current_page(self) -> Optional[Page]:
-        """Get current page or None if no page is active."""
+    def has_current_page(self) -> bool:
+        """Check if there is an active page."""
         if self._current_page_index is None:
-            return None
+            return False
         if self._current_page_index >= len(self._pages):
-            return None
+            return False
+        return True
+
+    def get_current_page(self) -> Page:
+        """Get current page. Raises RuntimeError if no page is active."""
+        if self._current_page_index is None:
+            raise RuntimeError("No page is currently open")
+        if self._current_page_index >= len(self._pages):
+            raise RuntimeError("No page is currently open")
         return self._pages[self._current_page_index]
 
     def get_current_url(self) -> str:
         """Get current page URL."""
-        page = self.get_current_page()
-        return page.url if page else "about:blank"
+        if not self.has_current_page():
+            return "about:blank"
+        return self.get_current_page().url
 
     def get_viewport_size(self) -> Tuple[int, int]:
         """Get current page viewport size as (width, height)."""
@@ -102,23 +111,7 @@ class AgentBrowser:
         self._pages = []
         self._current_page_index = None
 
-    # Page operations
-
-    async def wait_for_load(self, timeout: int = 10000) -> None:
-        """Wait for page to fully load."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        await page.wait_for_load(timeout=timeout)
-
-    async def screenshot(
-        self, path: Optional[str] = None, full_page: bool = False
-    ) -> bytes:
-        """Take screenshot of current page."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        return await page.screenshot(path=path, full_page=full_page)
+    # Context building
 
     async def get_page_context(self) -> List[Content]:
         """Get current page context (tabs, DOM, screenshot) as Content list."""
@@ -137,168 +130,53 @@ class AgentBrowser:
             )
         return content
 
-    # DOM-based actions
-
-    async def click(self, id: str) -> None:
-        """Click element by ID."""
-        element = await self._select(id)
-        await element.click()
-        await wait(self._wait_after_action)
-
-    async def fill(self, id: str, value: str) -> None:
-        """Fill element by ID."""
-        element = await self._select(id)
-        await element.fill(value)
-        await wait(self._wait_after_action)
-
-    async def type(self, id: str, text: str) -> None:
-        """Type into element by ID."""
-        element = await self._select(id)
-        await element.type(text)
-        await wait(self._wait_after_action)
-
-    async def upload(self, id: str, file_path: str) -> None:
-        """Upload file to element by ID."""
-        element = await self._select(id)
-        await element.upload_file(file_path)
-        await wait(self._wait_after_action)
-
-    async def goto(self, url: str) -> None:
-        """Go to URL and clear context."""
-        page = self.get_current_page()
-        if page is None:
-            if self._context is None:
-                raise RuntimeError(
-                    "Cannot goto: no tab available and no context to create one."
-                )
-            page = await self.open_tab()
-        await page.goto(url)
-        self._dom_context = None
-        await wait(self._wait_after_action)
-
-    # Pixel-based actions (for Computer Use)
-
-    async def click_at(self, x: int, y: int) -> None:
-        """Click at screen coordinates."""
+    async def wait_for_load(self, timeout: int = 10000) -> None:
+        """Wait for page to fully load."""
         page = self.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
-        x, y = self._scale_coordinates(x, y)
-        await page.mouse_click(x, y)
-        await wait(self._wait_after_action)
+        await page.wait_for_load(timeout=timeout)
 
-    async def hover_at(self, x: int, y: int) -> None:
-        """Hover at screen coordinates."""
+    async def screenshot(
+        self, path: Optional[str] = None, full_page: bool = False
+    ) -> bytes:
+        """Take screenshot of current page."""
         page = self.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
-        x, y = self._scale_coordinates(x, y)
-        await page.mouse_move(x, y)
-        await wait(self._wait_after_action)
+        return await page.screenshot(path=path, full_page=full_page)
 
-    async def type_text_at(
-        self,
-        x: int,
-        y: int,
-        text: str,
-        press_enter: bool = True,
-        clear_before_typing: bool = True,
-    ) -> None:
-        """Click at coordinates and type text."""
+    # Element resolution
+
+    async def select(self, id: str) -> Element:
+        """Select element by ID, returns Element for direct interaction."""
         page = self.get_current_page()
         if page is None:
             raise RuntimeError("No page is currently open")
-        x, y = self._scale_coordinates(x, y)
-        await page.mouse_click(x, y)
-        if clear_before_typing:
-            await page.keyboard_press("Control+a")
-            await page.keyboard_press("Backspace")
-        await page.keyboard_type(text)
-        if press_enter:
-            await page.keyboard_press("Enter")
-        await wait(self._wait_after_action)
+        if self._dom_context is None:
+            raise RuntimeError("Context not built yet.")
+        dom_node = self._dom_context.get_dom_node(id)
+        if dom_node is None:
+            raise KeyError(f"Element ID '{id}' not found")
+        xpath = dom_node.get_x_path()
+        return await page.select_one(xpath)
 
-    async def scroll_at(
-        self,
-        x: int,
-        y: int,
-        direction: Literal["up", "down", "left", "right"],
-        magnitude: int = 800,
-    ) -> None:
-        """Scroll at specific coordinates."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        x, y = self._scale_coordinates(x, y)
-        delta_x, delta_y = 0, 0
-        if direction == "up":
-            delta_y = -magnitude
-        elif direction == "down":
-            delta_y = magnitude
-        elif direction == "left":
-            delta_x = -magnitude
-        elif direction == "right":
-            delta_x = magnitude
-        await page.mouse_wheel(x, y, delta_x, delta_y)
-        await wait(self._wait_after_action)
+    # Coordinate scaling
 
-    async def scroll_document(
-        self, direction: Literal["up", "down", "left", "right"]
-    ) -> None:
-        """Scroll the entire document."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        key = {
-            "up": "PageUp",
-            "down": "PageDown",
-            "left": "Home",
-            "right": "End",
-        }.get(direction, "PageDown")
-        await page.keyboard_press(key)
-        await wait(self._wait_after_action)
+    def scale_coordinates(self, x: int, y: int) -> Tuple[int, int]:
+        """Scale normalized coordinates to actual pixels."""
+        if not self._coordinate_scale:
+            return x, y
+        viewport = self.get_viewport_size()
+        return (
+            int(x / self._coordinate_scale * viewport[0]),
+            int(y / self._coordinate_scale * viewport[1]),
+        )
 
-    async def drag_and_drop(self, x: int, y: int, dest_x: int, dest_y: int) -> None:
-        """Drag from one position to another."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        x, y = self._scale_coordinates(x, y)
-        dest_x, dest_y = self._scale_coordinates(dest_x, dest_y)
-        await page.mouse_drag(x, y, dest_x, dest_y)
-        await wait(self._wait_after_action)
+    # Wait helper
 
-    # Navigation
-
-    async def go_back(self) -> None:
-        """Navigate back in browser history."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        await page.go_back()
-        self._dom_context = None
-        await wait(self._wait_after_action)
-
-    async def go_forward(self) -> None:
-        """Navigate forward in browser history."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        await page.go_forward()
-        self._dom_context = None
-        await wait(self._wait_after_action)
-
-    async def search(self) -> None:
-        """Navigate to default search engine."""
-        await self.goto("https://www.google.com")
-
-    async def key_combination(self, keys: List[str]) -> None:
-        """Press keyboard key combination."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        key_combo = "+".join(keys)
-        await page.keyboard_press(key_combo)
+    async def wait(self) -> None:
+        """Wait for configured wait_after_action duration."""
         await wait(self._wait_after_action)
 
     # Private methods
@@ -326,16 +204,6 @@ class AgentBrowser:
             if self._current_page_index >= len(self._pages):
                 self._current_page_index = len(self._pages) - 1 if self._pages else None
 
-    def _scale_coordinates(self, x: int, y: int) -> Tuple[int, int]:
-        """Scale normalized coordinates to actual pixels."""
-        if not self._coordinate_scale:
-            return x, y
-        viewport = self.get_viewport_size()
-        return (
-            int(x / self._coordinate_scale * viewport[0]),
-            int(y / self._coordinate_scale * viewport[1]),
-        )
-
     def _get_tabs_context(self) -> str:
         """Get tabs context string for LLM."""
         self._sync_pages()
@@ -350,18 +218,17 @@ class AgentBrowser:
 
     async def _get_screenshot(self, full_page: bool = False) -> Optional[str]:
         """Get screenshot as base64 string, or None if no page is open."""
-        page = self.get_current_page()
-        if page is None:
+        if not self.has_current_page():
             return None
         await self.wait_for_load(timeout=10000)
         screenshot_bytes = await self.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    async def _get_dom_snapshot(self) -> str:
-        """Get DOM snapshot with interactive elements."""
+    async def _get_dom_snapshot(self) -> Optional[str]:
+        """Get DOM snapshot with interactive elements, or None if no page is open."""
+        if not self.has_current_page():
+            return None
         page = self.get_current_page()
-        if page is None:
-            return ""
         await self.wait_for_load(timeout=10000)
         self._dom_context = await LLMDomContext.from_page(page)
         context_str = self._dom_context.get_context(mode=self._mode)
@@ -371,16 +238,3 @@ class AgentBrowser:
         else:
             lines.append(context_str)
         return "\n".join(lines)
-
-    async def _select(self, id: str):
-        """Select element by ID."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        if self._dom_context is None:
-            raise RuntimeError("Context not built yet.")
-        dom_node = self._dom_context.get_dom_node(id)
-        if dom_node is None:
-            raise KeyError(f"Element ID '{id}' not found")
-        xpath = dom_node.get_x_path()
-        return await page.select_one(xpath)

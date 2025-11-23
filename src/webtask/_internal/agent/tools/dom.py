@@ -25,12 +25,14 @@ class ClickTool(Tool):
         )
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize click tool with worker browser."""
+        """Initialize click tool with browser."""
         self.browser = browser
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute click on element."""
-        await self.browser.click(params.element_id)
+        element = await self.browser.select(params.element_id)
+        await element.click()
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -54,12 +56,14 @@ class FillTool(Tool):
         )
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize fill tool with worker browser."""
+        """Initialize fill tool with browser."""
         self.browser = browser
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute fill on element."""
-        await self.browser.fill(params.element_id, params.value)
+        element = await self.browser.select(params.element_id)
+        await element.fill(params.value)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -83,12 +87,14 @@ class TypeTool(Tool):
         )
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize type tool with worker browser."""
+        """Initialize type tool with browser."""
         self.browser = browser
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type on element."""
-        await self.browser.type(params.element_id, params.text)
+        element = await self.browser.select(params.element_id)
+        await element.type(params.text)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -120,18 +126,18 @@ class UploadTool(Tool):
         browser: "AgentBrowser",
         file_manager: "FileManager",
     ):
-        """Initialize upload tool with worker browser and file manager."""
+        """Initialize upload tool with browser and file manager."""
         self.browser = browser
         self.file_manager = file_manager
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute file upload."""
-        # Resolve file indexes to paths
         paths = self.file_manager.get_paths(params.file_indexes)
-
-        # Upload files (single file or multiple)
         file_path = paths if len(paths) > 1 else paths[0]
-        await self.browser.upload(params.element_id, file_path)
+
+        element = await self.browser.select(params.element_id)
+        await element.upload_file(file_path)
+        await self.browser.wait()
 
         indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
         return ToolResult(

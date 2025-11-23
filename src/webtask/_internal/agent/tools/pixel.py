@@ -30,7 +30,10 @@ class ClickAtTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute click at coordinates."""
-        await self.browser.click_at(params.x, params.y)
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        await page.mouse_click(x, y)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -61,7 +64,10 @@ class HoverAtTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute hover at coordinates."""
-        await self.browser.hover_at(params.x, params.y)
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        await page.mouse_move(x, y)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -95,13 +101,16 @@ class TypeTextAtTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type at coordinates."""
-        await self.browser.type_text_at(
-            params.x,
-            params.y,
-            params.text,
-            press_enter=params.press_enter,
-            clear_before_typing=params.clear_before_typing,
-        )
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        await page.mouse_click(x, y)
+        if params.clear_before_typing:
+            await page.keyboard_press("Control+a")
+            await page.keyboard_press("Backspace")
+        await page.keyboard_type(params.text)
+        if params.press_enter:
+            await page.keyboard_press("Enter")
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -134,9 +143,19 @@ class ScrollAtTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute scroll at coordinates."""
-        await self.browser.scroll_at(
-            params.x, params.y, params.direction, params.magnitude
-        )
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        delta_x, delta_y = 0, 0
+        if params.direction == "up":
+            delta_y = -params.magnitude
+        elif params.direction == "down":
+            delta_y = params.magnitude
+        elif params.direction == "left":
+            delta_x = -params.magnitude
+        elif params.direction == "right":
+            delta_x = params.magnitude
+        await page.mouse_wheel(x, y, delta_x, delta_y)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -166,7 +185,15 @@ class ScrollDocumentTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute document scroll."""
-        await self.browser.scroll_document(params.direction)
+        page = self.browser.get_current_page()
+        key = {
+            "up": "PageUp",
+            "down": "PageDown",
+            "left": "Home",
+            "right": "End",
+        }.get(params.direction, "PageDown")
+        await page.keyboard_press(key)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -197,9 +224,11 @@ class DragAndDropTool(Tool):
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute drag and drop."""
-        await self.browser.drag_and_drop(
-            params.x, params.y, params.dest_x, params.dest_y
-        )
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        dest_x, dest_y = self.browser.scale_coordinates(params.dest_x, params.dest_y)
+        await page.mouse_drag(x, y, dest_x, dest_y)
+        await self.browser.wait()
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
