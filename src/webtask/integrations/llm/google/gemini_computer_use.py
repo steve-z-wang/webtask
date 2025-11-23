@@ -115,6 +115,9 @@ class GeminiComputerUse(LLM):
             max_output_tokens=8192,
             system_instruction=system_instruction,
             tools=tool_configs,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=True  # We handle function calling ourselves
+            ),
         )
 
         # Use async client
