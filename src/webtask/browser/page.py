@@ -178,3 +178,81 @@ class Page(ABC):
             Current URL of the page
         """
         pass
+
+    @abstractmethod
+    def viewport_size(self) -> tuple[int, int]:
+        """
+        Get the viewport size.
+
+        Returns:
+            Tuple of (width, height) in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def mouse_click(self, x: int, y: int) -> None:
+        """
+        Click at specific screen coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def mouse_move(self, x: int, y: int) -> None:
+        """
+        Move mouse to specific screen coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+        """
+        pass
+
+    @abstractmethod
+    async def mouse_wheel(self, x: int, y: int, delta_x: int, delta_y: int) -> None:
+        """
+        Scroll at specific coordinates.
+
+        Args:
+            x: X coordinate in pixels
+            y: Y coordinate in pixels
+            delta_x: Horizontal scroll amount
+            delta_y: Vertical scroll amount
+        """
+        pass
+
+    @abstractmethod
+    async def mouse_drag(self, x: int, y: int, dest_x: int, dest_y: int) -> None:
+        """
+        Drag from one position to another.
+
+        Args:
+            x: Start X coordinate
+            y: Start Y coordinate
+            dest_x: Destination X coordinate
+            dest_y: Destination Y coordinate
+        """
+        pass
+
+    @abstractmethod
+    async def keyboard_press(self, key: str) -> None:
+        """
+        Press a keyboard key or combination.
+
+        Args:
+            key: Key to press (e.g., "Enter", "Control+C", "PageDown")
+        """
+        pass
+
+    @abstractmethod
+    async def go_back(self) -> None:
+        """Navigate back in browser history."""
+        pass
+
+    @abstractmethod
+    async def go_forward(self) -> None:
+        """Navigate forward in browser history."""
+        pass

@@ -218,3 +218,48 @@ class PlaywrightPage(Page):
             Current URL of the page
         """
         return self._page.url
+
+    def viewport_size(self) -> tuple[int, int]:
+        """
+        Get the viewport size.
+
+        Returns:
+            Tuple of (width, height) in pixels
+        """
+        size = self._page.viewport_size
+        if size is None:
+            # Default fallback if viewport not set
+            return (1280, 720)
+        return (size["width"], size["height"])
+
+    async def mouse_click(self, x: int, y: int) -> None:
+        """Click at specific screen coordinates."""
+        await self._page.mouse.click(x, y)
+
+    async def mouse_move(self, x: int, y: int) -> None:
+        """Move mouse to specific screen coordinates."""
+        await self._page.mouse.move(x, y)
+
+    async def mouse_wheel(self, x: int, y: int, delta_x: int, delta_y: int) -> None:
+        """Scroll at specific coordinates."""
+        await self._page.mouse.move(x, y)
+        await self._page.mouse.wheel(delta_x, delta_y)
+
+    async def mouse_drag(self, x: int, y: int, dest_x: int, dest_y: int) -> None:
+        """Drag from one position to another."""
+        await self._page.mouse.move(x, y)
+        await self._page.mouse.down()
+        await self._page.mouse.move(dest_x, dest_y)
+        await self._page.mouse.up()
+
+    async def keyboard_press(self, key: str) -> None:
+        """Press a keyboard key or combination."""
+        await self._page.keyboard.press(key)
+
+    async def go_back(self) -> None:
+        """Navigate back in browser history."""
+        await self._page.go_back()
+
+    async def go_forward(self) -> None:
+        """Navigate forward in browser history."""
+        await self._page.go_forward()

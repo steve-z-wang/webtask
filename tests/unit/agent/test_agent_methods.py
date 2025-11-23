@@ -6,11 +6,7 @@ from webtask.agent import Agent
 from webtask.browser import Context
 from webtask._internal.agent.run import Run, TaskResult, TaskStatus
 from webtask._internal.agent.task_runner import TaskRunner
-from webtask.exceptions import (
-    TaskAbortedError,
-    VerificationAbortedError,
-    ExtractionAbortedError,
-)
+from webtask.exceptions import TaskAbortedError
 
 
 @pytest.mark.unit
@@ -191,7 +187,7 @@ async def test_do_returns_result_on_success(mocker):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_verify_throws_on_abort(mocker):
-    """Test that verify() throws VerificationAbortedError when verification is aborted."""
+    """Test that verify() throws TaskAbortedError when verification is aborted."""
     mock_llm = Mock()
     mock_context = Mock(spec=Context)
 
@@ -210,7 +206,7 @@ async def test_verify_throws_on_abort(mocker):
     with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
         mock_task_run.return_value = mock_run
 
-        with pytest.raises(VerificationAbortedError, match="Could not verify"):
+        with pytest.raises(TaskAbortedError, match="Could not verify"):
             await agent.verify("cart has 7 items")
 
 
@@ -254,7 +250,7 @@ async def test_verify_returns_verdict_on_success(mocker):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_extract_throws_on_abort(mocker):
-    """Test that extract() throws ExtractionAbortedError when extraction is aborted."""
+    """Test that extract() throws TaskAbortedError when extraction is aborted."""
     mock_llm = Mock()
     mock_context = Mock(spec=Context)
 
@@ -273,7 +269,7 @@ async def test_extract_throws_on_abort(mocker):
     with patch.object(TaskRunner, "run", new_callable=AsyncMock) as mock_task_run:
         mock_task_run.return_value = mock_run
 
-        with pytest.raises(ExtractionAbortedError, match="Could not extract"):
+        with pytest.raises(TaskAbortedError, match="Could not extract"):
             await agent.extract("total price")
 
 

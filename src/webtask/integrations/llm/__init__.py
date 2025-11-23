@@ -1,9 +1,10 @@
 """LLM integrations."""
 
-from .google import Gemini
+from .google import Gemini, GeminiComputerUse
 
 __all__ = [
     "Gemini",
+    "GeminiComputerUse",
 ]
 
 # Optional Bedrock integration (requires boto3)

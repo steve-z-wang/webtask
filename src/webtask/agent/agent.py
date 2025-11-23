@@ -18,20 +18,19 @@ from webtask._internal.agent.tools import (
     WaitTool,
     OpenTabTool,
     SwitchTabTool,
+    ClickAtTool,
+    HoverAtTool,
+    TypeTextAtTool,
+    ScrollAtTool,
+    ScrollDocumentTool,
+    DragAndDropTool,
+    GoBackTool,
+    GoForwardTool,
+    KeyCombinationTool,
 )
-from webtask.exceptions import (
-    TaskAbortedError,
-    VerificationAbortedError,
-    ExtractionAbortedError,
-)
+from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
-
-
-class VerificationResult(BaseModel):
-    """Structured output for verification tasks."""
-
-    verified: bool = Field(description="True if the condition is met, False otherwise")
 
 
 class Agent:
@@ -45,10 +44,14 @@ class Agent:
     - Supports stateful for multi-turn conversations
     """
 
+    # Valid modes for agent operation
+    VALID_MODES = ("text", "visual", "full")
+
     def __init__(
         self,
         llm: LLM,
         context: Context,
+        mode: str = "text",
         stateful: bool = True,
     ):
         """
@@ -57,16 +60,25 @@ class Agent:
         Args:
             llm: LLM instance for reasoning and task execution
             context: Context instance for browser management
+            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
             stateful: If True, maintain conversation history between do() calls (default: True)
         """
+        if mode not in self.VALID_MODES:
+            raise ValueError(
+                f"Invalid mode '{mode}'. Must be one of: {self.VALID_MODES}"
+            )
+
         self.llm = llm
         self.context = context
+        self.mode = mode
         self.stateful = stateful
         self.logger = logging.getLogger(__name__)
 
+        # Get coordinate_scale from LLM if available (e.g., GeminiComputerUse)
+        coordinate_scale = getattr(llm, "coordinate_scale", None)
+
         # Create AgentBrowser once - shared across all do() calls
-        # This preserves page state between tasks
-        self.browser = AgentBrowser(context=context)
+        self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
@@ -75,26 +87,52 @@ class Agent:
     def _create_browser_tools(
         self, file_manager: Optional[FileManager] = None
     ) -> List[Tool]:
-        """Create browser tools for task execution.
+        """Create browser tools based on agent mode.
 
         Args:
             file_manager: Optional FileManager for upload tool
 
         Returns:
-            List of browser tools
+            List of browser tools appropriate for the mode
         """
-        tools: List[Tool] = [
+        # Common tools for all modes
+        common_tools: List[Tool] = [
+            WaitTool(),
             GotoTool(self.browser),
+            GoBackTool(self.browser),
+            GoForwardTool(self.browser),
+            OpenTabTool(self.browser),
+            SwitchTabTool(self.browser),
+            ScrollDocumentTool(self.browser),
+            KeyCombinationTool(self.browser),
+        ]
+
+        # Text mode: DOM-based tools (element IDs)
+        text_tools: List[Tool] = [
             ClickTool(self.browser),
             FillTool(self.browser),
             TypeTool(self.browser),
-            WaitTool(),
-            OpenTabTool(self.browser),
-            SwitchTabTool(self.browser),
         ]
 
-        # Add upload tool only if file_manager is provided
-        if file_manager is not None:
+        # Visual mode: Pixel-based tools (coordinates)
+        visual_tools: List[Tool] = [
+            ClickAtTool(self.browser),
+            TypeTextAtTool(self.browser),
+            HoverAtTool(self.browser),
+            ScrollAtTool(self.browser),
+            DragAndDropTool(self.browser),
+        ]
+
+        # Build tool list based on mode
+        if self.mode == "text":
+            tools = common_tools + text_tools
+        elif self.mode == "visual":
+            tools = common_tools + visual_tools
+        else:  # full
+            tools = common_tools + text_tools + visual_tools
+
+        # Add upload tool only if file_manager is provided (text/full modes only)
+        if file_manager is not None and self.mode in ("text", "full"):
             tools.append(UploadTool(self.browser, file_manager))
 
         return tools
@@ -104,7 +142,7 @@ class Agent:
         task: str,
         max_steps: int,
         wait_after_action: float,
-        mode: str,
+        dom_mode: str,
         output_schema: Optional[Type[BaseModel]] = None,
         files: Optional[List[str]] = None,
         exception_class: Type[Exception] = TaskAbortedError,
@@ -116,7 +154,7 @@ class Agent:
             task: Task description
             max_steps: Maximum steps
             wait_after_action: Wait time after each action
-            mode: DOM context mode
+            dom_mode: DOM serialization mode (accessibility or dom)
             output_schema: Optional output schema
             files: Optional list of file paths for upload
             exception_class: Exception class to raise on abort
@@ -130,13 +168,17 @@ class Agent:
         from webtask.llm.message import Content, TextContent
 
         self.browser.set_wait_after_action(wait_after_action)
-        self.browser.set_mode(mode)
+        self.browser.set_mode(dom_mode)
 
         # Create file manager for this run
         file_manager = FileManager(files) if files else None
 
         # Create browser tools (including upload tool if files provided)
         tools = self._create_browser_tools(file_manager)
+
+        # Determine context flags based on agent mode
+        include_dom = self.mode in ("text", "full")
+        include_screenshot = self.mode in ("visual", "full")
 
         # Create get_context callback that includes page context + file context
         async def get_context() -> List[Content]:
@@ -146,8 +188,10 @@ class Agent:
             if file_manager and not file_manager.is_empty():
                 content.append(TextContent(text=file_manager.format_context()))
 
-            # Add page context (tabs, DOM, screenshot)
-            page_context = await self.browser.get_page_context()
+            # Add page context based on agent mode
+            page_context = await self.browser.get_page_context(
+                include_dom=include_dom, include_screenshot=include_screenshot
+            )
             content.extend(page_context)
 
             return content
@@ -181,7 +225,7 @@ class Agent:
         wait_after_action: float = 0.2,
         files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
-        mode: str = "accessibility",
+        dom_mode: str = "accessibility",
     ) -> Result:
         """
         Execute a task using TaskRunner.
@@ -192,7 +236,7 @@ class Agent:
             wait_after_action: Wait time in seconds after each action (default: 0.2)
             files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
-            mode: DOM context mode - "accessibility" (default) or "dom"
+            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             Result with output and feedback
@@ -204,7 +248,7 @@ class Agent:
             task=task,
             max_steps=max_steps,
             wait_after_action=wait_after_action,
-            mode=mode,
+            dom_mode=dom_mode,
             output_schema=output_schema,
             files=files,
             exception_class=TaskAbortedError,
@@ -217,7 +261,7 @@ class Agent:
         condition: str,
         max_steps: int = 10,
         wait_after_action: float = 0.2,
-        mode: str = "accessibility",
+        dom_mode: str = "accessibility",
     ) -> Verdict:
         """
         Verify a condition on the current page.
@@ -226,22 +270,30 @@ class Agent:
             condition: Condition to verify in natural language (e.g., "cart has 7 items")
             max_steps: Maximum number of steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
+            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             Verdict with passed (bool) and feedback (str)
 
         Raises:
-            VerificationAbortedError: If verification is aborted
+            TaskAbortedError: If verification is aborted
         """
+
+        class VerificationResult(BaseModel):
+            """Structured output for verification."""
+
+            verified: bool = Field(
+                description="True if the condition is met, False otherwise"
+            )
+
         task = f"Check if the following condition is true: {condition}"
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
             wait_after_action=wait_after_action,
-            mode=mode,
+            dom_mode=dom_mode,
             output_schema=VerificationResult,
-            exception_class=VerificationAbortedError,
+            exception_class=TaskAbortedError,
         )
 
         if not run.result.output:
@@ -258,7 +310,7 @@ class Agent:
         output_schema: Optional[Type[BaseModel]] = None,
         max_steps: int = 10,
         wait_after_action: float = 0.2,
-        mode: str = "accessibility",
+        dom_mode: str = "accessibility",
     ):
         """
         Extract information from the current page.
@@ -268,13 +320,13 @@ class Agent:
             output_schema: Optional Pydantic model for structured output
             max_steps: Maximum steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (default: 0.2)
-            mode: DOM context mode - "accessibility" (default) or "dom"
+            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             str if no output_schema provided, otherwise instance of output_schema
 
         Raises:
-            ExtractionAbortedError: If extraction is aborted
+            TaskAbortedError: If extraction is aborted
         """
 
         # Default to str schema if none provided
@@ -290,9 +342,9 @@ class Agent:
             task=task,
             max_steps=max_steps,
             wait_after_action=wait_after_action,
-            mode=mode,
+            dom_mode=dom_mode,
             output_schema=schema,
-            exception_class=ExtractionAbortedError,
+            exception_class=TaskAbortedError,
         )
 
         # Return extracted value directly
@@ -308,7 +360,10 @@ class Agent:
         Args:
             url: URL to go to
         """
-        await self.browser.goto(url)
+        if not self.browser.has_current_page():
+            await self.browser.open_tab()
+        page = self.browser.get_current_page()
+        await page.goto(url)
 
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False
@@ -352,6 +407,8 @@ class Agent:
         Returns:
             Current Page instance, or None if no page is active
         """
+        if not self.browser.has_current_page():
+            return None
         return self.browser.get_current_page()
 
     def focus_tab(self, page: Page) -> None:

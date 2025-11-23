@@ -17,17 +17,12 @@ Easy to use LLM-powered web automation.
 
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import Gemini
-import os
+from webtask.integrations.llm import GeminiComputerUse
 
 wt = Webtask()
+agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
 
-llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
-agent = await wt.create_agent(llm=llm)
-
-await agent.goto("practicesoftwaretesting.com")
-
-await agent.do("Add 2 Flat-Head Wood Screws to the cart")
+await agent.do("Go to practicesoftwaretesting.com and add 2 Flat-Head Wood Screws to the cart")
 
 verdict = await agent.verify("the cart contains 2 items")
 if verdict:
@@ -36,15 +31,12 @@ if verdict:
 
 ## Features
 
-**Simple or complex tasks** - From single actions to multi-step workflows
-
-**Stateful agents** - Remember context across multiple tasks
-
-**Verification** - Simple boolean checks with natural language
-
-**Structured output** - Extract data with Pydantic schemas
-
-**Easy integration** - Multiple ways to create agents
+- **Simple or complex tasks** - Single actions or multi-step workflows
+- **Stateful agents** - Remembers context across tasks
+- **Three modes** - Text (DOM), visual (screenshots), or full (both)
+- **Verification** - Natural language assertions
+- **Structured output** - Extract data with Pydantic schemas
+- **Easy integration** - Works with existing browsers
 
 ## Get Started
 

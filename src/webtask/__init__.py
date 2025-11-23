@@ -5,8 +5,6 @@ from .agent import Agent, Result, Verdict, Tool
 from .exceptions import (
     WebtaskError,
     TaskAbortedError,
-    VerificationAbortedError,
-    ExtractionAbortedError,
 )
 
 from .browser import (
@@ -30,7 +28,7 @@ from .llm import (
     ToolResultStatus,
 )
 
-__version__ = "0.19.2"
+__version__ = "0.20.0"
 
 __all__ = [
     # Manager
@@ -43,8 +41,6 @@ __all__ = [
     # Exceptions
     "WebtaskError",
     "TaskAbortedError",
-    "VerificationAbortedError",
-    "ExtractionAbortedError",
     # Browser interfaces (for custom implementations)
     "Browser",
     "Context",

@@ -18,6 +18,7 @@ No parameters. Browser launches automatically when you create the first agent.
 ```python
 async def create_agent(
     llm: LLM,
+    mode: str = "text",
     stateful: bool = True,
     headless: bool = False,
     browser_type: str = "chromium"
@@ -27,7 +28,8 @@ async def create_agent(
 Create agent with new browser context.
 
 **Parameters:**
-- `llm` - LLM instance (Gemini or Bedrock)
+- `llm` - LLM instance (Gemini, GeminiComputerUse, or Bedrock)
+- `mode` - Agent mode: "text" (DOM-based), "visual" (screenshots), "full" (both)
 - `stateful` - Maintain conversation history between do() calls (default: True)
 - `headless` - Run browser without GUI (default: False)
 - `browser_type` - "chromium", "firefox", or "webkit" (default: "chromium")
@@ -35,20 +37,12 @@ Create agent with new browser context.
 **Example:**
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import Gemini
-import os
+from webtask.integrations.llm import GeminiComputerUse
 
 wt = Webtask()
 
-llm = Gemini(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
-
-# Visible browser (default)
-agent = await wt.create_agent(llm=llm)
-
-# Headless browser
-agent = await wt.create_agent(llm=llm, headless=True)
-
-# Non-stateful agent
+agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
+agent = await wt.create_agent(llm=llm, mode="text", headless=True)
 agent = await wt.create_agent(llm=llm, stateful=False)
 ```
 
@@ -58,27 +52,20 @@ agent = await wt.create_agent(llm=llm, stateful=False)
 async def create_agent_with_browser(
     llm: LLM,
     browser: Browser,
+    mode: str = "text",
     stateful: bool = True,
     use_existing_context: bool = True
 ) -> Agent
 ```
 
-Create agent with existing browser. Uses existing context by default.
+Create agent with existing browser.
 
 **Example:**
 ```python
 from webtask.integrations.browser.playwright import PlaywrightBrowser
 
-# Connect to existing browser
 browser = await PlaywrightBrowser.connect("http://localhost:9222")
-agent = await wt.create_agent_with_browser(llm=llm, browser=browser)
-
-# Force new isolated window
-agent = await wt.create_agent_with_browser(
-    llm=llm,
-    browser=browser,
-    use_existing_context=False
-)
+agent = await wt.create_agent_with_browser(llm=llm, browser=browser, mode="visual")
 ```
 
 ### `create_agent_with_context()`
@@ -87,6 +74,7 @@ agent = await wt.create_agent_with_browser(
 def create_agent_with_context(
     llm: LLM,
     context: Context,
+    mode: str = "text",
     stateful: bool = True
 ) -> Agent
 ```
@@ -96,7 +84,7 @@ Create agent with existing context.
 **Example:**
 ```python
 context = browser.get_default_context()
-agent = wt.create_agent_with_context(llm=llm, context=context)
+agent = wt.create_agent_with_context(llm=llm, context=context, mode="text")
 ```
 
 ### `create_agent_with_page()`
@@ -105,6 +93,7 @@ agent = wt.create_agent_with_context(llm=llm, context=context)
 def create_agent_with_page(
     llm: LLM,
     page: Page,
+    mode: str = "text",
     stateful: bool = True
 ) -> Agent
 ```
@@ -114,7 +103,7 @@ Create agent with existing page.
 **Example:**
 ```python
 page = await context.create_page()
-agent = wt.create_agent_with_page(llm=llm, page=page)
+agent = wt.create_agent_with_page(llm=llm, page=page, mode="visual")
 ```
 
 ### `close()`
