@@ -5,28 +5,28 @@
 
 ```python
 from webtask.integrations.llm import Gemini
-import os
 
-llm = Gemini(
-    model="gemini-2.5-flash",
-    api_key=os.getenv("GEMINI_API_KEY")
-)
-
-agent = await wt.create_agent(llm=llm)
+llm = Gemini(model="gemini-2.5-flash")
+agent = await wt.create_agent(llm=llm, mode="text")
 ```
 
-Available models: `gemini-2.5-flash`, `gemini-2.5-pro`
+## GeminiComputerUse
 
-## Bedrock
+For visual mode with pixel-based interactions:
+
+```python
+from webtask.integrations.llm import GeminiComputerUse
+
+llm = GeminiComputerUse(model="gemini-2.5-computer-use-preview")
+agent = await wt.create_agent(llm=llm, mode="visual")
+```
+
+## Bedrock (WIP)
 
 ```python
 from webtask.integrations.llm import Bedrock
 
-llm = Bedrock(
-    model="us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    region="us-east-1"
-)
-
+llm = Bedrock(model="anthropic.claude-sonnet-4-20250514-v1:0")
 agent = await wt.create_agent(llm=llm)
 ```
 

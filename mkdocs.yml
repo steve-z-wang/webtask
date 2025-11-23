@@ -69,11 +69,12 @@ nav:
   - Home: index.md
   - Documentation:
     - Getting Started: getting-started.md
-    - Examples: examples.md
-    - Using Cookies: guides/cookies.md
-    - Custom LLM: guides/custom-llm.md
     - MCP Server: mcp-server.md
     - Architecture: architecture.md
+    - Common Use Cases:
+      - Examples: examples.md
+      - Using Cookies: guides/cookies.md
+      - Custom LLM: guides/custom-llm.md
     - API Reference:
       - Overview: api/index.md
       - Webtask: api/webtask.md

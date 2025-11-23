@@ -111,7 +111,6 @@ Bedrock(model="anthropic.claude-sonnet-4-20250514-v1:0")        # Claude 4 Sonne
 
 - [Documentation](https://steve-z-wang.github.io/webtask/)
 - [Benchmarks](https://github.com/steve-z-wang/webtask-benchmarks)
-- [MCP Server](https://steve-z-wang.github.io/webtask/mcp/)
 
 ## License
 

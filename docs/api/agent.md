@@ -69,7 +69,7 @@ Check if a condition is true.
 
 **Returns:** Verdict that can be used as boolean
 
-**Raises:** `VerificationAbortedError` if verification is aborted
+**Raises:** `TaskAbortedError` if verification is aborted
 
 **Example:**
 ```python
@@ -104,7 +104,7 @@ Extract information from the current page.
 
 **Returns:** str if no output_schema provided, otherwise instance of output_schema
 
-**Raises:** `ExtractionAbortedError` if extraction is aborted
+**Raises:** `TaskAbortedError` if extraction is aborted
 
 **Example:**
 ```python
