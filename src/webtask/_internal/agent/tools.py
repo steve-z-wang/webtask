@@ -1,6 +1,6 @@
 """Task tools - all tools available to the worker."""
 
-from typing import Dict, List, TYPE_CHECKING, Optional, Any, Type
+from typing import List, TYPE_CHECKING, Optional, Any, Type
 from pydantic import BaseModel, Field, create_model
 from webtask.llm.tool import Tool
 from .run import TaskResult, TaskStatus

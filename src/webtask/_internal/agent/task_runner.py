@@ -1,7 +1,7 @@
 """TaskRunner - executes one task with conversation-based LLM."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Type
+from typing import List, Optional, Tuple, TYPE_CHECKING, Type
 from pydantic import BaseModel
 from webtask.llm import (
     Message,

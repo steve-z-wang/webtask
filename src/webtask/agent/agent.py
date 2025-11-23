@@ -1,7 +1,7 @@
 """Agent - main interface for web automation."""
 
 import logging
-from typing import Dict, List, Optional, Type
+from typing import List, Optional, Type
 from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.browser import Context, Page
