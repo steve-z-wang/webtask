@@ -64,9 +64,11 @@ class Agent:
         self.stateful = stateful
         self.logger = logging.getLogger(__name__)
 
+        # Get coordinate_scale from LLM if available (e.g., GeminiComputerUse)
+        coordinate_scale = getattr(llm, "coordinate_scale", None)
+
         # Create AgentBrowser once - shared across all do() calls
-        # This preserves page state between tasks
-        self.browser = AgentBrowser(context=context)
+        self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
         # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations

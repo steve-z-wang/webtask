@@ -66,6 +66,30 @@ class MockPage(Page):
     async def evaluate(self, script):
         return None
 
+    def viewport_size(self):
+        return (1280, 720)
+
+    async def mouse_click(self, x, y):
+        pass
+
+    async def mouse_move(self, x, y):
+        pass
+
+    async def mouse_wheel(self, x, y, delta_x, delta_y):
+        pass
+
+    async def mouse_drag(self, x, y, dest_x, dest_y):
+        pass
+
+    async def keyboard_press(self, key):
+        pass
+
+    async def go_back(self):
+        pass
+
+    async def go_forward(self):
+        pass
+
 
 @pytest.fixture
 def mock_page_factory():
@@ -166,7 +190,7 @@ async def test_get_tabs_context(browser, mock_context):
     page2.url = "https://github.com"
 
     # Get tabs context (page2 is current)
-    tabs_context = browser.get_tabs_context()
+    tabs_context = browser._get_tabs_context()
 
     # Verify format
     assert "Tabs:" in tabs_context
@@ -175,7 +199,7 @@ async def test_get_tabs_context(browser, mock_context):
 
     # Focus tab 0 and verify marker moves
     browser.focus_tab(0)
-    tabs_context = browser.get_tabs_context()
+    tabs_context = browser._get_tabs_context()
 
     assert "- [0] https://google.com (current)" in tabs_context
     assert "- [1] https://github.com" in tabs_context

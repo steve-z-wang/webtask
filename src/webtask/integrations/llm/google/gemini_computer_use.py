@@ -1,6 +1,6 @@
 """Google Gemini Computer Use LLM implementation for pixel-based browser control."""
 
-from typing import Optional, List, Tuple, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 from google import genai
 from google.genai import types
@@ -30,26 +30,23 @@ EXCLUDED_PREDEFINED_FUNCTIONS = [
     "drag_and_drop",
 ]
 
-# Tools that have coordinate parameters that need denormalization
-COORDINATE_TOOLS = {
-    "click_at": ["x", "y"],
-    "hover_at": ["x", "y"],
-    "type_text_at": ["x", "y"],
-    "scroll_at": ["x", "y", "magnitude"],
-    "drag_and_drop": ["x", "y", "dest_x", "dest_y"],
-}
-
 
 class GeminiComputerUse(LLM):
     """Google Gemini Computer Use implementation for pixel-based browser control.
 
     This uses the specialized gemini-2.5-computer-use model with custom tools
     that include description parameters for better logging and summaries.
+
+    The model returns coordinates normalized to 0-999. The coordinate_scale
+    attribute indicates this, and AgentBrowser uses it to scale coordinates
+    to actual screen pixels.
     """
+
+    # Model uses 0-999 normalized coordinates
+    coordinate_scale = 1000
 
     def __init__(
         self,
-        screen_size: Tuple[int, int],
         model: str = "gemini-2.5-computer-use-preview-10-2025",
         api_key: Optional[str] = None,
         temperature: float = 1.0,
@@ -57,7 +54,6 @@ class GeminiComputerUse(LLM):
         """Initialize GeminiComputerUse.
 
         Args:
-            screen_size: Screen dimensions as (width, height) in pixels
             model: Computer Use model name
             api_key: Optional API key (if not set via environment variable)
             temperature: Sampling temperature (default 1.0 as recommended for Computer Use)
@@ -68,40 +64,8 @@ class GeminiComputerUse(LLM):
         self._client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
         self.model_name = model
-        self.screen_size = screen_size
         self.temperature = temperature
         self._debugger = LLMContextDebugger()
-
-    def _denormalize_x(self, x: int) -> int:
-        """Convert normalized x coordinate (0-999) to actual pixels."""
-        return int(x / 1000 * self.screen_size[0])
-
-    def _denormalize_y(self, y: int) -> int:
-        """Convert normalized y coordinate (0-999) to actual pixels."""
-        return int(y / 1000 * self.screen_size[1])
-
-    def _denormalize_tool_call(self, tool_call: ToolCall) -> ToolCall:
-        """Denormalize coordinates in tool call arguments."""
-        if tool_call.name not in COORDINATE_TOOLS:
-            return tool_call
-
-        coord_params = COORDINATE_TOOLS[tool_call.name]
-        new_args = dict(tool_call.arguments)
-
-        for param in coord_params:
-            if param in new_args:
-                value = new_args[param]
-                # Determine if this is an x or y coordinate
-                if param in ("x", "dest_x"):
-                    new_args[param] = self._denormalize_x(value)
-                elif param in ("y", "dest_y"):
-                    new_args[param] = self._denormalize_y(value)
-                elif param == "magnitude":
-                    # Magnitude is typically used with scroll_at
-                    # It's already in the right scale, no denormalization needed
-                    pass
-
-        return ToolCall(name=tool_call.name, arguments=new_args)
 
     def _build_tool_config(self, tools: List["Tool"]) -> List[types.Tool]:
         """Build Gemini tool configuration with Computer Use and custom functions."""
@@ -138,7 +102,8 @@ class GeminiComputerUse(LLM):
     ) -> AssistantMessage:
         """Generate response with tool calling.
 
-        Coordinates in returned tool calls are denormalized from 0-999 to actual pixels.
+        Note: Coordinates in returned tool calls are normalized (0-999).
+        AgentBrowser handles scaling to actual screen pixels using coordinate_scale.
         """
         gemini_content, system_instruction = messages_to_gemini_content(messages)
         tool_configs = self._build_tool_config(tools)
@@ -168,13 +133,13 @@ class GeminiComputerUse(LLM):
                 f"Total: {usage.total_token_count}"
             )
 
-        # Parse response and denormalize coordinates
+        # Parse response
         assistant_msg = self._parse_response(response)
         self._debugger.save_call(messages, assistant_msg)
         return assistant_msg
 
     def _parse_response(self, response) -> AssistantMessage:
-        """Parse Gemini response and denormalize coordinates."""
+        """Parse Gemini response to AssistantMessage."""
         tool_calls = []
         content_parts = []
 
@@ -187,11 +152,7 @@ class GeminiComputerUse(LLM):
                 elif hasattr(part, "function_call") and part.function_call:
                     fc = part.function_call
                     args = dict(fc.args) if fc.args else {}
-
-                    tool_call = ToolCall(name=fc.name, arguments=args)
-                    # Denormalize coordinates
-                    tool_call = self._denormalize_tool_call(tool_call)
-                    tool_calls.append(tool_call)
+                    tool_calls.append(ToolCall(name=fc.name, arguments=args))
 
         return AssistantMessage(
             content=content_parts if content_parts else None,
