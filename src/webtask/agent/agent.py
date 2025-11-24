@@ -28,7 +28,6 @@ from webtask._internal.agent.tools import (
     GoForwardTool,
     KeyCombinationTool,
 )
-from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.prompts.worker_prompt import build_worker_prompt
@@ -205,17 +204,13 @@ class Agent:
         # Create dodo agent with current configuration
         dodo_agent = self._create_dodo_agent()
 
-        try:
-            result = await dodo_agent.do(
-                task=task,
-                max_iterations=max_steps,
-                output_schema=output_schema,
-            )
-            return Result(output=result.output, feedback=result.feedback)
-        except Exception as e:
-            if "aborted" in str(e).lower():
-                raise TaskAbortedError(str(e))
-            raise
+        # TaskAbortedError from dodo propagates naturally
+        result = await dodo_agent.do(
+            task=task,
+            max_iterations=max_steps,
+            output_schema=output_schema,
+        )
+        return Result(output=result.output, feedback=result.feedback)
 
     async def verify(
         self,
@@ -249,16 +244,12 @@ class Agent:
         # Create dodo agent
         dodo_agent = self._create_dodo_agent()
 
-        try:
-            verdict = await dodo_agent.check(
-                condition=condition,
-                max_iterations=max_steps,
-            )
-            return Verdict(passed=verdict.passed, feedback=verdict.reason)
-        except Exception as e:
-            if "aborted" in str(e).lower():
-                raise TaskAbortedError(str(e))
-            raise
+        # TaskAbortedError from dodo propagates naturally
+        verdict = await dodo_agent.check(
+            condition=condition,
+            max_iterations=max_steps,
+        )
+        return Verdict(passed=verdict.passed, feedback=verdict.reason)
 
     async def extract(
         self,
@@ -294,16 +285,12 @@ class Agent:
         # Create dodo agent
         dodo_agent = self._create_dodo_agent()
 
-        try:
-            return await dodo_agent.tell(
-                what=what,
-                schema=output_schema,
-                max_iterations=max_steps,
-            )
-        except Exception as e:
-            if "aborted" in str(e).lower():
-                raise TaskAbortedError(str(e))
-            raise
+        # TaskAbortedError from dodo propagates naturally
+        return await dodo_agent.tell(
+            what=what,
+            schema=output_schema,
+            max_iterations=max_steps,
+        )
 
     async def goto(self, url: str) -> None:
         """

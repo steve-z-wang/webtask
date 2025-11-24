@@ -1,15 +1,13 @@
 """Custom exceptions for webtask."""
 
+# Re-export from dodo so users can do: from webtask import TaskAbortedError
+from dodo import TaskAbortedError
+
 
 class WebtaskError(Exception):
-    """Base exception for all webtask errors."""
+    """Base exception for webtask-specific errors."""
 
     pass
 
 
-class TaskAbortedError(WebtaskError):
-    """Raised when a task (do/verify/extract) is aborted by the agent."""
-
-    def __init__(self, message: str, feedback: str | None = None):
-        super().__init__(message)
-        self.feedback = feedback
+__all__ = ["WebtaskError", "TaskAbortedError"]
