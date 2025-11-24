@@ -2,12 +2,12 @@
 
 import logging
 from typing import List, Optional, Type
+
 from pydantic import BaseModel, Field
+from dodo import Agent as DodoAgent, Text, Image
+
 from webtask.llm import LLM
-from webtask.llm.tool import Tool
 from webtask.browser import Context, Page
-from webtask._internal.agent.task_runner import TaskRunner
-from webtask._internal.agent.run import Run, TaskStatus
 from webtask._internal.agent.file_manager import FileManager
 from webtask._internal.agent.tools import (
     GotoTool,
@@ -37,11 +37,12 @@ class Agent:
     """
     Main agent interface for web automation.
 
-    Requires a Context for browser management and page operations.
+    Wraps dodo's Agent with browser-specific tools and context.
 
     Primary interface:
-    - High-level autonomous: do(task) - Agent autonomously executes tasks with Worker
-    - Supports stateful for multi-turn conversations
+    - do(task) - Execute a task autonomously
+    - verify(condition) - Check if a condition is true
+    - extract(what) - Extract information from the page
     """
 
     # Valid modes for agent operation
@@ -80,23 +81,22 @@ class Agent:
         # Create AgentBrowser once - shared across all do() calls
         self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
-        # Store previous runs if stateful=True
-        # Accumulates runs from all do() calls for multi-turn conversations
-        self._previous_runs: List[Run] = []
+        # Configuration for tasks (set by do/verify/extract)
+        self._wait_after_action: float = 0.2
+        self._dom_mode: str = "accessibility"
+        self._file_manager: Optional[FileManager] = None
 
-    def _create_browser_tools(
-        self, file_manager: Optional[FileManager] = None
-    ) -> List[Tool]:
+        # Dodo agent (created lazily for each configuration)
+        self._dodo_agent: Optional[DodoAgent] = None
+
+    def _create_browser_tools(self) -> List:
         """Create browser tools based on agent mode.
-
-        Args:
-            file_manager: Optional FileManager for upload tool
 
         Returns:
             List of browser tools appropriate for the mode
         """
         # Common tools for all modes
-        common_tools: List[Tool] = [
+        common_tools = [
             WaitTool(),
             GotoTool(self.browser),
             GoBackTool(self.browser),
@@ -108,14 +108,14 @@ class Agent:
         ]
 
         # Text mode: DOM-based tools (element IDs)
-        text_tools: List[Tool] = [
+        text_tools = [
             ClickTool(self.browser),
             FillTool(self.browser),
             TypeTool(self.browser),
         ]
 
         # Visual mode: Pixel-based tools (coordinates)
-        visual_tools: List[Tool] = [
+        visual_tools = [
             ClickAtTool(self.browser),
             TypeTextAtTool(self.browser),
             HoverAtTool(self.browser),
@@ -132,91 +132,52 @@ class Agent:
             tools = common_tools + text_tools + visual_tools
 
         # Add upload tool only if file_manager is provided (text/full modes only)
-        if file_manager is not None and self.mode in ("text", "full"):
-            tools.append(UploadTool(self.browser, file_manager))
+        if self._file_manager is not None and self.mode in ("text", "full"):
+            tools.append(UploadTool(self.browser, self._file_manager))
 
         return tools
 
-    async def _run_task(
-        self,
-        task: str,
-        max_steps: int,
-        wait_after_action: float,
-        dom_mode: str,
-        output_schema: Optional[Type[BaseModel]] = None,
-        files: Optional[List[str]] = None,
-        exception_class: Type[Exception] = TaskAbortedError,
-    ) -> Run:
+    async def _observe(self) -> List:
+        """Get current page context for the LLM.
+
+        Returns context with lifespan=1 so old page states don't pollute history.
         """
-        Internal method to run a task and throw on abort.
+        content = []
 
-        Args:
-            task: Task description
-            max_steps: Maximum steps
-            wait_after_action: Wait time after each action
-            dom_mode: DOM serialization mode (accessibility or dom)
-            output_schema: Optional output schema
-            files: Optional list of file paths for upload
-            exception_class: Exception class to raise on abort
-
-        Returns:
-            Run object with completed result
-
-        Raises:
-            exception_class: If task is aborted
-        """
-        from webtask.llm.message import Content, TextContent
-
-        self.browser.set_wait_after_action(wait_after_action)
-        self.browser.set_mode(dom_mode)
-
-        # Create file manager for this run
-        file_manager = FileManager(files) if files else None
-
-        # Create browser tools (including upload tool if files provided)
-        tools = self._create_browser_tools(file_manager)
+        # Add file context first (if files provided)
+        if self._file_manager and not self._file_manager.is_empty():
+            content.append(
+                Text(text=self._file_manager.format_context(), lifespan=1)
+            )
 
         # Determine context flags based on agent mode
         include_dom = self.mode in ("text", "full")
         include_screenshot = self.mode in ("visual", "full")
 
-        # Create get_context callback that includes page context + file context
-        async def get_context() -> List[Content]:
-            content: List[Content] = []
+        # Get page context from browser
+        page_context = await self.browser.get_page_context(
+            include_dom=include_dom, include_screenshot=include_screenshot
+        )
 
-            # Add file context first (if files provided)
-            if file_manager and not file_manager.is_empty():
-                content.append(TextContent(text=file_manager.format_context()))
+        # Convert webtask content to dodo content with lifespan=1
+        for item in page_context:
+            if hasattr(item, "text"):
+                content.append(Text(text=item.text, lifespan=1))
+            elif hasattr(item, "data"):
+                # Image content
+                content.append(Image(base64=item.data, lifespan=1))
 
-            # Add page context based on agent mode
-            page_context = await self.browser.get_page_context(
-                include_dom=include_dom, include_screenshot=include_screenshot
-            )
-            content.extend(page_context)
+        return content
 
-            return content
-
-        # Create TaskRunner for this run with tools and context callback
-        task_runner = TaskRunner(
+    def _create_dodo_agent(self) -> DodoAgent:
+        """Create dodo agent with current configuration."""
+        tools = self._create_browser_tools()
+        return DodoAgent(
             llm=self.llm,
             tools=tools,
-            get_context=get_context,
+            observe=self._observe,
+            stateful=self.stateful,
         )
-
-        run = await task_runner.run(
-            task,
-            max_steps,
-            previous_runs=self._previous_runs if self.stateful else None,
-            output_schema=output_schema,
-        )
-
-        if self.stateful:
-            self._previous_runs.append(run)
-
-        if run.result.status == TaskStatus.ABORTED:
-            raise exception_class(run.result.feedback or "Task aborted")
-
-        return run
 
     async def do(
         self,
@@ -228,7 +189,7 @@ class Agent:
         dom_mode: str = "accessibility",
     ) -> Result:
         """
-        Execute a task using TaskRunner.
+        Execute a task using dodo's Agent.
 
         Args:
             task: Task description in natural language
@@ -244,17 +205,27 @@ class Agent:
         Raises:
             TaskAbortedError: If task is aborted
         """
-        run = await self._run_task(
-            task=task,
-            max_steps=max_steps,
-            wait_after_action=wait_after_action,
-            dom_mode=dom_mode,
-            output_schema=output_schema,
-            files=files,
-            exception_class=TaskAbortedError,
-        )
+        # Configure browser
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(dom_mode)
+        self._wait_after_action = wait_after_action
+        self._dom_mode = dom_mode
+        self._file_manager = FileManager(files) if files else None
 
-        return Result(output=run.result.output, feedback=run.result.feedback)
+        # Create dodo agent with current configuration
+        dodo_agent = self._create_dodo_agent()
+
+        try:
+            result = await dodo_agent.do(
+                task=task,
+                max_iterations=max_steps,
+                output_schema=output_schema,
+            )
+            return Result(output=result.output, feedback=result.feedback)
+        except Exception as e:
+            if "aborted" in str(e).lower():
+                raise TaskAbortedError(str(e))
+            raise
 
     async def verify(
         self,
@@ -278,31 +249,26 @@ class Agent:
         Raises:
             TaskAbortedError: If verification is aborted
         """
+        # Configure browser
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(dom_mode)
+        self._wait_after_action = wait_after_action
+        self._dom_mode = dom_mode
+        self._file_manager = None
 
-        class VerificationResult(BaseModel):
-            """Structured output for verification."""
+        # Create dodo agent
+        dodo_agent = self._create_dodo_agent()
 
-            verified: bool = Field(
-                description="True if the condition is met, False otherwise"
+        try:
+            verdict = await dodo_agent.check(
+                condition=condition,
+                max_iterations=max_steps,
             )
-
-        task = f"Check if the following condition is true: {condition}"
-        run = await self._run_task(
-            task=task,
-            max_steps=max_steps,
-            wait_after_action=wait_after_action,
-            dom_mode=dom_mode,
-            output_schema=VerificationResult,
-            exception_class=TaskAbortedError,
-        )
-
-        if not run.result.output:
-            raise RuntimeError("Verification failed: no structured output received")
-
-        return Verdict(
-            passed=run.result.output.verified,
-            feedback=run.result.feedback or "",
-        )
+            return Verdict(passed=verdict.passed, feedback=verdict.reason)
+        except Exception as e:
+            if "aborted" in str(e).lower():
+                raise TaskAbortedError(str(e))
+            raise
 
     async def extract(
         self,
@@ -328,30 +294,26 @@ class Agent:
         Raises:
             TaskAbortedError: If extraction is aborted
         """
+        # Configure browser
+        self.browser.set_wait_after_action(wait_after_action)
+        self.browser.set_mode(dom_mode)
+        self._wait_after_action = wait_after_action
+        self._dom_mode = dom_mode
+        self._file_manager = None
 
-        # Default to str schema if none provided
-        class StrOutput(BaseModel):
-            """String output for extraction."""
+        # Create dodo agent
+        dodo_agent = self._create_dodo_agent()
 
-            value: str = Field(description=f"The extracted {what}")
-
-        schema = output_schema or StrOutput
-        task = f"Extract the following information: {what}"
-
-        run = await self._run_task(
-            task=task,
-            max_steps=max_steps,
-            wait_after_action=wait_after_action,
-            dom_mode=dom_mode,
-            output_schema=schema,
-            exception_class=TaskAbortedError,
-        )
-
-        # Return extracted value directly
-        if output_schema:
-            return run.result.output
-        else:
-            return run.result.output.value if run.result.output else ""
+        try:
+            return await dodo_agent.tell(
+                what=what,
+                schema=output_schema,
+                max_iterations=max_steps,
+            )
+        except Exception as e:
+            if "aborted" in str(e).lower():
+                raise TaskAbortedError(str(e))
+            raise
 
     async def goto(self, url: str) -> None:
         """

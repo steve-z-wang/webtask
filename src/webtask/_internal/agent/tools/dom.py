@@ -1,147 +1,95 @@
 """DOM-based tools that interact with elements by ID."""
 
 from typing import List, TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
-from webtask.llm.message import ToolResult, ToolResultStatus
+from dodo import tool
 
 if TYPE_CHECKING:
     from webtask._internal.agent.agent_browser import AgentBrowser
     from webtask._internal.agent.file_manager import FileManager
 
 
-class ClickTool(Tool):
+@tool
+class ClickTool:
     """Click an element on the page."""
 
-    name = "click"
-    description = "Click an element on the page"
-
-    class Params(BaseModel):
-        """Parameters for click tool."""
-
-        element_id: str = Field(description="ID of the element to click")
-        description: str = Field(
-            description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')"
-        )
-
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize click tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute click on element."""
-        element = await self.browser.select(params.element_id)
+    async def run(self, element_id: str, description: str) -> str:
+        """
+        Args:
+            element_id: ID of the element to click
+            description: Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')
+        """
+        element = await self.browser.select(element_id)
         await element.click()
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Clicked {params.description}",
-        )
+        return f"Clicked {description}"
 
 
-class FillTool(Tool):
-    """Fill a form element with a value."""
-
-    name = "fill"
-    description = "Fill a form element with a value (fast, direct value setting)"
-
-    class Params(BaseModel):
-        """Parameters for fill tool."""
-
-        element_id: str = Field(description="ID of the element to fill")
-        value: str = Field(description="Value to fill into the element")
-        description: str = Field(
-            description="Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')"
-        )
+@tool
+class FillTool:
+    """Fill a form element with a value (fast, direct value setting)."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize fill tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute fill on element."""
-        element = await self.browser.select(params.element_id)
-        await element.fill(params.value)
+    async def run(self, element_id: str, value: str, description: str) -> str:
+        """
+        Args:
+            element_id: ID of the element to fill
+            value: Value to fill into the element
+            description: Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')
+        """
+        element = await self.browser.select(element_id)
+        await element.fill(value)
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Filled {params.description} with '{params.value}'",
-        )
+        return f"Filled {description} with '{value}'"
 
 
-class TypeTool(Tool):
-    """Type text into an element character by character."""
-
-    name = "type"
-    description = "Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)"
-
-    class Params(BaseModel):
-        """Parameters for type tool."""
-
-        element_id: str = Field(description="ID of the element to type into")
-        text: str = Field(description="Text to type into the element")
-        description: str = Field(
-            description="Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')"
-        )
+@tool
+class TypeTool:
+    """Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize type tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute type on element."""
-        element = await self.browser.select(params.element_id)
-        await element.type(params.text)
+    async def run(self, element_id: str, text: str, description: str) -> str:
+        """
+        Args:
+            element_id: ID of the element to type into
+            text: Text to type into the element
+            description: Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')
+        """
+        element = await self.browser.select(element_id)
+        await element.type(text)
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Typed '{params.text}' into {params.description}",
-        )
+        return f"Typed '{text}' into {description}"
 
 
-class UploadTool(Tool):
-    """Upload files to a file input element."""
+@tool
+class UploadTool:
+    """Upload files to a file input element. Use file indexes shown in the Files section."""
 
-    name = "upload"
-    description = "Upload files to a file input element. Use file indexes shown in the Files section."
-
-    class Params(BaseModel):
-        """Parameters for upload tool."""
-
-        element_id: str = Field(
-            description="Element ID of the file input (e.g., '[input-5]')"
-        )
-        file_indexes: List[int] = Field(
-            description="List of file indexes to upload (e.g., [0] or [0, 1])"
-        )
-        description: str = Field(
-            description="Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')"
-        )
-
-    def __init__(
-        self,
-        browser: "AgentBrowser",
-        file_manager: "FileManager",
-    ):
-        """Initialize upload tool with browser and file manager."""
+    def __init__(self, browser: "AgentBrowser", file_manager: "FileManager"):
         self.browser = browser
         self.file_manager = file_manager
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute file upload."""
-        paths = self.file_manager.get_paths(params.file_indexes)
+    async def run(
+        self, element_id: str, file_indexes: List[int], description: str
+    ) -> str:
+        """
+        Args:
+            element_id: Element ID of the file input (e.g., '[input-5]')
+            file_indexes: List of file indexes to upload (e.g., [0] or [0, 1])
+            description: Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')
+        """
+        paths = self.file_manager.get_paths(file_indexes)
         file_path = paths if len(paths) > 1 else paths[0]
 
-        element = await self.browser.select(params.element_id)
+        element = await self.browser.select(element_id)
         await element.upload_file(file_path)
         await self.browser.wait()
 
-        indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Uploaded files {indexes_str} to {params.description}",
-        )
+        indexes_str = ", ".join(f"[{i}]" for i in file_indexes)
+        return f"Uploaded files {indexes_str} to {description}"

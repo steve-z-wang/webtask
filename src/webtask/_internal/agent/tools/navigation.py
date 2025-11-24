@@ -1,161 +1,102 @@
 """Navigation tools for URL and history navigation."""
 
 from typing import TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
-from webtask.llm.message import ToolResult, ToolResultStatus
+from dodo import tool
 
 if TYPE_CHECKING:
     from webtask._internal.agent.agent_browser import AgentBrowser
 
 
-class GotoTool(Tool):
+@tool
+class GotoTool:
     """Go to a URL."""
 
-    name = "goto"
-    description = "Go to a URL"
-
-    class Params(BaseModel):
-        """Parameters for goto tool."""
-
-        url: str = Field(description="URL to go to")
-
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize goto tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute goto."""
+    async def run(self, url: str) -> str:
+        """
+        Args:
+            url: URL to go to
+        """
         if not self.browser.has_current_page():
             await self.browser.open_tab()
         page = self.browser.get_current_page()
-        await page.goto(params.url)
+        await page.goto(url)
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Went to {params.url}",
-        )
+        return f"Went to {url}"
 
 
-class GoBackTool(Tool):
-    """Navigate back in browser history."""
-
-    name = "go_back"
-    description = "Navigate to the previous page in browser history"
-
-    class Params(BaseModel):
-        """Parameters for go_back tool."""
-
-        description: str = Field(
-            description="Why you're going back (e.g., 'Return to search results')"
-        )
+@tool
+class GoBackTool:
+    """Navigate to the previous page in browser history."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize go_back tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute go back."""
+    async def run(self, description: str) -> str:
+        """
+        Args:
+            description: Why you're going back (e.g., 'Return to search results')
+        """
         page = self.browser.get_current_page()
         await page.go_back()
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Went back: {params.description}",
-        )
+        return f"Went back: {description}"
 
 
-class GoForwardTool(Tool):
-    """Navigate forward in browser history."""
-
-    name = "go_forward"
-    description = "Navigate to the next page in browser history"
-
-    class Params(BaseModel):
-        """Parameters for go_forward tool."""
-
-        description: str = Field(
-            description="Why you're going forward (e.g., 'Return to product page')"
-        )
+@tool
+class GoForwardTool:
+    """Navigate to the next page in browser history."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize go_forward tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute go forward."""
+    async def run(self, description: str) -> str:
+        """
+        Args:
+            description: Why you're going forward (e.g., 'Return to product page')
+        """
         page = self.browser.get_current_page()
         await page.go_forward()
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Went forward: {params.description}",
-        )
+        return f"Went forward: {description}"
 
 
-class SearchTool(Tool):
-    """Navigate to search engine homepage."""
-
-    name = "search"
-    description = "Navigate to the default search engine homepage"
-
-    class Params(BaseModel):
-        """Parameters for search tool."""
-
-        description: str = Field(
-            description="Why you're going to search (e.g., 'Start new search for product')"
-        )
+@tool
+class SearchTool:
+    """Navigate to the default search engine homepage."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize search tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute search navigation."""
+    async def run(self, description: str) -> str:
+        """
+        Args:
+            description: Why you're going to search (e.g., 'Start new search for product')
+        """
         if not self.browser.has_current_page():
             await self.browser.open_tab()
         page = self.browser.get_current_page()
         await page.goto("https://www.google.com")
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Went to search: {params.description}",
-        )
+        return f"Went to search: {description}"
 
 
-class KeyCombinationTool(Tool):
-    """Press keyboard key combinations."""
-
-    name = "key_combination"
-    description = (
-        "Press keyboard keys or combinations (e.g., 'Control+C', 'Enter', 'Escape')"
-    )
-
-    class Params(BaseModel):
-        """Parameters for key_combination tool."""
-
-        keys: str = Field(
-            description="Keys to press (e.g., 'Control+C', 'Enter', 'Alt+Tab')"
-        )
-        description: str = Field(
-            description="What this key combination does (e.g., 'Copy selected text', 'Submit form')"
-        )
+@tool
+class KeyCombinationTool:
+    """Press keyboard keys or combinations (e.g., 'Control+C', 'Enter', 'Escape')."""
 
     def __init__(self, browser: "AgentBrowser"):
-        """Initialize key_combination tool with browser."""
         self.browser = browser
 
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute key combination."""
+    async def run(self, keys: str, description: str) -> str:
+        """
+        Args:
+            keys: Keys to press (e.g., 'Control+C', 'Enter', 'Alt+Tab')
+            description: What this key combination does (e.g., 'Copy selected text', 'Submit form')
+        """
         page = self.browser.get_current_page()
-        await page.keyboard_press(params.keys)
+        await page.keyboard_press(keys)
         await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Pressed {params.keys}: {params.description}",
-        )
+        return f"Pressed {keys}: {description}"
