@@ -1,7 +1,8 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
 from .webtask import Webtask
-from .agent import Agent, Result, Verdict
+from .agent import Agent
+from .result import Result, Verdict
 from .exceptions import (
     WebtaskError,
     TaskAbortedError,

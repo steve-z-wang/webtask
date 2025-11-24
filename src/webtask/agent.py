@@ -28,7 +28,7 @@ from webtask._internal.agent.tools import (
     GoForwardTool,
     KeyCombinationTool,
 )
-from .result import Result, Verdict
+from webtask.result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.prompts.worker_prompt import build_worker_prompt
 
