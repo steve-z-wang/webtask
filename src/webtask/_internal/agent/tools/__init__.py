@@ -28,9 +28,6 @@ from .tab import OpenTabTool, SwitchTabTool
 # Utility tools
 from .utility import WaitTool
 
-# Control tools
-from .control import CompleteWorkTool, AbortWorkTool
-
 __all__ = [
     # DOM
     "ClickTool",
@@ -55,7 +52,4 @@ __all__ = [
     "SwitchTabTool",
     # Utility
     "WaitTool",
-    # Control
-    "CompleteWorkTool",
-    "AbortWorkTool",
 ]

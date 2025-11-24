@@ -3,8 +3,8 @@
 import logging
 from typing import List, Optional, Type
 
-from pydantic import BaseModel, Field
-from dodo import Agent as DodoAgent, Text, Image
+from pydantic import BaseModel
+from dodo import Agent as DodoAgent, Text, Content
 
 from webtask.llm import LLM
 from webtask.browser import Context, Page
@@ -137,35 +137,23 @@ class Agent:
 
         return tools
 
-    async def _observe(self) -> List:
-        """Get current page context for the LLM.
-
-        Returns context with lifespan=1 so old page states don't pollute history.
-        """
-        content = []
+    async def _observe(self) -> List[Content]:
+        """Get current page context for the LLM."""
+        content: List[Content] = []
 
         # Add file context first (if files provided)
         if self._file_manager and not self._file_manager.is_empty():
-            content.append(
-                Text(text=self._file_manager.format_context(), lifespan=1)
-            )
+            content.append(Text(text=self._file_manager.format_context(), lifespan=1))
 
         # Determine context flags based on agent mode
         include_dom = self.mode in ("text", "full")
         include_screenshot = self.mode in ("visual", "full")
 
-        # Get page context from browser
+        # Get page context from browser (already returns dodo Content types)
         page_context = await self.browser.get_page_context(
             include_dom=include_dom, include_screenshot=include_screenshot
         )
-
-        # Convert webtask content to dodo content with lifespan=1
-        for item in page_context:
-            if hasattr(item, "text"):
-                content.append(Text(text=item.text, lifespan=1))
-            elif hasattr(item, "data"):
-                # Image content
-                content.append(Image(base64=item.data, lifespan=1))
+        content.extend(page_context)
 
         return content
 

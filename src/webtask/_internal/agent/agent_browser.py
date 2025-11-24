@@ -1,8 +1,8 @@
 """AgentBrowser - browser interface for agent with page management and LLMDomContext."""
 
 from typing import List, Optional, Tuple, Union
+from dodo import Text, Image, Content
 from webtask.browser import Page, Context, Element
-from webtask.llm.message import Content, TextContent, ImageContent, ImageMimeType
 from ..context import LLMDomContext
 from ..utils.wait import wait
 import base64
@@ -124,21 +124,15 @@ class AgentBrowser:
         """
         content: List[Content] = []
         tabs_context = self._get_tabs_context()
-        content.append(TextContent(text=tabs_context, tag="tabs_context"))
+        content.append(Text(text=tabs_context, lifespan=1))
         if include_dom:
             dom_snapshot = await self._get_dom_snapshot()
             if dom_snapshot:
-                content.append(TextContent(text=dom_snapshot, tag="dom_snapshot"))
+                content.append(Text(text=dom_snapshot, lifespan=1))
         if include_screenshot:
             screenshot_b64 = await self._get_screenshot()
             if screenshot_b64:
-                content.append(
-                    ImageContent(
-                        data=screenshot_b64,
-                        mime_type=ImageMimeType.PNG,
-                        tag="screenshot",
-                    )
-                )
+                content.append(Image(base64=screenshot_b64, lifespan=1))
         return content
 
     async def wait_for_load(self, timeout: int = 10000) -> None:

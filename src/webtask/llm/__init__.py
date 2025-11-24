@@ -1,33 +1,27 @@
-"""LLM module - LLM base class and message types."""
+"""LLM module - re-exports from dodo."""
 
-from .llm import LLM
-from .message import (
+from dodo import (
+    LLM,
+    Text,
+    Image,
+    Content,
+    ToolResult,
+    ToolResultStatus,
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    Content,
-    TextContent,
-    ImageContent,
-    ImageMimeType,
-    ToolCall,
-    ToolResult,
-    ToolResultStatus,
+    ModelMessage,
 )
 
 __all__ = [
     "LLM",
+    "Text",
+    "Image",
+    "Content",
+    "ToolResult",
+    "ToolResultStatus",
     "Message",
     "SystemMessage",
     "UserMessage",
-    "AssistantMessage",
-    "ToolResultMessage",
-    "Content",
-    "TextContent",
-    "ImageContent",
-    "ImageMimeType",
-    "ToolCall",
-    "ToolResult",
-    "ToolResultStatus",
+    "ModelMessage",
 ]
