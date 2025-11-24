@@ -81,13 +81,8 @@ class Agent:
         # Create AgentBrowser once - shared across all do() calls
         self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
-        # Configuration for tasks (set by do/verify/extract)
-        self._wait_after_action: float = 0.2
-        self._dom_mode: str = "accessibility"
+        # File manager for current task (set by do())
         self._file_manager: Optional[FileManager] = None
-
-        # Dodo agent (created lazily for each configuration)
-        self._dodo_agent: Optional[DodoAgent] = None
 
     def _create_browser_tools(self) -> List:
         """Create browser tools based on agent mode.
@@ -194,11 +189,9 @@ class Agent:
         Raises:
             TaskAbortedError: If task is aborted
         """
-        # Configure browser
+        # Configure browser for this task
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(dom_mode)
-        self._wait_after_action = wait_after_action
-        self._dom_mode = dom_mode
         self._file_manager = FileManager(files) if files else None
 
         # Create dodo agent with current configuration
@@ -234,11 +227,9 @@ class Agent:
         Raises:
             TaskAbortedError: If verification is aborted
         """
-        # Configure browser
+        # Configure browser for this task
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(dom_mode)
-        self._wait_after_action = wait_after_action
-        self._dom_mode = dom_mode
         self._file_manager = None
 
         # Create dodo agent
@@ -275,11 +266,9 @@ class Agent:
         Raises:
             TaskAbortedError: If extraction is aborted
         """
-        # Configure browser
+        # Configure browser for this task
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(dom_mode)
-        self._wait_after_action = wait_after_action
-        self._dom_mode = dom_mode
         self._file_manager = None
 
         # Create dodo agent
