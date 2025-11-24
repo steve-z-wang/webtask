@@ -1,7 +1,7 @@
 """webtask - Web automation framework with LLM-powered agents."""
 
 from .webtask import Webtask
-from .agent import Agent, Result, Verdict, Tool
+from .agent import Agent, Result, Verdict
 from .exceptions import (
     WebtaskError,
     TaskAbortedError,
@@ -14,18 +14,20 @@ from .browser import (
     Element,
 )
 
-from .llm import (
+# Re-export from dodo
+from dodo import (
     LLM,
+    Tool,
+    tool,
+    Text,
+    Image,
+    Content,
+    ToolResult,
+    ToolResultStatus,
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
-    ToolCall,
-    ToolResult,
-    ToolResultStatus,
+    ModelMessage,
 )
 
 __version__ = "0.20.0"
@@ -37,7 +39,9 @@ __all__ = [
     "Agent",
     "Result",
     "Verdict",
+    # Tool
     "Tool",
+    "tool",
     # Exceptions
     "WebtaskError",
     "TaskAbortedError",
@@ -46,16 +50,15 @@ __all__ = [
     "Context",
     "Page",
     "Element",
-    # LLM interface
+    # LLM interface (from dodo)
     "LLM",
+    "Text",
+    "Image",
+    "Content",
+    "ToolResult",
+    "ToolResultStatus",
     "Message",
     "SystemMessage",
     "UserMessage",
-    "AssistantMessage",
-    "ToolResultMessage",
-    "TextContent",
-    "ImageContent",
-    "ToolCall",
-    "ToolResult",
-    "ToolResultStatus",
+    "ModelMessage",
 ]

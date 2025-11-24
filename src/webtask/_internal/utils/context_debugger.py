@@ -60,12 +60,7 @@ class LLMContextDebugger:
 
 def _message_to_dict(message: "Message") -> dict:
     """Convert message to JSON-serializable dict."""
-    from webtask.llm import (
-        AssistantMessage,
-        ToolResultMessage,
-        TextContent,
-        ImageContent,
-    )
+    from dodo import ModelMessage, Text, Image, ToolResult
 
     result = {
         "type": message.__class__.__name__,
@@ -76,7 +71,17 @@ def _message_to_dict(message: "Message") -> dict:
     if message.content:
         result["content"] = []
         for content in message.content:
-            if isinstance(content, TextContent):
+            if isinstance(content, ToolResult):
+                result["content"].append(
+                    {
+                        "type": "tool_result",
+                        "name": content.name,
+                        "status": content.status.value,
+                        "error": content.error,
+                        "tool_call_id": content.tool_call_id,
+                    }
+                )
+            elif isinstance(content, Text):
                 result["content"].append(
                     {
                         "type": "text",
@@ -84,19 +89,19 @@ def _message_to_dict(message: "Message") -> dict:
                         "tag": content.tag,
                     }
                 )
-            elif isinstance(content, ImageContent):
+            elif isinstance(content, Image):
                 # Don't save full base64 image data, just metadata
                 result["content"].append(
                     {
                         "type": "image",
                         "mime_type": content.mime_type.value,
-                        "size": len(content.data),
+                        "size": len(content.base64),
                         "tag": content.tag,
                     }
                 )
 
-    # Add tool calls if present (AssistantMessage)
-    if isinstance(message, AssistantMessage) and message.tool_calls:
+    # Add tool calls if present (ModelMessage)
+    if isinstance(message, ModelMessage) and message.tool_calls:
         result["tool_calls"] = [
             {
                 "id": tc.id,
@@ -104,18 +109,6 @@ def _message_to_dict(message: "Message") -> dict:
                 "arguments": tc.arguments,
             }
             for tc in message.tool_calls
-        ]
-
-    # Add tool results if present (ToolResultMessage)
-    if isinstance(message, ToolResultMessage):
-        result["results"] = [
-            {
-                "tool_call_id": tr.tool_call_id,
-                "name": tr.name,
-                "status": tr.status.value,
-                "error": tr.error,
-            }
-            for tr in message.results
         ]
 
     return result

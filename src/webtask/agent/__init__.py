@@ -1,7 +1,6 @@
-"""Agent module - public agent interface and tool base class."""
+"""Agent module - public agent interface."""
 
 from .agent import Agent
 from .result import Result, Verdict
-from ..llm.tool import Tool
 
-__all__ = ["Agent", "Result", "Verdict", "Tool"]
+__all__ = ["Agent", "Result", "Verdict"]

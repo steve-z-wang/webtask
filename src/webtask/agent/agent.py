@@ -31,6 +31,7 @@ from webtask._internal.agent.tools import (
 from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
+from webtask._internal.prompts.worker_prompt import build_worker_prompt
 
 
 class Agent:
@@ -164,6 +165,7 @@ class Agent:
             llm=self.llm,
             tools=tools,
             observe=self._observe,
+            system_prompt=build_worker_prompt(),
             stateful=self.stateful,
         )
 

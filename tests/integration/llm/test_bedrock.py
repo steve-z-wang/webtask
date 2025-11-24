@@ -2,7 +2,8 @@
 
 import os
 import pytest
-from webtask.llm import SystemMessage, UserMessage, TextContent, ToolCall
+from webtask.llm import SystemMessage, UserMessage, Text
+from dodo.llm.message import ToolCall
 
 # Skip tests if boto3 not available
 pytest.importorskip("boto3")
@@ -32,7 +33,7 @@ def bedrock_llm():
 def sample_tools():
     """Create sample tools for testing."""
     from pydantic import BaseModel, Field
-    from webtask.llm.tool import Tool
+    from dodo import Tool
 
     class ClickParams(BaseModel):
         element_id: str = Field(description="ID of element to click")
@@ -71,10 +72,10 @@ def sample_tools():
 async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
     """Test that Bedrock returns a tool call for a simple request."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a web automation agent.")]),
+        SystemMessage(content=[Text(text="You are a web automation agent.")]),
         UserMessage(
             content=[
-                TextContent(text="Navigate to https://example.com and click button-5")
+                Text(text="Navigate to https://example.com and click button-5")
             ]
         ),
     ]
@@ -97,7 +98,7 @@ async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
 async def test_bedrock_call_tools_with_text_content(bedrock_llm, sample_tools):
     """Test that Bedrock can return both text and tool calls."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a helpful assistant.")]),
+        SystemMessage(content=[Text(text="You are a helpful assistant.")]),
         UserMessage(
             content=[
                 TextContent(
@@ -122,7 +123,7 @@ async def test_bedrock_call_tools_with_text_content(bedrock_llm, sample_tools):
 async def test_bedrock_handles_multiple_tools(bedrock_llm, sample_tools):
     """Test that Bedrock can call multiple tools in sequence."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a web automation agent.")]),
+        SystemMessage(content=[Text(text="You are a web automation agent.")]),
         UserMessage(
             content=[
                 TextContent(

@@ -5,20 +5,20 @@ from typing import Any, Dict, List, TYPE_CHECKING
 
 from google.genai import types
 
-from webtask.llm import (
+from dodo import (
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
-    ToolCall,
+    ModelMessage,
+    Text,
+    Image,
+    ToolResult,
 )
+from dodo.llm.message import ToolCall
 from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
 if TYPE_CHECKING:
-    from webtask.llm.tool import Tool
+    from dodo import Tool
 
 
 def messages_to_gemini_content(
@@ -43,18 +43,29 @@ def messages_to_gemini_content(
                 system_instruction = "\n\n".join([part.text for part in msg.content])
 
         elif isinstance(msg, UserMessage):
-            # Build parts list (text and images)
+            # Build parts list (text, images, and tool results)
             parts = []
 
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, ToolResult):
+                        # Convert ToolResult to Gemini function response
+                        response_data = {"status": content_part.status.value}
+                        if content_part.error:
+                            response_data["error"] = content_part.error
+                        parts.append(
+                            types.Part.from_function_response(
+                                name=content_part.name,
+                                response=response_data,
+                            )
+                        )
+                    elif isinstance(content_part, Text):
                         parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         # Convert base64 to inline data
                         parts.append(
                             types.Part.from_bytes(
-                                data=base64.b64decode(content_part.data),
+                                data=base64.b64decode(content_part.base64),
                                 mime_type=content_part.mime_type.value,
                             )
                         )
@@ -63,19 +74,19 @@ def messages_to_gemini_content(
             if parts:
                 gemini_messages.append(types.Content(role="user", parts=parts))
 
-        elif isinstance(msg, AssistantMessage):
+        elif isinstance(msg, ModelMessage):
             # Assistant message with tool calls
             parts = []
 
             # Include content if present
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         parts.append(
                             types.Part.from_bytes(
-                                data=base64.b64decode(content_part.data),
+                                data=base64.b64decode(content_part.base64),
                                 mime_type=content_part.mime_type.value,
                             )
                         )
@@ -93,38 +104,6 @@ def messages_to_gemini_content(
             # Only add message if parts is not empty (Gemini requires at least one part)
             if parts:
                 gemini_messages.append(types.Content(role="model", parts=parts))
-
-        elif isinstance(msg, ToolResultMessage):
-            # Tool results message - convert to Gemini function response
-            parts = []
-
-            for result in msg.results:
-                # Create function response for each tool result
-                response_data = {"status": result.status.value}
-                if result.error:
-                    response_data["error"] = result.error
-
-                parts.append(
-                    types.Part.from_function_response(
-                        name=result.name,
-                        response=response_data,
-                    )
-                )
-
-            # Add observation content (DOM + screenshot) as text/images
-            if msg.content:
-                for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
-                        parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
-                        parts.append(
-                            types.Part.from_bytes(
-                                data=base64.b64decode(content_part.data),
-                                mime_type=content_part.mime_type.value,
-                            )
-                        )
-
-            gemini_messages.append(types.Content(role="user", parts=parts))
 
     return gemini_messages, system_instruction
 
@@ -212,8 +191,8 @@ def build_tool_config(tools: List["Tool"]) -> types.Tool:
     return types.Tool(function_declarations=function_declarations)
 
 
-def gemini_response_to_assistant_message(response) -> "AssistantMessage":
-    """Convert Gemini response to AssistantMessage."""
+def gemini_response_to_model_message(response) -> "ModelMessage":
+    """Convert Gemini response to ModelMessage."""
     tool_calls = []
     content_parts = []
 
@@ -221,7 +200,7 @@ def gemini_response_to_assistant_message(response) -> "AssistantMessage":
         for part in response.candidates[0].content.parts:
             # Check for text content
             if hasattr(part, "text") and part.text:
-                content_parts.append(TextContent(text=part.text))
+                content_parts.append(Text(text=part.text))
             # Check for function call
             elif hasattr(part, "function_call") and part.function_call:
                 fc = part.function_call
@@ -234,7 +213,7 @@ def gemini_response_to_assistant_message(response) -> "AssistantMessage":
                     )
                 )
 
-    return AssistantMessage(
+    return ModelMessage(
         content=content_parts if content_parts else None,
         tool_calls=tool_calls if tool_calls else None,
     )

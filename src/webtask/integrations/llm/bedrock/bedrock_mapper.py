@@ -2,20 +2,20 @@
 
 import base64
 from typing import Any, Dict, List, TYPE_CHECKING
-from webtask.llm import (
+from dodo import (
     Message,
     SystemMessage,
     UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
-    ToolCall,
+    ModelMessage,
+    Text,
+    Image,
+    ToolResult,
 )
+from dodo.llm.message import ToolCall
 from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
 if TYPE_CHECKING:
-    from webtask.llm.tool import Tool
+    from dodo import Tool
 
 
 def messages_to_bedrock_format(
@@ -37,21 +37,37 @@ def messages_to_bedrock_format(
                 system_prompt = "\n\n".join([part.text for part in msg.content])
 
         elif isinstance(msg, UserMessage):
-            # Build content list (text and images)
+            # Build content list (text, images, and tool results)
             content = []
 
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, ToolResult):
+                        # Convert ToolResult to Bedrock tool result format
+                        tool_result_content = {
+                            "toolUseId": content_part.tool_call_id or f"call-{content_part.name}",
+                            "content": [],
+                        }
+                        if content_part.error:
+                            tool_result_content["status"] = "error"
+                            tool_result_content["content"].append(
+                                {"text": f"Error: {content_part.error}"}
+                            )
+                        else:
+                            tool_result_content["content"].append(
+                                {"text": f"Status: {content_part.status.value}"}
+                            )
+                        content.append({"toolResult": tool_result_content})
+                    elif isinstance(content_part, Text):
                         content.append({"text": content_part.text})
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         # Bedrock expects base64 encoded images
                         content.append(
                             {
                                 "image": {
-                                    "format": "png",  # Assume PNG, could be made configurable
+                                    "format": "png",
                                     "source": {
-                                        "bytes": base64.b64decode(content_part.data)
+                                        "bytes": base64.b64decode(content_part.base64)
                                     },
                                 }
                             }
@@ -60,14 +76,14 @@ def messages_to_bedrock_format(
             if content:
                 bedrock_messages.append({"role": "user", "content": content})
 
-        elif isinstance(msg, AssistantMessage):
+        elif isinstance(msg, ModelMessage):
             # Assistant message with optional tool calls
             content = []
 
             # Include text content if present
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         content.append({"text": content_part.text})
 
             # Add tool calls
@@ -85,47 +101,6 @@ def messages_to_bedrock_format(
 
             if content:
                 bedrock_messages.append({"role": "assistant", "content": content})
-
-        elif isinstance(msg, ToolResultMessage):
-            # Tool results message - convert to Bedrock tool result format
-            content = []
-
-            for result in msg.results:
-                # Create tool result
-                tool_result_content = {"toolUseId": result.tool_call_id, "content": []}
-
-                if result.error:
-                    tool_result_content["status"] = "error"
-                    tool_result_content["content"].append(
-                        {"text": f"Error: {result.error}"}
-                    )
-                else:
-                    # Bedrock doesn't have an explicit success status, omit status for success
-                    tool_result_content["content"].append(
-                        {"text": f"Status: {result.status.value}"}
-                    )
-
-                content.append({"toolResult": tool_result_content})
-
-            # Add observation content (DOM + screenshot) as additional content
-            if msg.content:
-                for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
-                        content.append({"text": content_part.text})
-                    elif isinstance(content_part, ImageContent):
-                        content.append(
-                            {
-                                "image": {
-                                    "format": "png",
-                                    "source": {
-                                        "bytes": base64.b64decode(content_part.data)
-                                    },
-                                }
-                            }
-                        )
-
-            if content:
-                bedrock_messages.append({"role": "user", "content": content})
 
     return bedrock_messages, system_prompt
 
@@ -163,8 +138,8 @@ def build_tool_config(tools: List["Tool"]) -> Dict[str, Any]:
     return {"tools": tool_specs}
 
 
-def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> AssistantMessage:
-    """Convert Bedrock Converse API response to AssistantMessage."""
+def bedrock_response_to_model_message(response: Dict[str, Any]) -> ModelMessage:
+    """Convert Bedrock Converse API response to ModelMessage."""
     tool_calls = []
     content_parts = []
 
@@ -174,7 +149,7 @@ def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> Assistant
 
         for content_block in message_content:
             if "text" in content_block:
-                content_parts.append(TextContent(text=content_block["text"]))
+                content_parts.append(Text(text=content_block["text"]))
             elif "toolUse" in content_block:
                 tool_use = content_block["toolUse"]
                 tool_calls.append(
@@ -185,7 +160,7 @@ def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> Assistant
                     )
                 )
 
-    return AssistantMessage(
+    return ModelMessage(
         content=content_parts if content_parts else None,
         tool_calls=tool_calls if tool_calls else None,
     )

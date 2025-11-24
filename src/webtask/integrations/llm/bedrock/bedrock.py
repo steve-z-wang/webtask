@@ -2,13 +2,12 @@
 
 from typing import Optional, List, TYPE_CHECKING
 
-from webtask.llm import LLM
-from webtask.llm.message import Message, AssistantMessage
+from dodo import LLM, Message, ModelMessage
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .bedrock_mapper import (
     messages_to_bedrock_format,
     build_tool_config,
-    bedrock_response_to_assistant_message,
+    bedrock_response_to_model_message,
 )
 
 try:
@@ -20,7 +19,7 @@ except ImportError:
     )
 
 if TYPE_CHECKING:
-    from webtask.llm.tool import Tool
+    from dodo import Tool
 
 
 class Bedrock(LLM):
@@ -71,7 +70,7 @@ class Bedrock(LLM):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> ModelMessage:
         """Generate response with tool calling."""
         bedrock_messages, system_prompt = messages_to_bedrock_format(messages)
         tool_config = build_tool_config(tools)
@@ -107,6 +106,6 @@ class Bedrock(LLM):
                 f"Total: {usage.get('totalTokens', 0)}"
             )
 
-        assistant_msg = bedrock_response_to_assistant_message(response)
+        assistant_msg = bedrock_response_to_model_message(response)
         self._debugger.save_call(messages, assistant_msg)
         return assistant_msg
