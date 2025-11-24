@@ -17,7 +17,7 @@ class OpenTabTool:
     async def run(self, description: str) -> str:
         """
         Args:
-            description: Why you are opening a new tab (e.g., 'Open new tab to search for product')
+            description (str): Why you are opening a new tab (e.g., 'Open new tab to search for product')
         """
         await self.browser.open_tab()
         return f"Opened new tab: {description}"
@@ -33,8 +33,8 @@ class SwitchTabTool:
     async def run(self, tab_index: int, description: str) -> str:
         """
         Args:
-            tab_index: The tab index to switch to (0-based, as shown in Tabs section)
-            description: Why you are switching to this tab (e.g., 'Switch back to main tab')
+            tab_index (int): The tab index to switch to (0-based, as shown in Tabs section)
+            description (str): Why you are switching to this tab (e.g., 'Switch back to main tab')
         """
         self.browser.focus_tab(tab_index)
         return f"Switched to tab [{tab_index}]: {description}"

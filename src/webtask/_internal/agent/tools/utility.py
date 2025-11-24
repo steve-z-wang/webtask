@@ -11,7 +11,7 @@ class WaitTool:
     async def run(self, seconds: float) -> str:
         """
         Args:
-            seconds: Seconds to wait (0.1 to 10)
+            seconds (float): Seconds to wait (0.1 to 10)
         """
         # Clamp to valid range
         seconds = max(0.1, min(10.0, seconds))

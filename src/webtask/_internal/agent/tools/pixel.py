@@ -17,9 +17,9 @@ class ClickAtTool:
     async def run(self, x: int, y: int, description: str) -> str:
         """
         Args:
-            x: X coordinate (pixels)
-            y: Y coordinate (pixels)
-            description: What you're clicking (e.g., 'Submit button', 'Login link')
+            x (int): X coordinate (pixels)
+            y (int): Y coordinate (pixels)
+            description (str): What you're clicking (e.g., 'Submit button', 'Login link')
         """
         page = self.browser.get_current_page()
         scaled_x, scaled_y = self.browser.scale_coordinates(x, y)
@@ -38,9 +38,9 @@ class HoverAtTool:
     async def run(self, x: int, y: int, description: str) -> str:
         """
         Args:
-            x: X coordinate (pixels)
-            y: Y coordinate (pixels)
-            description: What you're hovering over (e.g., 'Dropdown menu', 'Tooltip trigger')
+            x (int): X coordinate (pixels)
+            y (int): Y coordinate (pixels)
+            description (str): What you're hovering over (e.g., 'Dropdown menu', 'Tooltip trigger')
         """
         page = self.browser.get_current_page()
         scaled_x, scaled_y = self.browser.scale_coordinates(x, y)
@@ -67,12 +67,12 @@ class TypeTextAtTool:
     ) -> str:
         """
         Args:
-            x: X coordinate (pixels)
-            y: Y coordinate (pixels)
-            text: Text to type
-            description: What you're typing into (e.g., 'Search box', 'Email field')
-            press_enter: Press Enter after typing
-            clear_before_typing: Clear existing text before typing
+            x (int): X coordinate (pixels)
+            y (int): Y coordinate (pixels)
+            text (str): Text to type
+            description (str): What you're typing into (e.g., 'Search box', 'Email field')
+            press_enter (bool): Press Enter after typing
+            clear_before_typing (bool): Clear existing text before typing
         """
         page = self.browser.get_current_page()
         scaled_x, scaled_y = self.browser.scale_coordinates(x, y)
@@ -104,11 +104,11 @@ class ScrollAtTool:
     ) -> str:
         """
         Args:
-            x: X coordinate (pixels)
-            y: Y coordinate (pixels)
-            direction: Scroll direction
-            description: What you're scrolling (e.g., 'Product list', 'Chat history')
-            magnitude: Scroll amount in pixels
+            x (int): X coordinate (pixels)
+            y (int): Y coordinate (pixels)
+            direction (str): Scroll direction
+            description (str): What you're scrolling (e.g., 'Product list', 'Chat history')
+            magnitude (int): Scroll amount in pixels
         """
         page = self.browser.get_current_page()
         scaled_x, scaled_y = self.browser.scale_coordinates(x, y)
@@ -138,8 +138,8 @@ class ScrollDocumentTool:
     ) -> str:
         """
         Args:
-            direction: Scroll direction
-            description: Why you're scrolling (e.g., 'Scroll to see more results')
+            direction (str): Scroll direction
+            description (str): Why you're scrolling (e.g., 'Scroll to see more results')
         """
         page = self.browser.get_current_page()
         key = {
@@ -165,11 +165,11 @@ class DragAndDropTool:
     ) -> str:
         """
         Args:
-            x: Start X coordinate (pixels)
-            y: Start Y coordinate (pixels)
-            dest_x: Destination X coordinate (pixels)
-            dest_y: Destination Y coordinate (pixels)
-            description: What you're dragging (e.g., 'Drag slider to 50%', 'Move file to folder')
+            x (int): Start X coordinate (pixels)
+            y (int): Start Y coordinate (pixels)
+            dest_x (int): Destination X coordinate (pixels)
+            dest_y (int): Destination Y coordinate (pixels)
+            description (str): What you're dragging (e.g., 'Drag slider to 50%', 'Move file to folder')
         """
         page = self.browser.get_current_page()
         scaled_x, scaled_y = self.browser.scale_coordinates(x, y)

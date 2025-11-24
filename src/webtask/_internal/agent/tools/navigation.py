@@ -17,7 +17,7 @@ class GotoTool:
     async def run(self, url: str) -> str:
         """
         Args:
-            url: URL to go to
+            url (str): URL to go to
         """
         if not self.browser.has_current_page():
             await self.browser.open_tab()
@@ -37,7 +37,7 @@ class GoBackTool:
     async def run(self, description: str) -> str:
         """
         Args:
-            description: Why you're going back (e.g., 'Return to search results')
+            description (str): Why you're going back (e.g., 'Return to search results')
         """
         page = self.browser.get_current_page()
         await page.go_back()
@@ -55,7 +55,7 @@ class GoForwardTool:
     async def run(self, description: str) -> str:
         """
         Args:
-            description: Why you're going forward (e.g., 'Return to product page')
+            description (str): Why you're going forward (e.g., 'Return to product page')
         """
         page = self.browser.get_current_page()
         await page.go_forward()
@@ -73,7 +73,7 @@ class SearchTool:
     async def run(self, description: str) -> str:
         """
         Args:
-            description: Why you're going to search (e.g., 'Start new search for product')
+            description (str): Why you're going to search (e.g., 'Start new search for product')
         """
         if not self.browser.has_current_page():
             await self.browser.open_tab()
@@ -93,8 +93,8 @@ class KeyCombinationTool:
     async def run(self, keys: str, description: str) -> str:
         """
         Args:
-            keys: Keys to press (e.g., 'Control+C', 'Enter', 'Alt+Tab')
-            description: What this key combination does (e.g., 'Copy selected text', 'Submit form')
+            keys (str): Keys to press (e.g., 'Control+C', 'Enter', 'Alt+Tab')
+            description (str): What this key combination does (e.g., 'Copy selected text', 'Submit form')
         """
         page = self.browser.get_current_page()
         await page.keyboard_press(keys)

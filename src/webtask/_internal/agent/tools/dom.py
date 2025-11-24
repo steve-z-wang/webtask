@@ -18,8 +18,8 @@ class ClickTool:
     async def run(self, element_id: str, description: str) -> str:
         """
         Args:
-            element_id: ID of the element to click
-            description: Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')
+            element_id (str): ID of the element to click
+            description (str): Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')
         """
         element = await self.browser.select(element_id)
         await element.click()
@@ -37,9 +37,9 @@ class FillTool:
     async def run(self, element_id: str, value: str, description: str) -> str:
         """
         Args:
-            element_id: ID of the element to fill
-            value: Value to fill into the element
-            description: Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')
+            element_id (str): ID of the element to fill
+            value (str): Value to fill into the element
+            description (str): Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')
         """
         element = await self.browser.select(element_id)
         await element.fill(value)
@@ -57,9 +57,9 @@ class TypeTool:
     async def run(self, element_id: str, text: str, description: str) -> str:
         """
         Args:
-            element_id: ID of the element to type into
-            text: Text to type into the element
-            description: Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')
+            element_id (str): ID of the element to type into
+            text (str): Text to type into the element
+            description (str): Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')
         """
         element = await self.browser.select(element_id)
         await element.type(text)
@@ -80,9 +80,9 @@ class UploadTool:
     ) -> str:
         """
         Args:
-            element_id: Element ID of the file input (e.g., '[input-5]')
-            file_indexes: List of file indexes to upload (e.g., [0] or [0, 1])
-            description: Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')
+            element_id (str): Element ID of the file input (e.g., '[input-5]')
+            file_indexes (List[int]): List of file indexes to upload (e.g., [0] or [0, 1])
+            description (str): Human-readable description of what file input you're uploading to (e.g., 'Profile photo upload', 'Document attachment field')
         """
         paths = self.file_manager.get_paths(file_indexes)
         file_path = paths if len(paths) > 1 else paths[0]
