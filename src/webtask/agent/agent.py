@@ -92,11 +92,12 @@ class Agent:
         self._previous_runs = []
 
     def _create_browser_tools(
-        self, file_manager: Optional[FileManager] = None
+        self, mode: str, file_manager: Optional[FileManager] = None
     ) -> List[Tool]:
         """Create browser tools based on agent mode.
 
         Args:
+            mode: Agent mode - "text", "visual", or "full"
             file_manager: Optional FileManager for upload tool
 
         Returns:
@@ -130,15 +131,15 @@ class Agent:
         ]
 
         # Build tool list based on mode
-        if self.mode == "text":
+        if mode == "text":
             tools = common_tools + text_tools
-        elif self.mode == "visual":
+        elif mode == "visual":
             tools = common_tools + visual_tools
         else:  # full
             tools = common_tools + text_tools + visual_tools
 
         # Add upload tool only if file_manager is provided (text/full modes only)
-        if file_manager is not None and self.mode in ("text", "full"):
+        if file_manager is not None and mode in ("text", "full"):
             tools.append(UploadTool(self.browser, file_manager))
 
         return tools
@@ -147,8 +148,9 @@ class Agent:
         self,
         task: str,
         max_steps: int,
-        wait_after_action: float,
-        dom_mode: str,
+        wait_after_action: Optional[float] = None,
+        mode: Optional[str] = None,
+        dom_mode: str = "accessibility",
         output_schema: Optional[Type[BaseModel]] = None,
         files: Optional[List[str]] = None,
         exception_class: Type[Exception] = TaskAbortedError,
@@ -159,7 +161,8 @@ class Agent:
         Args:
             task: Task description
             max_steps: Maximum steps
-            wait_after_action: Wait time after each action
+            wait_after_action: Wait time after each action (uses agent default if not specified)
+            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
             dom_mode: DOM serialization mode (accessibility or dom)
             output_schema: Optional output schema
             files: Optional list of file paths for upload
@@ -170,7 +173,17 @@ class Agent:
 
         Raises:
             exception_class: If task is aborted
+            ValueError: If invalid mode is provided
         """
+        # Resolve defaults
+        wait_after_action = wait_after_action if wait_after_action is not None else self.wait_after_action
+        mode = mode if mode is not None else self.mode
+
+        # Validate mode
+        if mode not in self.VALID_MODES:
+            raise ValueError(
+                f"Invalid mode '{mode}'. Must be one of: {self.VALID_MODES}"
+            )
 
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(dom_mode)
@@ -179,11 +192,11 @@ class Agent:
         file_manager = FileManager(files) if files else None
 
         # Create browser tools (including upload tool if files provided)
-        tools = self._create_browser_tools(file_manager)
+        tools = self._create_browser_tools(mode, file_manager)
 
-        # Determine context flags based on agent mode
-        include_dom = self.mode in ("text", "full")
-        include_screenshot = self.mode in ("visual", "full")
+        # Determine context flags based on mode
+        include_dom = mode in ("text", "full")
+        include_screenshot = mode in ("visual", "full")
 
         # Create get_context callback that includes page context + file context
         async def get_context() -> List[Content]:
@@ -227,6 +240,7 @@ class Agent:
         task: str,
         max_steps: int = 20,
         wait_after_action: Optional[float] = None,
+        mode: Optional[str] = None,
         files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         dom_mode: str = "accessibility",
@@ -238,6 +252,7 @@ class Agent:
             task: Task description in natural language
             max_steps: Maximum number of steps to execute (default: 20)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
+            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
             files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
@@ -247,15 +262,13 @@ class Agent:
 
         Raises:
             TaskAbortedError: If task is aborted
+            ValueError: If invalid mode is provided
         """
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=(
-                wait_after_action
-                if wait_after_action is not None
-                else self.wait_after_action
-            ),
+            wait_after_action=wait_after_action,
+            mode=mode,
             dom_mode=dom_mode,
             output_schema=output_schema,
             files=files,
@@ -269,6 +282,7 @@ class Agent:
         condition: str,
         max_steps: int = 10,
         wait_after_action: Optional[float] = None,
+        mode: Optional[str] = None,
         dom_mode: str = "accessibility",
     ) -> Verdict:
         """
@@ -278,6 +292,7 @@ class Agent:
             condition: Condition to verify in natural language (e.g., "cart has 7 items")
             max_steps: Maximum number of steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
+            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
@@ -285,6 +300,7 @@ class Agent:
 
         Raises:
             TaskAbortedError: If verification is aborted
+            ValueError: If invalid mode is provided
         """
 
         class VerificationResult(BaseModel):
@@ -298,11 +314,8 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=(
-                wait_after_action
-                if wait_after_action is not None
-                else self.wait_after_action
-            ),
+            wait_after_action=wait_after_action,
+            mode=mode,
             dom_mode=dom_mode,
             output_schema=VerificationResult,
             exception_class=TaskAbortedError,
@@ -322,6 +335,7 @@ class Agent:
         output_schema: Optional[Type[BaseModel]] = None,
         max_steps: int = 10,
         wait_after_action: Optional[float] = None,
+        mode: Optional[str] = None,
         dom_mode: str = "accessibility",
     ):
         """
@@ -332,6 +346,7 @@ class Agent:
             output_schema: Optional Pydantic model for structured output
             max_steps: Maximum steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
+            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
@@ -339,6 +354,7 @@ class Agent:
 
         Raises:
             TaskAbortedError: If extraction is aborted
+            ValueError: If invalid mode is provided
         """
 
         # Default to str schema if none provided
@@ -353,11 +369,8 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=(
-                wait_after_action
-                if wait_after_action is not None
-                else self.wait_after_action
-            ),
+            wait_after_action=wait_after_action,
+            mode=mode,
             dom_mode=dom_mode,
             output_schema=schema,
             exception_class=TaskAbortedError,
