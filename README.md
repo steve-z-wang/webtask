@@ -50,12 +50,11 @@ await agent.do("Go to cart and verify")
 agent.clear_history()  # Start fresh
 ```
 
-**Three modes**
+**Two modes**
 
 ```python
-agent = await wt.create_agent(llm=llm, mode="text")     # DOM-based (default)
-agent = await wt.create_agent(llm=llm, mode="visual")   # Screenshots
-agent = await wt.create_agent(llm=llm, mode="full")     # Both
+agent = await wt.create_agent(llm=llm, mode="dom")     # Element IDs (default)
+agent = await wt.create_agent(llm=llm, mode="pixel")   # Screen coordinates
 ```
 
 **Verification**

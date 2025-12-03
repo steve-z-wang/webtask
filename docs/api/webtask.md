@@ -18,7 +18,7 @@ No parameters. Browser launches automatically when you create the first agent.
 ```python
 async def create_agent(
     llm: LLM,
-    mode: str = "text",
+    mode: str = "dom",
     wait_after_action: float = 1.0,
     headless: bool = False,
     browser_type: str = "chromium"
@@ -29,7 +29,7 @@ Create agent with new browser context.
 
 **Parameters:**
 - `llm` - LLM instance (Gemini, GeminiComputerUse, or Bedrock)
-- `mode` - Agent mode: "text" (DOM-based), "visual" (screenshots), "full" (both)
+- `mode` - Agent mode: "dom" (element IDs) or "pixel" (screen coordinates)
 - `wait_after_action` - Wait time in seconds after each action (default: 1.0)
 - `headless` - Run browser without GUI (default: False)
 - `browser_type` - "chromium", "firefox", or "webkit" (default: "chromium")
@@ -41,8 +41,8 @@ from webtask.integrations.llm import GeminiComputerUse
 
 wt = Webtask()
 
-agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
-agent = await wt.create_agent(llm=llm, mode="text", headless=True)
+agent = await wt.create_agent(llm=GeminiComputerUse(), mode="pixel")
+agent = await wt.create_agent(llm=llm, mode="dom", headless=True)
 agent = await wt.create_agent(llm=llm, wait_after_action=2.0)  # Slower network
 ```
 
@@ -52,7 +52,7 @@ agent = await wt.create_agent(llm=llm, wait_after_action=2.0)  # Slower network
 async def create_agent_with_browser(
     llm: LLM,
     browser: Browser,
-    mode: str = "text",
+    mode: str = "dom",
     wait_after_action: float = 1.0,
     use_existing_context: bool = True
 ) -> Agent
@@ -65,7 +65,7 @@ Create agent with existing browser.
 from webtask.integrations.browser.playwright import PlaywrightBrowser
 
 browser = await PlaywrightBrowser.connect("http://localhost:9222")
-agent = await wt.create_agent_with_browser(llm=llm, browser=browser, mode="visual")
+agent = await wt.create_agent_with_browser(llm=llm, browser=browser, mode="pixel")
 ```
 
 ### `create_agent_with_context()`
@@ -74,7 +74,7 @@ agent = await wt.create_agent_with_browser(llm=llm, browser=browser, mode="visua
 def create_agent_with_context(
     llm: LLM,
     context: Context,
-    mode: str = "text",
+    mode: str = "dom",
     wait_after_action: float = 1.0
 ) -> Agent
 ```
@@ -84,7 +84,7 @@ Create agent with existing context.
 **Example:**
 ```python
 context = browser.get_default_context()
-agent = wt.create_agent_with_context(llm=llm, context=context, mode="text")
+agent = wt.create_agent_with_context(llm=llm, context=context, mode="dom")
 ```
 
 ### `create_agent_with_page()`
@@ -103,7 +103,7 @@ Create agent with existing page.
 **Example:**
 ```python
 page = await context.create_page()
-agent = wt.create_agent_with_page(llm=llm, page=page, mode="visual")
+agent = wt.create_agent_with_page(llm=llm, page=page, mode="pixel")
 ```
 
 ### `close()`

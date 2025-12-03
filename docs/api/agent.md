@@ -9,7 +9,7 @@ Main interface for web automation.
 Agent(
     llm: LLM,
     context: Context,
-    mode: str = "text",
+    mode: str = "dom",
     wait_after_action: float = 1.0
 )
 ```
@@ -17,7 +17,7 @@ Agent(
 **Parameters:**
 - `llm` - LLM instance for reasoning
 - `context` - Browser context
-- `mode` - Agent mode: "text" (DOM-based), "visual" (screenshots), "full" (both)
+- `mode` - Agent mode: "dom" (element IDs) or "pixel" (screen coordinates)
 - `wait_after_action` - Default wait time after each action in seconds (default: 1.0)
 
 ## Methods
@@ -41,7 +41,7 @@ Execute a task with natural language.
 - `task` - Task description
 - `max_steps` - Maximum steps to execute (default: 20)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
-- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
+- `mode` - Agent mode override: "dom" or "pixel" (uses agent default if not specified)
 - `files` - Optional list of file paths for upload
 - `output_schema` - Optional Pydantic model for structured output
 
@@ -82,7 +82,7 @@ Check if a condition is true.
 - `condition` - Condition to check
 - `max_steps` - Maximum steps (default: 10)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
-- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
+- `mode` - Agent mode override: "dom" or "pixel" (uses agent default if not specified)
 
 **Returns:** Verdict that can be used as boolean
 
@@ -117,7 +117,7 @@ Extract information from the current page.
 - `output_schema` - Optional Pydantic model for structured output
 - `max_steps` - Maximum steps (default: 10)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
-- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
+- `mode` - Agent mode override: "dom" or "pixel" (uses agent default if not specified)
 
 **Returns:** str if no output_schema provided, otherwise instance of output_schema
 

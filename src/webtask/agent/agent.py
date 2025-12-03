@@ -45,13 +45,13 @@ class Agent:
     """
 
     # Valid modes for agent operation
-    VALID_MODES = ("text", "visual", "full")
+    VALID_MODES = ("dom", "pixel")
 
     def __init__(
         self,
         llm: LLM,
         context: Context,
-        mode: str = "text",
+        mode: str = "dom",
         wait_after_action: float = 1.0,
     ):
         """
@@ -60,7 +60,7 @@ class Agent:
         Args:
             llm: LLM instance for reasoning and task execution
             context: Context instance for browser management
-            mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
+            mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
         """
         if mode not in self.VALID_MODES:
@@ -97,7 +97,7 @@ class Agent:
         """Create browser tools based on agent mode.
 
         Args:
-            mode: Agent mode - "text", "visual", or "full"
+            mode: Agent mode - "dom" or "pixel"
             file_manager: Optional FileManager for upload tool
 
         Returns:
@@ -110,36 +110,34 @@ class Agent:
             GoForwardTool(self.browser),
             OpenTabTool(self.browser),
             SwitchTabTool(self.browser),
-            ScrollDocumentTool(self.browser),
             KeyCombinationTool(self.browser),
         ]
 
-        # Text mode: DOM-based tools (element IDs)
-        text_tools: List[Tool] = [
+        # DOM mode: element ID-based tools
+        dom_tools: List[Tool] = [
             ClickTool(self.browser),
             FillTool(self.browser),
             TypeTool(self.browser),
         ]
 
-        # Visual mode: Pixel-based tools (coordinates)
-        visual_tools: List[Tool] = [
+        # Pixel mode: coordinate-based tools
+        pixel_tools: List[Tool] = [
             ClickAtTool(self.browser),
             TypeTextAtTool(self.browser),
             HoverAtTool(self.browser),
             ScrollAtTool(self.browser),
+            ScrollDocumentTool(self.browser),
             DragAndDropTool(self.browser),
         ]
 
         # Build tool list based on mode
-        if mode == "text":
-            tools = common_tools + text_tools
-        elif mode == "visual":
-            tools = common_tools + visual_tools
-        else:  # full
-            tools = common_tools + text_tools + visual_tools
+        if mode == "dom":
+            tools = common_tools + dom_tools
+        else:  # pixel
+            tools = common_tools + pixel_tools
 
-        # Add upload tool only if file_manager is provided (text/full modes only)
-        if file_manager is not None and mode in ("text", "full"):
+        # Add upload tool only if file_manager is provided (dom mode only)
+        if file_manager is not None and mode == "dom":
             tools.append(UploadTool(self.browser, file_manager))
 
         return tools
@@ -161,7 +159,7 @@ class Agent:
             task: Task description
             max_steps: Maximum steps
             wait_after_action: Wait time after each action (uses agent default if not specified)
-            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
+            mode: Agent mode - "dom" or "pixel" (uses agent default if not specified)
             output_schema: Optional output schema
             files: Optional list of file paths for upload
             exception_class: Exception class to raise on abort
@@ -197,8 +195,9 @@ class Agent:
         tools = self._create_browser_tools(mode, file_manager)
 
         # Determine context flags based on mode
-        include_dom = mode in ("text", "full")
-        include_screenshot = mode in ("visual", "full")
+        # Both modes get screenshots, only dom mode gets DOM context
+        include_dom = mode == "dom"
+        include_screenshot = True
 
         # Create get_context callback that includes page context + file context
         async def get_context() -> List[Content]:
@@ -253,7 +252,7 @@ class Agent:
             task: Task description in natural language
             max_steps: Maximum number of steps to execute (default: 20)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
-            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
+            mode: Agent mode - "dom" or "pixel" (uses agent default if not specified)
             files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
 
@@ -290,7 +289,7 @@ class Agent:
             condition: Condition to verify in natural language (e.g., "cart has 7 items")
             max_steps: Maximum number of steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
-            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
+            mode: Agent mode - "dom" or "pixel" (uses agent default if not specified)
 
         Returns:
             Verdict with passed (bool) and feedback (str)
@@ -341,7 +340,7 @@ class Agent:
             output_schema: Optional Pydantic model for structured output
             max_steps: Maximum steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
-            mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
+            mode: Agent mode - "dom" or "pixel" (uses agent default if not specified)
 
         Returns:
             str if no output_schema provided, otherwise instance of output_schema
