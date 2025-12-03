@@ -40,68 +40,6 @@ class ClickTool(Tool):
         )
 
 
-class FillTool(Tool):
-    """Fill a form element with a value."""
-
-    name = "fill"
-    description = "Fill a form element with a value (fast, direct value setting)"
-
-    class Params(BaseModel):
-        """Parameters for fill tool."""
-
-        element_id: str = Field(description="ID of the element to fill")
-        value: str = Field(description="Value to fill into the element")
-        description: str = Field(
-            description="Human-readable description of what element you're filling (e.g., 'Email input field', 'Password field')"
-        )
-
-    def __init__(self, browser: "AgentBrowser"):
-        """Initialize fill tool with browser."""
-        self.browser = browser
-
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute fill on element."""
-        element = await self.browser.select(params.element_id)
-        await element.fill(params.value)
-        await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Filled {params.description} with '{params.value}'",
-        )
-
-
-class TypeTool(Tool):
-    """Type text into an element character by character."""
-
-    name = "type"
-    description = "Type text into an element character by character with realistic delays (appends to existing text - use fill to replace)"
-
-    class Params(BaseModel):
-        """Parameters for type tool."""
-
-        element_id: str = Field(description="ID of the element to type into")
-        text: str = Field(description="Text to type into the element")
-        description: str = Field(
-            description="Human-readable description of what element you're typing into (e.g., 'Search box', 'Comment field')"
-        )
-
-    def __init__(self, browser: "AgentBrowser"):
-        """Initialize type tool with browser."""
-        self.browser = browser
-
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute type on element."""
-        element = await self.browser.select(params.element_id)
-        await element.type(params.text)
-        await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Typed '{params.text}' into {params.description}",
-        )
-
-
 class UploadTool(Tool):
     """Upload files to a file input element."""
 

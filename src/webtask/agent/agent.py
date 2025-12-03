@@ -13,20 +13,18 @@ from webtask._internal.agent.file_manager import FileManager
 from webtask._internal.agent.tools import (
     GotoTool,
     ClickTool,
-    FillTool,
-    TypeTool,
     UploadTool,
     OpenTabTool,
     SwitchTabTool,
     ClickAtTool,
     HoverAtTool,
-    TypeTextAtTool,
     ScrollAtTool,
     ScrollDocumentTool,
     DragAndDropTool,
     GoBackTool,
     GoForwardTool,
     KeyCombinationTool,
+    KeyboardTypeTool,
 )
 from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
@@ -103,7 +101,7 @@ class Agent:
         Returns:
             List of browser tools appropriate for the mode
         """
-        # Common tools for all modes
+        # Common tools for all modes (navigation + keyboard)
         common_tools: List[Tool] = [
             GotoTool(self.browser),
             GoBackTool(self.browser),
@@ -111,19 +109,17 @@ class Agent:
             OpenTabTool(self.browser),
             SwitchTabTool(self.browser),
             KeyCombinationTool(self.browser),
+            KeyboardTypeTool(self.browser),
         ]
 
         # DOM mode: element ID-based tools
         dom_tools: List[Tool] = [
             ClickTool(self.browser),
-            FillTool(self.browser),
-            TypeTool(self.browser),
         ]
 
         # Pixel mode: coordinate-based tools
         pixel_tools: List[Tool] = [
             ClickAtTool(self.browser),
-            TypeTextAtTool(self.browser),
             HoverAtTool(self.browser),
             ScrollAtTool(self.browser),
             ScrollDocumentTool(self.browser),

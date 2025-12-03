@@ -159,3 +159,35 @@ class KeyCombinationTool(Tool):
             status=ToolResultStatus.SUCCESS,
             description=f"Pressed {params.keys}: {params.description}",
         )
+
+
+class KeyboardTypeTool(Tool):
+    """Type text using keyboard into the focused element."""
+
+    name = "type"
+    description = "Type text using keyboard into the currently focused element. Click on an input field first to focus it, then use this to type."
+
+    class Params(BaseModel):
+        """Parameters for type tool."""
+
+        text: str = Field(description="Text to type")
+        clear: bool = Field(
+            default=False,
+            description="Clear existing text before typing (uses Ctrl+A, Backspace)",
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize type tool with browser."""
+        self.browser = browser
+
+    async def execute(self, params: Params) -> ToolResult:
+        """Execute keyboard typing."""
+        page = self.browser.get_current_page()
+        await page.keyboard_type(params.text, clear=params.clear)
+        await self.browser.wait()
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Typed '{params.text}'"
+            + (" (cleared first)" if params.clear else ""),
+        )

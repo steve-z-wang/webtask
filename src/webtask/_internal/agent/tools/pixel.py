@@ -75,49 +75,6 @@ class HoverAtTool(Tool):
         )
 
 
-class TypeTextAtTool(Tool):
-    """Type text at screen coordinates."""
-
-    name = "type_text_at"
-    description = "Click at coordinates and type text"
-
-    class Params(BaseModel):
-        """Parameters for type_text_at tool."""
-
-        x: int = Field(description="X coordinate (pixels)")
-        y: int = Field(description="Y coordinate (pixels)")
-        text: str = Field(description="Text to type")
-        description: str = Field(
-            description="What you're typing into (e.g., 'Search box', 'Email field')"
-        )
-        press_enter: bool = Field(default=True, description="Press Enter after typing")
-        clear_before_typing: bool = Field(
-            default=True, description="Clear existing text before typing"
-        )
-
-    def __init__(self, browser: "AgentBrowser"):
-        """Initialize type_text_at tool with browser."""
-        self.browser = browser
-
-    async def execute(self, params: Params) -> ToolResult:
-        """Execute type at coordinates."""
-        page = self.browser.get_current_page()
-        x, y = self.browser.scale_coordinates(params.x, params.y)
-        await page.mouse_click(x, y)
-        if params.clear_before_typing:
-            await page.keyboard_press("Control+a")
-            await page.keyboard_press("Backspace")
-        await page.keyboard_type(params.text)
-        if params.press_enter:
-            await page.keyboard_press("Enter")
-        await self.browser.wait()
-        return ToolResult(
-            name=self.name,
-            status=ToolResultStatus.SUCCESS,
-            description=f"Typed '{params.text}' into {params.description}",
-        )
-
-
 class ScrollAtTool(Tool):
     """Scroll at specific screen coordinates."""
 
@@ -167,7 +124,7 @@ class ScrollDocumentTool(Tool):
     """Scroll the entire document."""
 
     name = "scroll_document"
-    description = "Scroll the entire webpage"
+    description = "Scroll the entire webpage by 50% of viewport (maintains context, won't cut elements in half)"
 
     class Params(BaseModel):
         """Parameters for scroll_document tool."""
@@ -184,15 +141,20 @@ class ScrollDocumentTool(Tool):
         self.browser = browser
 
     async def execute(self, params: Params) -> ToolResult:
-        """Execute document scroll."""
+        """Execute document scroll using 50% viewport scroll."""
         page = self.browser.get_current_page()
-        key = {
-            "up": "PageUp",
-            "down": "PageDown",
-            "left": "Home",
-            "right": "End",
-        }.get(params.direction, "PageDown")
-        await page.keyboard_press(key)
+        width, height = page.viewport_size()
+
+        # Scroll by 50% of viewport to maintain context
+        if params.direction == "down":
+            await page.evaluate(f"window.scrollBy(0, {height // 2})")
+        elif params.direction == "up":
+            await page.evaluate(f"window.scrollBy(0, -{height // 2})")
+        elif params.direction == "right":
+            await page.evaluate(f"window.scrollBy({width // 2}, 0)")
+        elif params.direction == "left":
+            await page.evaluate(f"window.scrollBy(-{width // 2}, 0)")
+
         await self.browser.wait()
         return ToolResult(
             name=self.name,
