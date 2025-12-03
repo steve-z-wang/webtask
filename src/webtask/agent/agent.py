@@ -40,7 +40,7 @@ class Agent:
 
     Primary interface:
     - High-level autonomous: do(task) - Agent autonomously executes tasks with Worker
-    - Supports stateful for multi-turn conversations
+    - Maintains conversation history across do() calls (use clear_history() to reset)
     """
 
     # Valid modes for agent operation
@@ -51,7 +51,6 @@ class Agent:
         llm: LLM,
         context: Context,
         mode: str = "text",
-        stateful: bool = True,
     ):
         """
         Initialize agent.
@@ -60,7 +59,6 @@ class Agent:
             llm: LLM instance for reasoning and task execution
             context: Context instance for browser management
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
-            stateful: If True, maintain conversation history between do() calls (default: True)
         """
         if mode not in self.VALID_MODES:
             raise ValueError(
@@ -70,7 +68,6 @@ class Agent:
         self.llm = llm
         self.context = context
         self.mode = mode
-        self.stateful = stateful
         self.logger = logging.getLogger(__name__)
 
         # Get coordinate_scale from LLM if available (e.g., GeminiComputerUse)
@@ -79,9 +76,16 @@ class Agent:
         # Create AgentBrowser once - shared across all do() calls
         self.browser = AgentBrowser(context=context, coordinate_scale=coordinate_scale)
 
-        # Store previous runs if stateful=True
         # Accumulates runs from all do() calls for multi-turn conversations
         self._previous_runs: List[Run] = []
+
+    def clear_history(self) -> None:
+        """
+        Clear conversation history.
+
+        Resets the agent's memory of previous tasks, starting fresh.
+        """
+        self._previous_runs = []
 
     def _create_browser_tools(
         self, file_manager: Optional[FileManager] = None
@@ -204,12 +208,11 @@ class Agent:
         run = await task_runner.run(
             task,
             max_steps,
-            previous_runs=self._previous_runs if self.stateful else None,
+            previous_runs=self._previous_runs,
             output_schema=output_schema,
         )
 
-        if self.stateful:
-            self._previous_runs.append(run)
+        self._previous_runs.append(run)
 
         if run.result.status == TaskStatus.ABORTED:
             raise exception_class(run.result.feedback or "Task aborted")
