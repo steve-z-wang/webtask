@@ -246,38 +246,16 @@ class TaskRunner:
     def _prepare_messages(
         self, session_start_messages: List[Message], pairs: List[MessagePair]
     ) -> List[Message]:
-        keep_last_n_pairs = 5
-
-        # Convert pairs to messages (with optional compacting)
+        # Convert pairs to messages
         tool_messages: List[Message] = []
-
-        # If we have more pairs than keep_last_n_pairs, build summary from old ones
-        if len(pairs) > keep_last_n_pairs:
-            old_pairs = pairs[:-keep_last_n_pairs]
-            summary = self._build_summary(old_pairs)
-            if summary:
-                tool_messages.append(
-                    UserMessage(
-                        content=[
-                            TextContent(
-                                text=f"Previous actions in this session:\n{summary}"
-                            )
-                        ]
-                    )
-                )
-
-        # Add recent pairs (or all pairs if <= keep_last_n_pairs)
-        recent_pairs = (
-            pairs[-keep_last_n_pairs:] if len(pairs) > keep_last_n_pairs else pairs
-        )
-        for assistant_msg, tool_result_msg in recent_pairs:
+        for assistant_msg, tool_result_msg in pairs:
             tool_messages.append(assistant_msg)
             tool_messages.append(tool_result_msg)
 
         # Combine session start + tool messages
         all_messages = session_start_messages + tool_messages
 
-        # Purge old content
+        # Purge old content (keep context size manageable)
         all_messages = purge_messages_content(
             all_messages,
             by_tags=["tabs_context", "dom_snapshot"],
