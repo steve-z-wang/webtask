@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 class LLMDomContext:
     """Builds LLM context from DOM and accessibility trees."""
 
+    END_OF_PAGE_MARKER = "[END OF PAGE]"
+
     def __init__(
         self, dom_root: DomNode, ax_root: AXNode, include_element_ids: bool = True
     ):
@@ -219,6 +221,7 @@ class LLMDomContext:
                 traverse(child, depth + 1)
 
         traverse(root, 0)
+        lines.append(LLMDomContext.END_OF_PAGE_MARKER)
         return "\n".join(lines)
 
     @staticmethod
@@ -292,4 +295,5 @@ class LLMDomContext:
                 traverse(child, depth + 1)
 
         traverse(root, 0)
+        lines.append(LLMDomContext.END_OF_PAGE_MARKER)
         return "\n".join(lines)
