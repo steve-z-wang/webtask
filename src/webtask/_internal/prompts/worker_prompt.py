@@ -24,9 +24,6 @@ def build_worker_prompt() -> str:
         .add("Every turn, follow these steps:")
         .add()
         .add_numbered(
-            "**Think out loud** - Write text explaining what you see in the screenshot and what you plan to do next"
-        )
-        .add_numbered(
             "**Execute actions** - Call the necessary browser tools (click, type, fill, goto)"
         )
         .add_numbered(
@@ -39,11 +36,8 @@ def build_worker_prompt() -> str:
     example = (
         MarkdownBuilder()
         .add_heading("Example Response")
-        .add("**Correct format** - Text reasoning followed by tool calls:")
+        .add("**Correct format** - Just call the tools directly:")
         .add("```")
-        .add("TEXT: I see a login form with username and password fields.")
-        .add("I will fill in the credentials and click submit.")
-        .add()
         .add("TOOLS:")
         .add("- fill: username field with 'user@example.com'")
         .add("- fill: password field with 'password123'")
