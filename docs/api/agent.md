@@ -29,9 +29,9 @@ async def do(
     task: str,
     max_steps: int = 20,
     wait_after_action: Optional[float] = None,
+    mode: Optional[str] = None,
     files: Optional[List[str]] = None,
     output_schema: Optional[Type[BaseModel]] = None,
-    dom_mode: str = "accessibility"
 ) -> Result
 ```
 
@@ -41,9 +41,9 @@ Execute a task with natural language.
 - `task` - Task description
 - `max_steps` - Maximum steps to execute (default: 20)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
+- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
 - `files` - Optional list of file paths for upload
 - `output_schema` - Optional Pydantic model for structured output
-- `dom_mode` - DOM mode: "accessibility" or "dom" (default: "accessibility")
 
 **Returns:** Result with optional output and feedback
 
@@ -72,7 +72,7 @@ async def verify(
     condition: str,
     max_steps: int = 10,
     wait_after_action: Optional[float] = None,
-    dom_mode: str = "accessibility"
+    mode: Optional[str] = None,
 ) -> Verdict
 ```
 
@@ -82,7 +82,7 @@ Check if a condition is true.
 - `condition` - Condition to check
 - `max_steps` - Maximum steps (default: 10)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
-- `dom_mode` - DOM mode (default: "accessibility")
+- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
 
 **Returns:** Verdict that can be used as boolean
 
@@ -106,7 +106,7 @@ async def extract(
     output_schema: Optional[Type[BaseModel]] = None,
     max_steps: int = 10,
     wait_after_action: Optional[float] = None,
-    dom_mode: str = "accessibility"
+    mode: Optional[str] = None,
 ) -> str | BaseModel
 ```
 
@@ -117,7 +117,7 @@ Extract information from the current page.
 - `output_schema` - Optional Pydantic model for structured output
 - `max_steps` - Maximum steps (default: 10)
 - `wait_after_action` - Wait time after each action (uses agent default if not specified)
-- `dom_mode` - DOM mode (default: "accessibility")
+- `mode` - Agent mode override: "text", "visual", or "full" (uses agent default if not specified)
 
 **Returns:** str if no output_schema provided, otherwise instance of output_schema
 

@@ -150,7 +150,6 @@ class Agent:
         max_steps: int,
         wait_after_action: Optional[float] = None,
         mode: Optional[str] = None,
-        dom_mode: str = "accessibility",
         output_schema: Optional[Type[BaseModel]] = None,
         files: Optional[List[str]] = None,
         exception_class: Type[Exception] = TaskAbortedError,
@@ -163,7 +162,6 @@ class Agent:
             max_steps: Maximum steps
             wait_after_action: Wait time after each action (uses agent default if not specified)
             mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
-            dom_mode: DOM serialization mode (accessibility or dom)
             output_schema: Optional output schema
             files: Optional list of file paths for upload
             exception_class: Exception class to raise on abort
@@ -176,7 +174,11 @@ class Agent:
             ValueError: If invalid mode is provided
         """
         # Resolve defaults
-        wait_after_action = wait_after_action if wait_after_action is not None else self.wait_after_action
+        wait_after_action = (
+            wait_after_action
+            if wait_after_action is not None
+            else self.wait_after_action
+        )
         mode = mode if mode is not None else self.mode
 
         # Validate mode
@@ -186,7 +188,7 @@ class Agent:
             )
 
         self.browser.set_wait_after_action(wait_after_action)
-        self.browser.set_mode(dom_mode)
+        self.browser.set_mode("dom")
 
         # Create file manager for this run
         file_manager = FileManager(files) if files else None
@@ -243,7 +245,6 @@ class Agent:
         mode: Optional[str] = None,
         files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
-        dom_mode: str = "accessibility",
     ) -> Result:
         """
         Execute a task using TaskRunner.
@@ -255,7 +256,6 @@ class Agent:
             mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
             files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
-            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             Result with output and feedback
@@ -269,7 +269,6 @@ class Agent:
             max_steps=max_steps,
             wait_after_action=wait_after_action,
             mode=mode,
-            dom_mode=dom_mode,
             output_schema=output_schema,
             files=files,
             exception_class=TaskAbortedError,
@@ -283,7 +282,6 @@ class Agent:
         max_steps: int = 10,
         wait_after_action: Optional[float] = None,
         mode: Optional[str] = None,
-        dom_mode: str = "accessibility",
     ) -> Verdict:
         """
         Verify a condition on the current page.
@@ -293,7 +291,6 @@ class Agent:
             max_steps: Maximum number of steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
             mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
-            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             Verdict with passed (bool) and feedback (str)
@@ -316,7 +313,6 @@ class Agent:
             max_steps=max_steps,
             wait_after_action=wait_after_action,
             mode=mode,
-            dom_mode=dom_mode,
             output_schema=VerificationResult,
             exception_class=TaskAbortedError,
         )
@@ -336,7 +332,6 @@ class Agent:
         max_steps: int = 10,
         wait_after_action: Optional[float] = None,
         mode: Optional[str] = None,
-        dom_mode: str = "accessibility",
     ):
         """
         Extract information from the current page.
@@ -347,7 +342,6 @@ class Agent:
             max_steps: Maximum steps to execute (default: 10)
             wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
             mode: Agent mode - "text", "visual", or "full" (uses agent default if not specified)
-            dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
             str if no output_schema provided, otherwise instance of output_schema
@@ -371,7 +365,6 @@ class Agent:
             max_steps=max_steps,
             wait_after_action=wait_after_action,
             mode=mode,
-            dom_mode=dom_mode,
             output_schema=schema,
             exception_class=TaskAbortedError,
         )
