@@ -49,12 +49,26 @@ agent = await wt.create_agent(llm=llm, headless=True)   # Hide browser
 ### Stateful Agents
 
 ```python
-# Stateful mode (default) - remembers context
-agent = await wt.create_agent(llm=llm, stateful=True)
-
+# Agent remembers context across tasks by default
 await agent.do("Add 2 screws to the cart")
 await agent.do("Add 5 more screws")  # Remembers previous actions
 await agent.do("Go to cart")
+
+agent.clear_history()  # Start fresh when needed
+```
+
+### Timing Control
+
+```python
+# Set default wait time for agent (default: 1.0s)
+agent = await wt.create_agent(llm=llm, wait_after_action=2.0)
+
+# Override per task
+await agent.do("Click submit", wait_after_action=3.0)
+
+# Explicit waits for SPAs
+await agent.wait_for_load()          # Wait for page load
+await agent.wait_for_network_idle()  # Wait for network idle
 ```
 
 ## Next Steps

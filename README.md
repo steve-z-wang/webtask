@@ -46,6 +46,8 @@ await agent.do("Find the blue shirt, add to cart, and checkout")    # Multi-step
 await agent.do("Add 2 wood screws to cart")
 await agent.do("Add 5 cross-head screws")
 await agent.do("Go to cart and verify")
+
+agent.clear_history()  # Start fresh
 ```
 
 **Three modes**
@@ -92,6 +94,20 @@ agent = wt.create_agent_with_context(llm=llm, context=context)          # Existi
 agent = wt.create_agent_with_page(llm=llm, page=page)                   # Existing page
 ```
 
+**Timing control**
+
+```python
+# Set default wait time for agent
+agent = await wt.create_agent(llm=llm, wait_after_action=2.0)
+
+# Override per task
+await agent.do("Click submit", wait_after_action=3.0)
+
+# Explicit waits
+await agent.wait_for_load()          # Wait for page load
+await agent.wait_for_network_idle()  # Wait for network idle
+```
+
 ## Supported LLMs
 
 ```python
@@ -104,7 +120,6 @@ Bedrock(model="anthropic.claude-sonnet-4-20250514-v1:0")        # Claude 4 Sonne
 
 ## TODO
 
-- Unlimited context - Compact conversation history for extended sessions
 - Mind2Web benchmark - Evaluation on Mind2Web dataset
 
 ## Links

@@ -19,7 +19,7 @@ No parameters. Browser launches automatically when you create the first agent.
 async def create_agent(
     llm: LLM,
     mode: str = "text",
-    stateful: bool = True,
+    wait_after_action: float = 1.0,
     headless: bool = False,
     browser_type: str = "chromium"
 ) -> Agent
@@ -30,7 +30,7 @@ Create agent with new browser context.
 **Parameters:**
 - `llm` - LLM instance (Gemini, GeminiComputerUse, or Bedrock)
 - `mode` - Agent mode: "text" (DOM-based), "visual" (screenshots), "full" (both)
-- `stateful` - Maintain conversation history between do() calls (default: True)
+- `wait_after_action` - Wait time in seconds after each action (default: 1.0)
 - `headless` - Run browser without GUI (default: False)
 - `browser_type` - "chromium", "firefox", or "webkit" (default: "chromium")
 
@@ -43,7 +43,7 @@ wt = Webtask()
 
 agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
 agent = await wt.create_agent(llm=llm, mode="text", headless=True)
-agent = await wt.create_agent(llm=llm, stateful=False)
+agent = await wt.create_agent(llm=llm, wait_after_action=2.0)  # Slower network
 ```
 
 ### `create_agent_with_browser()`
@@ -53,7 +53,7 @@ async def create_agent_with_browser(
     llm: LLM,
     browser: Browser,
     mode: str = "text",
-    stateful: bool = True,
+    wait_after_action: float = 1.0,
     use_existing_context: bool = True
 ) -> Agent
 ```
@@ -75,7 +75,7 @@ def create_agent_with_context(
     llm: LLM,
     context: Context,
     mode: str = "text",
-    stateful: bool = True
+    wait_after_action: float = 1.0
 ) -> Agent
 ```
 
@@ -94,7 +94,7 @@ def create_agent_with_page(
     llm: LLM,
     page: Page,
     mode: str = "text",
-    stateful: bool = True
+    wait_after_action: float = 1.0
 ) -> Agent
 ```
 
