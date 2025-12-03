@@ -1,6 +1,5 @@
 """Tests for semantic knowledge functions."""
 
-import pytest
 from webtask._internal.dom.domnode import DomNode, Text
 from webtask._internal.dom.knowledge.semantic import has_semantic_value, SEMANTIC_TAGS
 
