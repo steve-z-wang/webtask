@@ -138,7 +138,6 @@ async def test_do_throws_on_abort(mocker):
         result=TaskResult(
             status=TaskStatus.ABORTED, feedback="Could not complete task"
         ),
-        summary="",
         messages=[],
         task_description="test task",
         steps_used=1,
@@ -168,7 +167,6 @@ async def test_do_returns_result_on_success(mocker):
             feedback="Task completed successfully",
             output={"key": "value"},
         ),
-        summary="",
         messages=[],
         task_description="test task",
         steps_used=1,
@@ -196,7 +194,6 @@ async def test_verify_throws_on_abort(mocker):
     # Mock TaskRunner.run to return aborted result
     mock_run = Run(
         result=TaskResult(status=TaskStatus.ABORTED, feedback="Could not verify"),
-        summary="",
         messages=[],
         task_description="test",
         steps_used=1,
@@ -230,7 +227,6 @@ async def test_verify_returns_verdict_on_success(mocker):
             feedback="Condition is true",
             output=MockVerificationResult(),
         ),
-        summary="",
         messages=[],
         task_description="test",
         steps_used=1,
@@ -259,7 +255,6 @@ async def test_extract_throws_on_abort(mocker):
     # Mock TaskRunner.run to return aborted result
     mock_run = Run(
         result=TaskResult(status=TaskStatus.ABORTED, feedback="Could not extract"),
-        summary="",
         messages=[],
         task_description="test",
         steps_used=1,
@@ -292,7 +287,6 @@ async def test_extract_returns_string_on_success(mocker):
             feedback="Extracted price",
             output=MockStrOutput(),
         ),
-        summary="",
         messages=[],
         task_description="test",
         steps_used=1,
@@ -331,7 +325,6 @@ async def test_extract_returns_structured_output_with_schema(mocker):
             feedback="Extracted product info",
             output=mock_output,
         ),
-        summary="",
         messages=[],
         task_description="test",
         steps_used=1,

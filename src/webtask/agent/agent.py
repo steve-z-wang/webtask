@@ -171,7 +171,6 @@ class Agent:
         Raises:
             exception_class: If task is aborted
         """
-        from webtask.llm.message import Content, TextContent
 
         self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode(dom_mode)
@@ -252,7 +251,11 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
+            wait_after_action=(
+                wait_after_action
+                if wait_after_action is not None
+                else self.wait_after_action
+            ),
             dom_mode=dom_mode,
             output_schema=output_schema,
             files=files,
@@ -295,7 +298,11 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
+            wait_after_action=(
+                wait_after_action
+                if wait_after_action is not None
+                else self.wait_after_action
+            ),
             dom_mode=dom_mode,
             output_schema=VerificationResult,
             exception_class=TaskAbortedError,
@@ -346,7 +353,11 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
+            wait_after_action=(
+                wait_after_action
+                if wait_after_action is not None
+                else self.wait_after_action
+            ),
             dom_mode=dom_mode,
             output_schema=schema,
             exception_class=TaskAbortedError,

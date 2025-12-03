@@ -57,6 +57,9 @@ class MockPage(Page):
     async def wait_for_load(self, timeout=10000):
         pass
 
+    async def wait_for_network_idle(self, timeout=10000):
+        pass
+
     async def screenshot(self, path=None, full_page=False):
         return b""
 
