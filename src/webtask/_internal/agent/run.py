@@ -35,7 +35,6 @@ class Run:
     """Task execution run - full execution history with embedded result."""
 
     result: TaskResult
-    summary: str
     messages: List
 
     task_description: str

@@ -120,9 +120,6 @@ class TaskRunner:
 
         self._logger.info(f"Task end - Status: {result.status.value}")
 
-        # Build automatic summary from all pairs
-        summary = self._build_summary(pairs)
-
         # Convert pairs to full message list
         messages: List[Message] = []
         for assistant_msg, tool_result_msg in pairs:
@@ -145,7 +142,6 @@ class TaskRunner:
         # Build and return Run with embedded Result
         return Run(
             result=result,
-            summary=summary,
             messages=messages,
             task_description=task,
             steps_used=steps_used,
@@ -210,37 +206,6 @@ class TaskRunner:
             if run.result.feedback:
                 lines.append(f"Feedback: {run.result.feedback}")
             lines.append("")  # Blank line between tasks
-        return "\n".join(lines)
-
-    def _build_summary(self, pairs: List[MessagePair]) -> str:
-        if not pairs:
-            return ""
-
-        lines = []
-        for assistant_msg, tool_result_msg in pairs:
-            # Extract reasoning from assistant message
-            reasoning = self._extract_reasoning(assistant_msg)
-
-            # Add reasoning as main bullet point if present
-            if reasoning:
-                reasoning = reasoning.strip()
-                # Single line reasoning
-                if "\n" not in reasoning:
-                    lines.append(f"- {reasoning}")
-                else:
-                    # Multi-line reasoning
-                    reasoning_lines = reasoning.split("\n")
-                    lines.append(f"- {reasoning_lines[0]}")
-                    for reasoning_line in reasoning_lines[1:]:
-                        lines.append(f"  {reasoning_line}")
-
-            # Add actions as nested list (indented) - descriptions are in ToolResult
-            for result in tool_result_msg.results:
-                if result.status.value == "error":
-                    lines.append(f"  - {result.description} [FAILED: {result.error}]")
-                else:
-                    lines.append(f"  - {result.description}")
-
         return "\n".join(lines)
 
     def _prepare_messages(
