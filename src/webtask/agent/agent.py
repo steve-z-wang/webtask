@@ -5,6 +5,7 @@ from typing import List, Optional, Type
 from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.llm.tool import Tool
+from webtask.llm.message import Content, TextContent
 from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Run, TaskStatus
@@ -51,6 +52,7 @@ class Agent:
         llm: LLM,
         context: Context,
         mode: str = "text",
+        wait_after_action: float = 1.0,
     ):
         """
         Initialize agent.
@@ -59,6 +61,7 @@ class Agent:
             llm: LLM instance for reasoning and task execution
             context: Context instance for browser management
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
+            wait_after_action: Wait time in seconds after each action (default: 1.0)
         """
         if mode not in self.VALID_MODES:
             raise ValueError(
@@ -68,6 +71,7 @@ class Agent:
         self.llm = llm
         self.context = context
         self.mode = mode
+        self.wait_after_action = wait_after_action
         self.logger = logging.getLogger(__name__)
 
         # Get coordinate_scale from LLM if available (e.g., GeminiComputerUse)
@@ -223,7 +227,7 @@ class Agent:
         self,
         task: str,
         max_steps: int = 20,
-        wait_after_action: float = 1.0,
+        wait_after_action: Optional[float] = None,
         files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         dom_mode: str = "accessibility",
@@ -234,7 +238,7 @@ class Agent:
         Args:
             task: Task description in natural language
             max_steps: Maximum number of steps to execute (default: 20)
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
+            wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
             files: Optional list of file paths for upload
             output_schema: Optional Pydantic model defining the expected output structure
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
@@ -248,7 +252,7 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action,
+            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
             dom_mode=dom_mode,
             output_schema=output_schema,
             files=files,
@@ -261,7 +265,7 @@ class Agent:
         self,
         condition: str,
         max_steps: int = 10,
-        wait_after_action: float = 1.0,
+        wait_after_action: Optional[float] = None,
         dom_mode: str = "accessibility",
     ) -> Verdict:
         """
@@ -270,7 +274,7 @@ class Agent:
         Args:
             condition: Condition to verify in natural language (e.g., "cart has 7 items")
             max_steps: Maximum number of steps to execute (default: 10)
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
+            wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
@@ -291,7 +295,7 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action,
+            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
             dom_mode=dom_mode,
             output_schema=VerificationResult,
             exception_class=TaskAbortedError,
@@ -310,7 +314,7 @@ class Agent:
         what: str,
         output_schema: Optional[Type[BaseModel]] = None,
         max_steps: int = 10,
-        wait_after_action: float = 1.0,
+        wait_after_action: Optional[float] = None,
         dom_mode: str = "accessibility",
     ):
         """
@@ -320,7 +324,7 @@ class Agent:
             what: What to extract in natural language (e.g., "total price", "product name")
             output_schema: Optional Pydantic model for structured output
             max_steps: Maximum steps to execute (default: 10)
-            wait_after_action: Wait time in seconds after each action (default: 0.2)
+            wait_after_action: Wait time in seconds after each action (uses agent default if not specified)
             dom_mode: DOM serialization mode - "accessibility" (default) or "dom"
 
         Returns:
@@ -342,7 +346,7 @@ class Agent:
         run = await self._run_task(
             task=task,
             max_steps=max_steps,
-            wait_after_action=wait_after_action,
+            wait_after_action=wait_after_action if wait_after_action is not None else self.wait_after_action,
             dom_mode=dom_mode,
             output_schema=schema,
             exception_class=TaskAbortedError,

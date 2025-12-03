@@ -102,7 +102,7 @@ class Webtask:
         self,
         llm: LLM,
         mode: str = "text",
-        stateful: bool = True,
+        wait_after_action: float = 1.0,
         headless: bool = False,
         browser_type: str = "chromium",
     ) -> Agent:
@@ -111,7 +111,7 @@ class Webtask:
         Args:
             llm: LLM instance for reasoning
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
-            stateful: If True, maintain conversation history between do() calls (default: True)
+            wait_after_action: Wait time in seconds after each action (default: 1.0)
             headless: Run browser in headless mode without GUI (default: False, shows browser window)
             browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
 
@@ -126,7 +126,7 @@ class Webtask:
             llm=llm,
             context=context,
             mode=mode,
-            stateful=stateful,
+            wait_after_action=wait_after_action,
         )
 
         return agent
@@ -136,7 +136,7 @@ class Webtask:
         llm: LLM,
         browser: Union[Browser, "PlaywrightBrowser"],
         mode: str = "text",
-        stateful: bool = True,
+        wait_after_action: float = 1.0,
         use_existing_context: bool = True,
     ) -> Agent:
         """Create agent with existing browser.
@@ -148,7 +148,7 @@ class Webtask:
             llm: LLM instance for reasoning
             browser: Browser instance or raw Playwright Browser (already launched)
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
-            stateful: If True, maintain conversation history between do() calls (default: True)
+            wait_after_action: Wait time in seconds after each action (default: 1.0)
             use_existing_context: Use existing context if available (default: True)
 
         Returns:
@@ -190,7 +190,7 @@ class Webtask:
             llm=llm,
             context=context,
             mode=mode,
-            stateful=stateful,
+            wait_after_action=wait_after_action,
         )
 
         return agent
@@ -200,7 +200,7 @@ class Webtask:
         llm: LLM,
         context: Union[Context, "BrowserContext"],
         mode: str = "text",
-        stateful: bool = True,
+        wait_after_action: float = 1.0,
     ) -> Agent:
         """Create agent with existing context.
 
@@ -211,7 +211,7 @@ class Webtask:
             llm: LLM instance for reasoning
             context: Context instance or Playwright BrowserContext
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
-            stateful: If True, maintain conversation history between do() calls (default: True)
+            wait_after_action: Wait time in seconds after each action (default: 1.0)
 
         Returns:
             Agent instance with provided context
@@ -228,7 +228,7 @@ class Webtask:
             llm=llm,
             context=wrapped_context,
             mode=mode,
-            stateful=stateful,
+            wait_after_action=wait_after_action,
         )
 
         return agent
@@ -238,7 +238,7 @@ class Webtask:
         llm: LLM,
         page: Union[Page, "PlaywrightPage"],
         mode: str = "text",
-        stateful: bool = True,
+        wait_after_action: float = 1.0,
     ) -> Agent:
         """Create agent with existing page.
 
@@ -249,7 +249,7 @@ class Webtask:
             llm: LLM instance for reasoning
             page: Page instance or Playwright Page
             mode: Agent mode - "text" (DOM tools), "visual" (pixel tools), "full" (both)
-            stateful: If True, maintain conversation history between do() calls (default: True)
+            wait_after_action: Wait time in seconds after each action (default: 1.0)
 
         Returns:
             Agent instance with context from the provided page
@@ -264,7 +264,7 @@ class Webtask:
             llm=llm,
             context=context,
             mode=mode,
-            stateful=stateful,
+            wait_after_action=wait_after_action,
         )
 
         # Focus the provided tab
