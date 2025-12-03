@@ -4,6 +4,9 @@ from typing import Union
 from ..domnode import DomNode, Text
 from .interactive import is_interactive
 
+# Semantic HTML tags that should be kept (have structural meaning)
+SEMANTIC_TAGS = {"li", "ul", "ol"}
+
 # Semantic attributes that provide meaningful information
 SEMANTIC_ATTRIBUTES = {
     # ARIA attributes (accessibility/interactivity)
@@ -63,6 +66,10 @@ def has_semantic_value(node: Union[DomNode, Text]) -> bool:
 
     if is_presentational_role(node):
         return False
+
+    # Check if tag itself is semantic (li, ul, ol)
+    if node.tag.lower() in SEMANTIC_TAGS:
+        return True
 
     has_semantic_attributes = any(is_semantic_attribute(k) for k in node.attrib.keys())
     is_interactive_elem = is_interactive(node)
