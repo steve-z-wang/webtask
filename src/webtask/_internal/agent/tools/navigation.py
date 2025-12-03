@@ -1,8 +1,8 @@
 """Navigation tools for URL and history navigation."""
 
 from typing import TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
+from pydantic import Field
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ class GotoTool(Tool):
     name = "goto"
     description = "Go to a URL"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for goto tool."""
 
         url: str = Field(description="URL to go to")
@@ -44,7 +44,7 @@ class GoBackTool(Tool):
     name = "go_back"
     description = "Navigate to the previous page in browser history"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for go_back tool."""
 
         description: str = Field(
@@ -73,7 +73,7 @@ class GoForwardTool(Tool):
     name = "go_forward"
     description = "Navigate to the next page in browser history"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for go_forward tool."""
 
         description: str = Field(
@@ -102,7 +102,7 @@ class SearchTool(Tool):
     name = "search"
     description = "Navigate to the default search engine homepage"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for search tool."""
 
         description: str = Field(
@@ -135,7 +135,7 @@ class KeyCombinationTool(Tool):
         "Press keyboard keys or combinations (e.g., 'Control+C', 'Enter', 'Escape')"
     )
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for key_combination tool."""
 
         keys: str = Field(
@@ -167,7 +167,7 @@ class KeyboardTypeTool(Tool):
     name = "type"
     description = "Type text using keyboard into the currently focused element. Click on an input field first to focus it, then use this to type."
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for type tool."""
 
         text: str = Field(description="Text to type")

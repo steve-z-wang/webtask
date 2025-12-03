@@ -1,6 +1,7 @@
 """LLM module - LLM base class and message types."""
 
 from .llm import LLM
+from .tool import Tool, ToolParams
 from .message import (
     Message,
     SystemMessage,
@@ -18,6 +19,8 @@ from .message import (
 
 __all__ = [
     "LLM",
+    "Tool",
+    "ToolParams",
     "Message",
     "SystemMessage",
     "UserMessage",

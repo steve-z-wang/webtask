@@ -1,9 +1,15 @@
 """Tool base class for agent tools."""
 
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from webtask.llm.message import ToolResult
+
+
+class ToolParams(BaseModel):
+    """Base class for tool parameters. Forbids extra fields."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class Tool(ABC):

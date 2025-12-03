@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Type, TYPE_CHECKING
 from pydantic import BaseModel, Field, create_model
-from webtask.llm.tool import Tool
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ class CompleteWorkTool(Tool):
     description = "Signal that you have successfully completed the subtask. Optionally provide structured output data to return to the user."
 
     # Default Params class (will be overridden in __init__ if output_schema is provided)
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for complete_work tool."""
 
         feedback: str = Field(
@@ -89,7 +89,7 @@ class AbortWorkTool(Tool):
     name = "abort_work"
     description = "Signal that you cannot proceed further with this subtask (stuck, blocked, error, or impossible to complete)"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for abort_work tool."""
 
         reason: str = Field(

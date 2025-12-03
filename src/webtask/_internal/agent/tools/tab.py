@@ -1,8 +1,8 @@
 """Tab management tools."""
 
 from typing import TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
+from pydantic import Field
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ class OpenTabTool(Tool):
     name = "open_tab"
     description = "Open a new blank browser tab and switch to it"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for open_tab tool."""
 
         description: str = Field(
@@ -44,7 +44,7 @@ class SwitchTabTool(Tool):
         "Switch to a different browser tab by its index (shown in Tabs section)"
     )
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for switch_tab tool."""
 
         tab_index: int = Field(

@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm import ToolCall, ToolResultStatus
 from webtask.llm.message import ToolResult
 from webtask._internal.agent.tool_registry import ToolRegistry
@@ -31,6 +31,26 @@ class DummyTool(Tool):
             name=self.name,
             status=ToolResultStatus.SUCCESS,
             description=f"Dummy action with value={params.value}",
+        )
+
+
+class StrictTool(Tool):
+    """Tool using ToolParams base class that forbids extra fields."""
+
+    name = "strict"
+    description = "A strict tool that rejects extra parameters"
+
+    class Params(ToolParams):
+        """Parameters for strict tool."""
+
+        text: str = Field(description="Text to process")
+
+    async def execute(self, params: Params) -> ToolResult:
+        """Execute strict action."""
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Processed: {params.text}",
         )
 
 
@@ -195,3 +215,29 @@ async def test_stop_on_param_validation_error(registry):
     # Descriptions should reflect status
     assert "ERROR" in results[0].description
     assert "SKIPPED" in results[1].description
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_tool_params_rejects_extra_fields():
+    """Test that ToolParams base class rejects extra fields."""
+    # Create a registry with the strict tool
+    registry = ToolRegistry()
+    registry.register(StrictTool())
+
+    # Create a tool call with extra parameters that shouldn't be accepted
+    tool_call = ToolCall(
+        id="test-extra",
+        name="strict",
+        arguments={"text": "hello", "element_id": "input-5"},  # element_id is extra
+    )
+
+    # Execute and check result
+    results = await registry.execute_tool_calls([tool_call])
+
+    # Should have 1 result with ERROR status due to extra field
+    assert len(results) == 1
+    assert results[0].status == ToolResultStatus.ERROR
+    assert results[0].name == "strict"
+    assert results[0].error is not None
+    assert "extra" in results[0].error.lower() or "element_id" in results[0].error

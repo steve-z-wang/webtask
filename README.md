@@ -117,10 +117,6 @@ GeminiComputerUse(model="gemini-2.5-computer-use-preview")      # Visual mode
 Bedrock(model="anthropic.claude-sonnet-4-20250514-v1:0")        # Claude 4 Sonnet (WIP)
 ```
 
-## TODO
-
-- Mind2Web benchmark - Evaluation on Mind2Web dataset
-
 ## Links
 
 - [Documentation](https://steve-z-wang.github.io/webtask/)

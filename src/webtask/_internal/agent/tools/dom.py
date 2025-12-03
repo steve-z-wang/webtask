@@ -1,8 +1,8 @@
 """DOM-based tools that interact with elements by ID."""
 
 from typing import List, TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
+from pydantic import Field
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ class ClickTool(Tool):
     name = "click"
     description = "Click an element on the page"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for click tool."""
 
         element_id: str = Field(description="ID of the element to click")
@@ -46,7 +46,7 @@ class UploadTool(Tool):
     name = "upload"
     description = "Upload files to a file input element. Use file indexes shown in the Files section."
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for upload tool."""
 
         element_id: str = Field(

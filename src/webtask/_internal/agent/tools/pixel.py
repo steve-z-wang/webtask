@@ -1,8 +1,8 @@
 """Pixel-based tools that use screen coordinates."""
 
 from typing import Literal, TYPE_CHECKING
-from pydantic import BaseModel, Field
-from webtask.llm.tool import Tool
+from pydantic import Field
+from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ class ClickAtTool(Tool):
     name = "click_at"
     description = "Click at specific screen coordinates"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for click_at tool."""
 
         x: int = Field(description="X coordinate (pixels)")
@@ -49,7 +49,7 @@ class HoverAtTool(Tool):
         "Hover at specific screen coordinates (useful for dropdowns, tooltips)"
     )
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for hover_at tool."""
 
         x: int = Field(description="X coordinate (pixels)")
@@ -81,7 +81,7 @@ class ScrollAtTool(Tool):
     name = "scroll_at"
     description = "Scroll at specific coordinates (useful for scrollable elements)"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for scroll_at tool."""
 
         x: int = Field(description="X coordinate (pixels)")
@@ -126,7 +126,7 @@ class ScrollDocumentTool(Tool):
     name = "scroll_document"
     description = "Scroll the entire webpage by 50% of viewport (maintains context, won't cut elements in half)"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for scroll_document tool."""
 
         direction: Literal["up", "down", "left", "right"] = Field(
@@ -169,7 +169,7 @@ class DragAndDropTool(Tool):
     name = "drag_and_drop"
     description = "Drag from one position and drop at another"
 
-    class Params(BaseModel):
+    class Params(ToolParams):
         """Parameters for drag_and_drop tool."""
 
         x: int = Field(description="Start X coordinate (pixels)")
