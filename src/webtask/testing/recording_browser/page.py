@@ -202,6 +202,19 @@ class RecordingPage(Page):
 
         return result
 
+    async def wait_for_network_idle(self, timeout: int = 10000):
+        """Wait for network to be idle."""
+        if self._context._browser._is_replaying:
+            self._get_next_result("wait_for_network_idle")
+            return
+
+        result = await self._page.wait_for_network_idle(timeout)
+
+        if self._context._browser._is_recording:
+            self._record_call("wait_for_network_idle", {"timeout": timeout}, None)
+
+        return result
+
     async def screenshot(
         self, path: Optional[Union[str, Path]] = None, full_page: bool = False
     ) -> bytes:

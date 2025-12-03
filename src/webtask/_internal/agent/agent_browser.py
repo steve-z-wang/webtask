@@ -14,7 +14,7 @@ class AgentBrowser:
     def __init__(
         self,
         context: Optional[Context] = None,
-        wait_after_action: float = 0.2,
+        wait_after_action: float = 1.0,
         mode: str = "accessibility",
         coordinate_scale: Optional[int] = None,
     ):
@@ -141,13 +141,6 @@ class AgentBrowser:
                 )
         return content
 
-    async def wait_for_load(self, timeout: int = 10000) -> None:
-        """Wait for page to fully load."""
-        page = self.get_current_page()
-        if page is None:
-            raise RuntimeError("No page is currently open")
-        await page.wait_for_load(timeout=timeout)
-
     async def screenshot(
         self, path: Optional[str] = None, full_page: bool = False
     ) -> bytes:
@@ -231,7 +224,6 @@ class AgentBrowser:
         """Get screenshot as base64 string, or None if no page is open."""
         if not self.has_current_page():
             return None
-        await self.wait_for_load(timeout=10000)
         screenshot_bytes = await self.screenshot(full_page=full_page)
         return base64.b64encode(screenshot_bytes).decode("utf-8")
 
@@ -240,7 +232,6 @@ class AgentBrowser:
         if not self.has_current_page():
             return None
         page = self.get_current_page()
-        await self.wait_for_load(timeout=10000)
         self._dom_context = await LLMDomContext.from_page(page)
         context_str = self._dom_context.get_context(mode=self._mode)
         lines = ["Current Tab:"]

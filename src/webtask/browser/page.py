@@ -114,6 +114,21 @@ class Page(ABC):
         pass
 
     @abstractmethod
+    async def wait_for_network_idle(self, timeout: int = 10000):
+        """
+        Wait for network to be idle (no requests for 500ms).
+
+        Useful for SPAs and pages with AJAX requests.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 10000)
+
+        Raises:
+            TimeoutError: If network doesn't become idle within timeout
+        """
+        pass
+
+    @abstractmethod
     async def screenshot(
         self, path: Optional[Union[str, Path]] = None, full_page: bool = False
     ) -> bytes:

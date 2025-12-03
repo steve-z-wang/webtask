@@ -159,6 +159,18 @@ class PlaywrightPage(Page):
         """
         await self._page.wait_for_load_state("load", timeout=timeout)
 
+    async def wait_for_network_idle(self, timeout: int = 10000):
+        """
+        Wait for network to be idle (no requests for 500ms).
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+
+        Raises:
+            TimeoutError: If network doesn't become idle within timeout
+        """
+        await self._page.wait_for_load_state("networkidle", timeout=timeout)
+
     async def close(self):
         """Close the page."""
         await self._page.close()

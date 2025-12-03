@@ -27,10 +27,7 @@ def build_worker_prompt() -> str:
             "**Think out loud** - Write text explaining what you see in the screenshot and what you plan to do next"
         )
         .add_numbered(
-            "**Execute actions** - Call the necessary browser tools (click, type, fill, goto, wait)"
-        )
-        .add_numbered(
-            "**Wait when needed** - Call wait only after actions that trigger page updates (see Q&A for details)"
+            "**Execute actions** - Call the necessary browser tools (click, type, fill, goto)"
         )
         .add_numbered(
             "**Complete when done** - Call complete_work when task is accomplished, or abort_work if blocked"
@@ -51,7 +48,6 @@ def build_worker_prompt() -> str:
         .add("- fill: username field with 'user@example.com'")
         .add("- fill: password field with 'password123'")
         .add("- click: login button")
-        .add("- wait: 2 seconds")
         .add("```")
         .add()
         .build()
@@ -61,21 +57,6 @@ def build_worker_prompt() -> str:
     qa = (
         MarkdownBuilder()
         .add_heading("Q&A")
-        .add()
-        .add("**When should I wait?**")
-        .add(
-            "Wait only when you expect the page to navigate or reload (e.g., clicking links, submitting forms, uploading files). Don't wait for UI interactions that don't reload the page (e.g., typing, opening dropdowns, selecting options)."
-        )
-        .add()
-        .add("**How long should I wait?**")
-        .add(
-            "Start with 1 second for simple pages, use 2-3 seconds for complex pages. Adjust based on the page's performance in this session."
-        )
-        .add()
-        .add("**What if page is still loading?**")
-        .add(
-            "Call the wait tool (1-2 seconds) and the next round will have the updated page state."
-        )
         .add()
         .add("**Can I call multiple tools in one response?**")
         .add(

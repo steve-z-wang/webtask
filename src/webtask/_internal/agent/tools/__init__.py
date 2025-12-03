@@ -25,9 +25,6 @@ from .navigation import (
 # Tab management tools
 from .tab import OpenTabTool, SwitchTabTool
 
-# Utility tools
-from .utility import WaitTool
-
 # Control tools
 from .control import CompleteWorkTool, AbortWorkTool
 
@@ -53,8 +50,6 @@ __all__ = [
     # Tab
     "OpenTabTool",
     "SwitchTabTool",
-    # Utility
-    "WaitTool",
     # Control
     "CompleteWorkTool",
     "AbortWorkTool",

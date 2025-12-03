@@ -15,7 +15,6 @@ from webtask._internal.agent.tools import (
     FillTool,
     TypeTool,
     UploadTool,
-    WaitTool,
     OpenTabTool,
     SwitchTabTool,
     ClickAtTool,
@@ -97,7 +96,6 @@ class Agent:
         """
         # Common tools for all modes
         common_tools: List[Tool] = [
-            WaitTool(),
             GotoTool(self.browser),
             GoBackTool(self.browser),
             GoForwardTool(self.browser),
@@ -222,7 +220,7 @@ class Agent:
         self,
         task: str,
         max_steps: int = 20,
-        wait_after_action: float = 0.2,
+        wait_after_action: float = 1.0,
         files: Optional[List[str]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         dom_mode: str = "accessibility",
@@ -260,7 +258,7 @@ class Agent:
         self,
         condition: str,
         max_steps: int = 10,
-        wait_after_action: float = 0.2,
+        wait_after_action: float = 1.0,
         dom_mode: str = "accessibility",
     ) -> Verdict:
         """
@@ -309,7 +307,7 @@ class Agent:
         what: str,
         output_schema: Optional[Type[BaseModel]] = None,
         max_steps: int = 10,
-        wait_after_action: float = 0.2,
+        wait_after_action: float = 1.0,
         dom_mode: str = "accessibility",
     ):
         """
@@ -399,6 +397,44 @@ class Agent:
         from webtask._internal.utils.wait import wait
 
         await wait(seconds)
+
+    async def wait_for_load(self, timeout: int = 10000) -> None:
+        """
+        Wait for the current page to fully load.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+
+        Raises:
+            RuntimeError: If no page is active
+            TimeoutError: If page doesn't load within timeout
+        """
+        page = self.get_current_page()
+        if page is None:
+            raise RuntimeError(
+                "No active page. Use goto() to navigate to a page first."
+            )
+        await page.wait_for_load(timeout=timeout)
+
+    async def wait_for_network_idle(self, timeout: int = 10000) -> None:
+        """
+        Wait for network to be idle (no requests for 500ms).
+
+        Useful for SPAs and pages with AJAX requests.
+
+        Args:
+            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+
+        Raises:
+            RuntimeError: If no page is active
+            TimeoutError: If network doesn't become idle within timeout
+        """
+        page = self.get_current_page()
+        if page is None:
+            raise RuntimeError(
+                "No active page. Use goto() to navigate to a page first."
+            )
+        await page.wait_for_network_idle(timeout=timeout)
 
     def get_current_page(self) -> Optional[Page]:
         """
