@@ -455,3 +455,22 @@ class Agent:
             page: Page instance to focus
         """
         self.browser.focus_tab(page)
+
+    async def get_debug_context(self) -> str:
+        """
+        Get the text context that the LLM sees (for debugging).
+
+        Returns the DOM snapshot and tabs context as a string.
+        Useful for debugging when elements can't be found in text mode.
+
+        Returns:
+            The text representation of the current page state
+        """
+        content_list = await self.browser.get_page_context(
+            include_dom=True, include_screenshot=False
+        )
+        parts = []
+        for content in content_list:
+            if hasattr(content, "text"):
+                parts.append(content.text)
+        return "\n\n".join(parts)
