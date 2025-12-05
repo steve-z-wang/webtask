@@ -2,7 +2,6 @@
 
 from playwright.async_api import async_playwright, Browser as PlaywrightBrowserType
 from ....browser import Browser
-from .constants import DEFAULT_TIMEOUT
 
 
 class PlaywrightBrowser(Browser):
@@ -136,9 +135,7 @@ class PlaywrightBrowser(Browser):
         """
         from .playwright_context import PlaywrightContext
 
-        # Create new browser context with default timeout
         browser_context = await self._browser.new_context()
-        browser_context.set_default_timeout(DEFAULT_TIMEOUT)
 
         # Set cookies if provided
         if cookies:
