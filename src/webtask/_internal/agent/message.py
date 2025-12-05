@@ -1,15 +1,7 @@
-"""Agent-specific content and message types with lifespan for context management."""
+"""Agent-specific content types with lifespan for context management."""
 
-from typing import List, Optional
-from webtask.llm.message import (
-    Content,
-    TextContent,
-    ImageContent,
-    ImageMimeType,
-    UserMessage,
-    ToolResultMessage,
-    ToolResult,
-)
+from typing import Optional
+from webtask.llm.message import Content, Text, Image, ImageMimeType
 
 
 class AgentContent(Content):
@@ -25,25 +17,13 @@ class AgentContent(Content):
     lifespan: Optional[int] = None
 
 
-class AgentTextContent(TextContent, AgentContent):
+class AgentText(Text, AgentContent):
     """Text content with lifespan support."""
 
     pass
 
 
-class AgentImageContent(ImageContent, AgentContent):
+class AgentImage(Image, AgentContent):
     """Image content with lifespan support."""
 
     pass
-
-
-class AgentUserMessage(UserMessage):
-    """User message with agent content that supports lifespan."""
-
-    content: Optional[List[AgentContent]] = None
-
-
-class AgentToolResultMessage(ToolResultMessage):
-    """Tool result message with agent content that supports lifespan."""
-
-    content: Optional[List[AgentContent]] = None

@@ -3,12 +3,12 @@
 from typing import Optional, List, TYPE_CHECKING
 
 from webtask.llm import LLM
-from webtask.llm.message import Message, AssistantMessage
+from webtask.llm.message import Message
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .bedrock_mapper import (
     messages_to_bedrock_format,
     build_tool_config,
-    bedrock_response_to_assistant_message,
+    bedrock_response_to_message,
 )
 
 try:
@@ -71,7 +71,7 @@ class Bedrock(LLM):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> Message:
         """Generate response with tool calling."""
         bedrock_messages, system_prompt = messages_to_bedrock_format(messages)
         tool_config = build_tool_config(tools)
@@ -107,6 +107,6 @@ class Bedrock(LLM):
                 f"Total: {usage.get('totalTokens', 0)}"
             )
 
-        assistant_msg = bedrock_response_to_assistant_message(response)
-        self._debugger.save_call(messages, assistant_msg)
-        return assistant_msg
+        model_msg = bedrock_response_to_message(response)
+        self._debugger.save_call(messages, model_msg)
+        return model_msg

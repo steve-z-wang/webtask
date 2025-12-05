@@ -22,35 +22,43 @@ class ToolResultStatus(str, Enum):
     ERROR = "error"
 
 
+class Role(str, Enum):
+    """Message role."""
+
+    SYSTEM = "system"
+    USER = "user"
+    MODEL = "model"
+    TOOL = "tool"
+
+
 class Content(BaseModel):
-    """Base class for message content parts."""
+    """Base class for message content."""
 
     pass
 
 
-class TextContent(Content):
-    """Text content part."""
+class Text(Content):
+    """Text content."""
 
     text: str
 
     def __str__(self) -> str:
-        # Truncate long text
         if len(self.text) > 100:
-            return f"TextContent({self.text[:100]}...)"
-        return f"TextContent({self.text})"
+            return f"Text({self.text[:100]}...)"
+        return f"Text({self.text})"
 
 
-class ImageContent(Content):
-    """Image content part (base64-encoded)."""
+class Image(Content):
+    """Image content (base64-encoded)."""
 
     data: str  # base64-encoded
     mime_type: ImageMimeType = ImageMimeType.PNG
 
     def __str__(self) -> str:
-        return f"ImageContent(mime_type={self.mime_type.value}, size={len(self.data)} bytes)"
+        return f"Image(mime_type={self.mime_type.value}, size={len(self.data)} bytes)"
 
 
-class ToolCall(BaseModel):
+class ToolCall(Content):
     """Tool call from LLM."""
 
     id: Optional[str] = None  # OpenAI/Anthropic provide ID, Gemini doesn't
@@ -64,7 +72,7 @@ class ToolCall(BaseModel):
         return f"ToolCall({self.name}, {args_str})"
 
 
-class ToolResult(BaseModel):
+class ToolResult(Content):
     """Result of tool execution."""
 
     tool_call_id: Optional[str] = None  # Match by ID if available (OpenAI/Anthropic)
@@ -84,89 +92,60 @@ class ToolResult(BaseModel):
 
 
 class Message(BaseModel):
-    """Base message with automatic timestamp."""
+    """Message with role and content."""
 
-    timestamp: datetime = Field(default_factory=datetime.now)
+    role: Role
     content: Optional[List[Content]] = None
+    timestamp: datetime = Field(default_factory=datetime.now)
 
+    @property
+    def text(self) -> Optional[str]:
+        """Get first text content from message."""
+        if self.content:
+            for c in self.content:
+                if isinstance(c, Text):
+                    return c.text
+        return None
 
-class SystemMessage(Message):
-    """System instruction message."""
+    @property
+    def tool_calls(self) -> List[ToolCall]:
+        """Get all tool calls from message content."""
+        if not self.content:
+            return []
+        return [c for c in self.content if isinstance(c, ToolCall)]
+
+    @property
+    def tool_results(self) -> List[ToolResult]:
+        """Get all tool results from message content."""
+        if not self.content:
+            return []
+        return [c for c in self.content if isinstance(c, ToolResult)]
 
     def __str__(self) -> str:
-        texts = [part.text for part in self.content]
-        combined = " ".join(texts)
-        if len(combined) > 200:
-            combined = combined[:200] + "..."
-        return f"SystemMessage({combined})"
+        if not self.content:
+            return f"Message({self.role.value}, empty)"
 
+        parts = []
+        text_parts = [c.text for c in self.content if isinstance(c, Text)]
+        image_count = sum(1 for c in self.content if isinstance(c, Image))
+        tool_calls = [c for c in self.content if isinstance(c, ToolCall)]
+        tool_results = [c for c in self.content if isinstance(c, ToolResult)]
 
-class UserMessage(Message):
-    """User message with text/images."""
-
-    def __str__(self) -> str:
-        text_parts = [
-            part.text for part in self.content if isinstance(part, TextContent)
-        ]
-        image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
-
-        text_str = " ".join(text_parts)
-        if len(text_str) > 200:
-            text_str = text_str[:200] + "..."
+        if text_parts:
+            text_str = " ".join(text_parts)
+            if len(text_str) > 100:
+                text_str = text_str[:100] + "..."
+            parts.append(f"text={text_str}")
 
         if image_count > 0:
-            return f"UserMessage(text={text_str}, images={image_count})"
-        return f"UserMessage({text_str})"
+            parts.append(f"images={image_count}")
 
+        if tool_calls:
+            tool_names = [tc.name for tc in tool_calls]
+            parts.append(f"tool_calls=[{', '.join(tool_names)}]")
 
-class AssistantMessage(Message):
-    """Assistant response with optional tool calls."""
+        if tool_results:
+            result_summary = [f"{r.name}:{r.status.value}" for r in tool_results]
+            parts.append(f"tool_results=[{', '.join(result_summary)}]")
 
-    tool_calls: Optional[List[ToolCall]] = None
-
-    def __str__(self) -> str:
-        parts = []
-
-        # Add content summary
-        if self.content:
-            text_parts = [
-                part.text for part in self.content if isinstance(part, TextContent)
-            ]
-            image_count = sum(
-                1 for part in self.content if isinstance(part, ImageContent)
-            )
-
-            if text_parts:
-                text_str = " ".join(text_parts)
-                if len(text_str) > 100:
-                    text_str = text_str[:100] + "..."
-                parts.append(f"text={text_str}")
-
-            if image_count > 0:
-                parts.append(f"images={image_count}")
-
-        # Add tool calls summary
-        if self.tool_calls:
-            tool_names = [tc.name for tc in self.tool_calls]
-            parts.append(f"tools=[{', '.join(tool_names)}]")
-
-        if parts:
-            return f"AssistantMessage({', '.join(parts)})"
-        return "AssistantMessage(empty)"
-
-
-class ToolResultMessage(Message):
-    """Tool execution results with observation content."""
-
-    results: List[ToolResult]  # Acknowledgment for each tool call
-
-    def __str__(self) -> str:
-        # Summary of results
-        result_summary = [f"{r.name}:{r.status}" for r in self.results]
-        results_str = ", ".join(result_summary)
-
-        # Count content types
-        text_count = sum(1 for part in self.content if isinstance(part, TextContent))
-        image_count = sum(1 for part in self.content if isinstance(part, ImageContent))
-
-        return f"ToolResultMessage(results=[{results_str}], text_parts={text_count}, images={image_count})"
+        return f"Message({self.role.value}, {', '.join(parts)})"

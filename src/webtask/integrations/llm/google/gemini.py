@@ -6,12 +6,12 @@ from google import genai
 from google.genai import types
 
 from webtask.llm import LLM
-from webtask.llm.message import Message, AssistantMessage
+from webtask.llm.message import Message
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .gemini_mapper import (
     messages_to_gemini_content,
     build_tool_config,
-    gemini_response_to_assistant_message,
+    gemini_response_to_message,
 )
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ class Gemini(LLM):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> Message:
         """Generate response with tool calling."""
         gemini_content, system_instruction = messages_to_gemini_content(messages)
         tool_config = build_tool_config(tools)
@@ -77,6 +77,6 @@ class Gemini(LLM):
                 f"Total: {usage.total_token_count}"
             )
 
-        assistant_msg = gemini_response_to_assistant_message(response)
-        self._debugger.save_call(messages, assistant_msg)
-        return assistant_msg
+        model_msg = gemini_response_to_message(response)
+        self._debugger.save_call(messages, model_msg)
+        return model_msg

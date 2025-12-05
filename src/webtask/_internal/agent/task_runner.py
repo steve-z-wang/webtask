@@ -5,18 +5,12 @@ from typing import Awaitable, Callable, List, Optional, Tuple, TYPE_CHECKING, Ty
 from pydantic import BaseModel
 from webtask.llm import (
     Message,
-    SystemMessage,
-    AssistantMessage,
+    Role,
     Content,
-    TextContent,
+    Text,
 )
 from webtask.llm.tool import Tool
-from .message import (
-    AgentContent,
-    AgentTextContent,
-    AgentUserMessage,
-    AgentToolResultMessage,
-)
+from .message import AgentContent, AgentText
 from .tool_registry import ToolRegistry
 from ..utils.logger import get_logger
 from .run import Run, TaskResult, TaskStatus
@@ -25,8 +19,8 @@ from .tools import CompleteWorkTool, AbortWorkTool
 if TYPE_CHECKING:
     from webtask.llm.llm import LLM
 
-# Type alias for message pairs
-MessagePair = Tuple[AssistantMessage, AgentToolResultMessage]
+# Type alias for message pairs (model response, tool results)
+MessagePair = Tuple[Message, Message]
 
 
 class TaskRunner:
@@ -83,34 +77,28 @@ class TaskRunner:
             all_messages = self._prepare_messages(session_start_messages, pairs)
 
             self._logger.debug("Sending LLM request...")
-            assistant_msg = await self._llm.call_tools(
+            model_msg = await self._llm.call_tools(
                 messages=all_messages,
                 tools=tool_registry.get_all(),
             )
 
-            reasoning = self._extract_reasoning(assistant_msg)
-            tool_names = (
-                [tc.name for tc in assistant_msg.tool_calls]
-                if assistant_msg.tool_calls
-                else []
-            )
+            reasoning = model_msg.text
+            tool_calls = model_msg.tool_calls
+            tool_names = [tc.name for tc in tool_calls]
 
             self._logger.info(f"Received LLM response - Tools: {tool_names}")
             if reasoning:
                 self._logger.info(f"Reasoning: {reasoning}")
 
-            tool_results = await tool_registry.execute_tool_calls(
-                assistant_msg.tool_calls or []
-            )
+            tool_results = await tool_registry.execute_tool_calls(tool_calls)
 
             # Get page context after tool execution
             page_context = await self._get_context()
 
-            tool_result_msg = AgentToolResultMessage(
-                results=tool_results,
-                content=page_context,
-            )
-            pairs.append((assistant_msg, tool_result_msg))
+            # Build tool result message content: results + page context
+            tool_msg_content: List[Content] = list(tool_results) + list(page_context)
+            tool_result_msg = Message(role=Role.TOOL, content=tool_msg_content)
+            pairs.append((model_msg, tool_result_msg))
 
             self._logger.info(f"Step {step + 1} - End")
 
@@ -128,8 +116,8 @@ class TaskRunner:
 
         # Convert pairs to full message list
         messages: List[Message] = []
-        for assistant_msg, tool_result_msg in pairs:
-            messages.append(assistant_msg)
+        for model_msg, tool_result_msg in pairs:
+            messages.append(model_msg)
             messages.append(tool_result_msg)
 
         # Build and return Run with embedded Result
@@ -169,14 +157,14 @@ class TaskRunner:
         task: str,
         previous_runs: Optional[List[Run]] = None,
     ) -> List[Message]:
-        user_content: List[AgentContent] = []
+        user_content: List[Content] = []
 
         # Add previous sessions if provided
         if previous_runs:
             formatted_sessions = self._format_previous_runs(previous_runs)
-            user_content.append(AgentTextContent(text=formatted_sessions))
+            user_content.append(AgentText(text=formatted_sessions))
 
-        user_content.append(AgentTextContent(text=f"## Current task:\n{task}"))
+        user_content.append(AgentText(text=f"## Current task:\n{task}"))
 
         # Add context (page state + files) via get_context callback
         context = await self._get_context()
@@ -184,8 +172,8 @@ class TaskRunner:
 
         # Build session start messages (never compacted)
         return [
-            SystemMessage(content=[TextContent(text=self._system_prompt)]),
-            AgentUserMessage(content=user_content),
+            Message(role=Role.SYSTEM, content=[Text(text=self._system_prompt)]),
+            Message(role=Role.USER, content=user_content),
         ]
 
     def _format_previous_runs(self, runs: List[Run]) -> str:
@@ -204,8 +192,8 @@ class TaskRunner:
     ) -> List[Message]:
         # Convert pairs to messages
         tool_messages: List[Message] = []
-        for assistant_msg, tool_result_msg in pairs:
-            tool_messages.append(assistant_msg)
+        for model_msg, tool_result_msg in pairs:
+            tool_messages.append(model_msg)
             tool_messages.append(tool_result_msg)
 
         # Combine session start + tool messages
@@ -265,9 +253,3 @@ class TaskRunner:
 
         return purged
 
-    def _extract_reasoning(self, assistant_msg: AssistantMessage) -> Optional[str]:
-        if assistant_msg.content:
-            for content in assistant_msg.content:
-                if hasattr(content, "text") and content.text:
-                    return content.text
-        return None

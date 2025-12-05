@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Type, TypeVar, TYPE_CHECKING
 from pydantic import BaseModel
-from webtask.llm import LLM, Message, AssistantMessage
+from webtask.llm import LLM, Message
 from webtask._internal.config import Config
 
 if TYPE_CHECKING:
@@ -136,7 +136,7 @@ class RecordingLLM(LLM):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> Message:
         """Call tools with recording/replay support."""
         if self._is_replaying:
             # Replay mode: load and return saved response
@@ -151,7 +151,7 @@ class RecordingLLM(LLM):
             self.logger.info(
                 f"Replaying LLM call_tools {self._call_index}/{self._total_calls}"
             )
-            return AssistantMessage.model_validate(call["response"])
+            return Message.model_validate(call["response"])
 
         elif self._is_recording:
             # Record mode: call real LLM and save immediately

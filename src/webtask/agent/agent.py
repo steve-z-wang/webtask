@@ -5,7 +5,7 @@ from typing import List, Optional, Type
 from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.llm.tool import Tool
-from webtask.llm.message import Content, TextContent
+from webtask.llm.message import Content, Text
 from webtask.browser import Context, Page
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Run, TaskStatus
@@ -202,7 +202,7 @@ class Agent:
 
             # Add file context first (if files provided)
             if file_manager and not file_manager.is_empty():
-                content.append(TextContent(text=file_manager.format_context()))
+                content.append(Text(text=file_manager.format_context()))
 
             # Add page context based on agent mode
             page_context = await self.browser.get_page_context(

@@ -3,7 +3,7 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING
-from .message import Message, AssistantMessage
+from .message import Message, Role
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool
@@ -20,29 +20,30 @@ class LLM(ABC):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> Message:
         """Generate response with tool calling.
 
         Args:
             messages: Conversation history as list of Message objects.
-                Can include SystemMessage, UserMessage, AssistantMessage, ToolResultMessage.
+                Each message has a role (SYSTEM, USER, MODEL, TOOL) and content.
             tools: List of tools available for the LLM to call (required).
 
         Returns:
-            AssistantMessage with content (text/images) and/or tool_calls.
+            Message with role=Role.MODEL containing content (Text/Image) and/or ToolCall.
 
         Example:
             >>> messages = [
-            ...     SystemMessage(content=[TextContent(text="You are a web agent")]),
-            ...     UserMessage(content=[TextContent(text="Click the login button")]),
+            ...     Message(role=Role.SYSTEM, content=[Text(text="You are a web agent")]),
+            ...     Message(role=Role.USER, content=[Text(text="Click the login button")]),
             ... ]
             >>> response = await llm.call_tools(messages, tools=[ClickTool(), NavigateTool()])
-            >>> print(response.tool_calls[0].name)
+            >>> tool_calls = [c for c in response.content if isinstance(c, ToolCall)]
+            >>> print(tool_calls[0].name)
             "click"
 
         Note:
             - Messages maintain conversation context across multiple turns
-            - Tool calls are returned in AssistantMessage.tool_calls
+            - Tool calls are included in message content as ToolCall objects
             - Each LLM implementation handles its own API format conversion
         """
         pass

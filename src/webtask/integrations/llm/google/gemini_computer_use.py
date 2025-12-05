@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 
 from webtask.llm import LLM
-from webtask.llm.message import Message, AssistantMessage, TextContent, ToolCall
+from webtask.llm.message import Message, Role, Text, ToolCall
 from webtask._internal.utils.context_debugger import LLMContextDebugger
 from .gemini_mapper import messages_to_gemini_content, clean_schema_for_gemini
 
@@ -99,7 +99,7 @@ class GeminiComputerUse(LLM):
         self,
         messages: List[Message],
         tools: List["Tool"],
-    ) -> AssistantMessage:
+    ) -> Message:
         """Generate response with tool calling.
 
         Note: Coordinates in returned tool calls are normalized (0-999).
@@ -137,14 +137,13 @@ class GeminiComputerUse(LLM):
             )
 
         # Parse response
-        assistant_msg = self._parse_response(response)
-        self._debugger.save_call(messages, assistant_msg)
-        return assistant_msg
+        model_msg = self._parse_response(response)
+        self._debugger.save_call(messages, model_msg)
+        return model_msg
 
-    def _parse_response(self, response) -> AssistantMessage:
-        """Parse Gemini response to AssistantMessage."""
-        tool_calls = []
-        content_parts = []
+    def _parse_response(self, response) -> Message:
+        """Parse Gemini response to Message with Role.MODEL."""
+        content = []
 
         if (
             response.candidates
@@ -154,14 +153,14 @@ class GeminiComputerUse(LLM):
             for part in response.candidates[0].content.parts:
                 # Check for text content
                 if hasattr(part, "text") and part.text:
-                    content_parts.append(TextContent(text=part.text))
+                    content.append(Text(text=part.text))
                 # Check for function call
                 elif hasattr(part, "function_call") and part.function_call:
                     fc = part.function_call
                     args = dict(fc.args) if fc.args else {}
-                    tool_calls.append(ToolCall(name=fc.name, arguments=args))
+                    content.append(ToolCall(name=fc.name, arguments=args))
 
-        return AssistantMessage(
-            content=content_parts if content_parts else None,
-            tool_calls=tool_calls if tool_calls else None,
+        return Message(
+            role=Role.MODEL,
+            content=content if content else None,
         )

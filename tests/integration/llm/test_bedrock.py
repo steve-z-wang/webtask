@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from webtask.llm import SystemMessage, UserMessage, TextContent, ToolCall
+from webtask.llm import Role, Message, Text, ToolCall
 
 # Skip tests if boto3 not available
 pytest.importorskip("boto3")
@@ -71,22 +71,25 @@ def sample_tools():
 async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
     """Test that Bedrock returns a tool call for a simple request."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a web automation agent.")]),
-        UserMessage(
+        Message(role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]),
+        Message(
+            role=Role.USER,
             content=[
-                TextContent(text="Navigate to https://example.com and click button-5")
-            ]
+                Text(text="Navigate to https://example.com and click button-5")
+            ],
         ),
     ]
 
     response = await bedrock_llm.call_tools(messages, sample_tools)
 
+    # Extract tool calls from content
+    tool_calls = [c for c in response.content if isinstance(c, ToolCall)]
+
     # Should have tool calls
-    assert response.tool_calls is not None
-    assert len(response.tool_calls) > 0
+    assert len(tool_calls) > 0
 
     # First tool call should be goto
-    first_call = response.tool_calls[0]
+    first_call = tool_calls[0]
     assert isinstance(first_call, ToolCall)
     assert first_call.name == "goto"
     assert "url" in first_call.arguments
@@ -97,24 +100,26 @@ async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
 async def test_bedrock_call_tools_with_text_content(bedrock_llm, sample_tools):
     """Test that Bedrock can return both text and tool calls."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a helpful assistant.")]),
-        UserMessage(
+        Message(role=Role.SYSTEM, content=[Text(text="You are a helpful assistant.")]),
+        Message(
+            role=Role.USER,
             content=[
-                TextContent(
+                Text(
                     text="Please navigate to https://google.com. Before you do, explain what you're about to do."
                 )
-            ]
+            ],
         ),
     ]
 
     response = await bedrock_llm.call_tools(messages, sample_tools)
 
-    # Should have tool calls
-    assert response.tool_calls is not None
-    assert len(response.tool_calls) > 0
+    # Extract tool calls from content
+    tool_calls = [c for c in response.content if isinstance(c, ToolCall)]
 
-    # May or may not have text content (depending on model behavior)
-    # Just verify structure is correct
+    # Should have tool calls
+    assert len(tool_calls) > 0
+
+    # Verify structure is correct
     assert hasattr(response, "content")
 
 
@@ -122,21 +127,24 @@ async def test_bedrock_call_tools_with_text_content(bedrock_llm, sample_tools):
 async def test_bedrock_handles_multiple_tools(bedrock_llm, sample_tools):
     """Test that Bedrock can call multiple tools in sequence."""
     messages = [
-        SystemMessage(content=[TextContent(text="You are a web automation agent.")]),
-        UserMessage(
+        Message(role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]),
+        Message(
+            role=Role.USER,
             content=[
-                TextContent(
+                Text(
                     text="First navigate to https://example.com, then click element button-1"
                 )
-            ]
+            ],
         ),
     ]
 
     response = await bedrock_llm.call_tools(messages, sample_tools)
 
+    # Extract tool calls from content
+    tool_calls = [c for c in response.content if isinstance(c, ToolCall)]
+
     # Should have tool calls
-    assert response.tool_calls is not None
-    assert len(response.tool_calls) >= 1
+    assert len(tool_calls) >= 1
 
     # First call should be goto
-    assert response.tool_calls[0].name == "goto"
+    assert tool_calls[0].name == "goto"

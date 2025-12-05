@@ -3,7 +3,7 @@
 from typing import List, Optional, Tuple, Union
 from webtask.browser import Page, Context, Element
 from webtask.llm.message import Content, ImageMimeType
-from .message import AgentTextContent, AgentImageContent
+from .message import AgentText, AgentImage
 from ..context import LLMDomContext
 from ..utils.wait import wait
 import base64
@@ -125,16 +125,16 @@ class AgentBrowser:
         """
         content: List[Content] = []
         tabs_context = self._get_tabs_context()
-        content.append(AgentTextContent(text=tabs_context, lifespan=1))
+        content.append(AgentText(text=tabs_context, lifespan=1))
         if include_dom:
             dom_snapshot = await self._get_dom_snapshot()
             if dom_snapshot:
-                content.append(AgentTextContent(text=dom_snapshot, lifespan=1))
+                content.append(AgentText(text=dom_snapshot, lifespan=1))
         if include_screenshot:
             screenshot_b64 = await self._get_screenshot()
             if screenshot_b64:
                 content.append(
-                    AgentImageContent(
+                    AgentImage(
                         data=screenshot_b64,
                         mime_type=ImageMimeType.PNG,
                         lifespan=2,

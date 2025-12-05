@@ -6,14 +6,12 @@ from typing import Any, Dict, List, TYPE_CHECKING
 from google.genai import types
 
 from webtask.llm import (
+    Role,
     Message,
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
+    Text,
+    Image,
     ToolCall,
+    ToolResult,
 )
 from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
@@ -37,20 +35,21 @@ def messages_to_gemini_content(
     system_instruction = None
 
     for msg in messages:
-        if isinstance(msg, SystemMessage):
+        if msg.role == Role.SYSTEM:
             # Extract system instruction (to be passed to config separately)
             if msg.content:
-                system_instruction = "\n\n".join([part.text for part in msg.content])
+                texts = [c.text for c in msg.content if isinstance(c, Text)]
+                system_instruction = "\n\n".join(texts)
 
-        elif isinstance(msg, UserMessage):
+        elif msg.role == Role.USER:
             # Build parts list (text and images)
             parts = []
 
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         # Convert base64 to inline data
                         parts.append(
                             types.Part.from_bytes(
@@ -63,60 +62,54 @@ def messages_to_gemini_content(
             if parts:
                 gemini_messages.append(types.Content(role="user", parts=parts))
 
-        elif isinstance(msg, AssistantMessage):
-            # Assistant message with tool calls
+        elif msg.role == Role.MODEL:
+            # Model message with optional tool calls
             parts = []
 
-            # Include content if present
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         parts.append(
                             types.Part.from_bytes(
                                 data=base64.b64decode(content_part.data),
                                 mime_type=content_part.mime_type.value,
                             )
                         )
-
-            # Add tool calls as function call parts
-            if msg.tool_calls:
-                for tool_call in msg.tool_calls:
-                    parts.append(
-                        types.Part.from_function_call(
-                            name=tool_call.name,
-                            args=tool_call.arguments,
+                    elif isinstance(content_part, ToolCall):
+                        parts.append(
+                            types.Part.from_function_call(
+                                name=content_part.name,
+                                args=content_part.arguments,
+                            )
                         )
-                    )
 
             # Only add message if parts is not empty (Gemini requires at least one part)
             if parts:
                 gemini_messages.append(types.Content(role="model", parts=parts))
 
-        elif isinstance(msg, ToolResultMessage):
+        elif msg.role == Role.TOOL:
             # Tool results message - convert to Gemini function response
             parts = []
 
-            for result in msg.results:
-                # Create function response for each tool result
-                response_data = {"status": result.status.value}
-                if result.error:
-                    response_data["error"] = result.error
-
-                parts.append(
-                    types.Part.from_function_response(
-                        name=result.name,
-                        response=response_data,
-                    )
-                )
-
-            # Add observation content (DOM + screenshot) as text/images
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, ToolResult):
+                        # Create function response for each tool result
+                        response_data = {"status": content_part.status.value}
+                        if content_part.error:
+                            response_data["error"] = content_part.error
+
+                        parts.append(
+                            types.Part.from_function_response(
+                                name=content_part.name,
+                                response=response_data,
+                            )
+                        )
+                    elif isinstance(content_part, Text):
                         parts.append(types.Part.from_text(text=content_part.text))
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         parts.append(
                             types.Part.from_bytes(
                                 data=base64.b64decode(content_part.data),
@@ -124,7 +117,8 @@ def messages_to_gemini_content(
                             )
                         )
 
-            gemini_messages.append(types.Content(role="user", parts=parts))
+            if parts:
+                gemini_messages.append(types.Content(role="user", parts=parts))
 
     return gemini_messages, system_instruction
 
@@ -212,29 +206,28 @@ def build_tool_config(tools: List["Tool"]) -> types.Tool:
     return types.Tool(function_declarations=function_declarations)
 
 
-def gemini_response_to_assistant_message(response) -> "AssistantMessage":
-    """Convert Gemini response to AssistantMessage."""
-    tool_calls = []
-    content_parts = []
+def gemini_response_to_message(response) -> Message:
+    """Convert Gemini response to Message with Role.MODEL."""
+    content = []
 
     if response.candidates and response.candidates[0].content:
         for part in response.candidates[0].content.parts:
             # Check for text content
             if hasattr(part, "text") and part.text:
-                content_parts.append(TextContent(text=part.text))
+                content.append(Text(text=part.text))
             # Check for function call
             elif hasattr(part, "function_call") and part.function_call:
                 fc = part.function_call
                 # Convert args to dict - in new SDK args is already a dict-like object
                 args = dict(fc.args) if fc.args else {}
-                tool_calls.append(
+                content.append(
                     ToolCall(
                         name=fc.name,
                         arguments=args,
                     )
                 )
 
-    return AssistantMessage(
-        content=content_parts if content_parts else None,
-        tool_calls=tool_calls if tool_calls else None,
+    return Message(
+        role=Role.MODEL,
+        content=content if content else None,
     )

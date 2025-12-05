@@ -3,14 +3,12 @@
 import base64
 from typing import Any, Dict, List, TYPE_CHECKING
 from webtask.llm import (
+    Role,
     Message,
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-    ToolResultMessage,
-    TextContent,
-    ImageContent,
+    Text,
+    Image,
     ToolCall,
+    ToolResult,
 )
 from webtask._internal.llm.json_schema_utils import resolve_json_schema_refs
 
@@ -31,20 +29,21 @@ def messages_to_bedrock_format(
     system_prompt = None
 
     for msg in messages:
-        if isinstance(msg, SystemMessage):
+        if msg.role == Role.SYSTEM:
             # Extract system prompt (Bedrock uses separate system parameter)
             if msg.content:
-                system_prompt = "\n\n".join([part.text for part in msg.content])
+                texts = [c.text for c in msg.content if isinstance(c, Text)]
+                system_prompt = "\n\n".join(texts)
 
-        elif isinstance(msg, UserMessage):
+        elif msg.role == Role.USER:
             # Build content list (text and images)
             content = []
 
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         content.append({"text": content_part.text})
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         # Bedrock expects base64 encoded images
                         content.append(
                             {
@@ -60,59 +59,57 @@ def messages_to_bedrock_format(
             if content:
                 bedrock_messages.append({"role": "user", "content": content})
 
-        elif isinstance(msg, AssistantMessage):
-            # Assistant message with optional tool calls
+        elif msg.role == Role.MODEL:
+            # Model message with optional tool calls
             content = []
 
-            # Include text content if present
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, Text):
                         content.append({"text": content_part.text})
-
-            # Add tool calls
-            if msg.tool_calls:
-                for tool_call in msg.tool_calls:
-                    content.append(
-                        {
-                            "toolUse": {
-                                "toolUseId": tool_call.id or f"call-{tool_call.name}",
-                                "name": tool_call.name,
-                                "input": tool_call.arguments,
+                    elif isinstance(content_part, ToolCall):
+                        content.append(
+                            {
+                                "toolUse": {
+                                    "toolUseId": content_part.id
+                                    or f"call-{content_part.name}",
+                                    "name": content_part.name,
+                                    "input": content_part.arguments,
+                                }
                             }
-                        }
-                    )
+                        )
 
             if content:
                 bedrock_messages.append({"role": "assistant", "content": content})
 
-        elif isinstance(msg, ToolResultMessage):
+        elif msg.role == Role.TOOL:
             # Tool results message - convert to Bedrock tool result format
             content = []
 
-            for result in msg.results:
-                # Create tool result
-                tool_result_content = {"toolUseId": result.tool_call_id, "content": []}
-
-                if result.error:
-                    tool_result_content["status"] = "error"
-                    tool_result_content["content"].append(
-                        {"text": f"Error: {result.error}"}
-                    )
-                else:
-                    # Bedrock doesn't have an explicit success status, omit status for success
-                    tool_result_content["content"].append(
-                        {"text": f"Status: {result.status.value}"}
-                    )
-
-                content.append({"toolResult": tool_result_content})
-
-            # Add observation content (DOM + screenshot) as additional content
             if msg.content:
                 for content_part in msg.content:
-                    if isinstance(content_part, TextContent):
+                    if isinstance(content_part, ToolResult):
+                        # Create tool result
+                        tool_result_content = {
+                            "toolUseId": content_part.tool_call_id,
+                            "content": [],
+                        }
+
+                        if content_part.error:
+                            tool_result_content["status"] = "error"
+                            tool_result_content["content"].append(
+                                {"text": f"Error: {content_part.error}"}
+                            )
+                        else:
+                            # Bedrock doesn't have an explicit success status, omit status for success
+                            tool_result_content["content"].append(
+                                {"text": f"Status: {content_part.status.value}"}
+                            )
+
+                        content.append({"toolResult": tool_result_content})
+                    elif isinstance(content_part, Text):
                         content.append({"text": content_part.text})
-                    elif isinstance(content_part, ImageContent):
+                    elif isinstance(content_part, Image):
                         content.append(
                             {
                                 "image": {
@@ -163,10 +160,9 @@ def build_tool_config(tools: List["Tool"]) -> Dict[str, Any]:
     return {"tools": tool_specs}
 
 
-def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> AssistantMessage:
-    """Convert Bedrock Converse API response to AssistantMessage."""
-    tool_calls = []
-    content_parts = []
+def bedrock_response_to_message(response: Dict[str, Any]) -> Message:
+    """Convert Bedrock Converse API response to Message with Role.MODEL."""
+    content = []
 
     # Extract content from response
     if "output" in response and "message" in response["output"]:
@@ -174,10 +170,10 @@ def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> Assistant
 
         for content_block in message_content:
             if "text" in content_block:
-                content_parts.append(TextContent(text=content_block["text"]))
+                content.append(Text(text=content_block["text"]))
             elif "toolUse" in content_block:
                 tool_use = content_block["toolUse"]
-                tool_calls.append(
+                content.append(
                     ToolCall(
                         id=tool_use["toolUseId"],
                         name=tool_use["name"],
@@ -185,7 +181,7 @@ def bedrock_response_to_assistant_message(response: Dict[str, Any]) -> Assistant
                     )
                 )
 
-    return AssistantMessage(
-        content=content_parts if content_parts else None,
-        tool_calls=tool_calls if tool_calls else None,
+    return Message(
+        role=Role.MODEL,
+        content=content if content else None,
     )

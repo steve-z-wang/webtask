@@ -60,15 +60,10 @@ class LLMContextDebugger:
 
 def _message_to_dict(message: "Message") -> dict:
     """Convert message to JSON-serializable dict."""
-    from webtask.llm import (
-        AssistantMessage,
-        ToolResultMessage,
-        TextContent,
-        ImageContent,
-    )
+    from webtask.llm import Text, Image, ToolCall, ToolResult
 
     result = {
-        "type": message.__class__.__name__,
+        "role": message.role.value,
         "timestamp": message.timestamp.isoformat(),
     }
 
@@ -76,46 +71,40 @@ def _message_to_dict(message: "Message") -> dict:
     if message.content:
         result["content"] = []
         for content in message.content:
-            if isinstance(content, TextContent):
+            if isinstance(content, Text):
                 result["content"].append(
                     {
                         "type": "text",
                         "text": content.text,
-                        "tag": content.tag,
                     }
                 )
-            elif isinstance(content, ImageContent):
+            elif isinstance(content, Image):
                 # Don't save full base64 image data, just metadata
                 result["content"].append(
                     {
                         "type": "image",
                         "mime_type": content.mime_type.value,
                         "size": len(content.data),
-                        "tag": content.tag,
                     }
                 )
-
-    # Add tool calls if present (AssistantMessage)
-    if isinstance(message, AssistantMessage) and message.tool_calls:
-        result["tool_calls"] = [
-            {
-                "id": tc.id,
-                "name": tc.name,
-                "arguments": tc.arguments,
-            }
-            for tc in message.tool_calls
-        ]
-
-    # Add tool results if present (ToolResultMessage)
-    if isinstance(message, ToolResultMessage):
-        result["results"] = [
-            {
-                "tool_call_id": tr.tool_call_id,
-                "name": tr.name,
-                "status": tr.status.value,
-                "error": tr.error,
-            }
-            for tr in message.results
-        ]
+            elif isinstance(content, ToolCall):
+                result["content"].append(
+                    {
+                        "type": "tool_call",
+                        "id": content.id,
+                        "name": content.name,
+                        "arguments": content.arguments,
+                    }
+                )
+            elif isinstance(content, ToolResult):
+                result["content"].append(
+                    {
+                        "type": "tool_result",
+                        "tool_call_id": content.tool_call_id,
+                        "name": content.name,
+                        "status": content.status.value,
+                        "error": content.error,
+                    }
+                )
 
     return result
