@@ -1,20 +1,23 @@
 """TaskRunner - executes one task with conversation-based LLM."""
 
+from collections import defaultdict
 from typing import Awaitable, Callable, List, Optional, Tuple, TYPE_CHECKING, Type
 from pydantic import BaseModel
 from webtask.llm import (
     Message,
     SystemMessage,
-    UserMessage,
     AssistantMessage,
-    ToolResultMessage,
     Content,
     TextContent,
 )
 from webtask.llm.tool import Tool
-from webtask._internal.llm import purge_messages_content
+from .message import (
+    AgentContent,
+    AgentTextContent,
+    AgentUserMessage,
+    AgentToolResultMessage,
+)
 from .tool_registry import ToolRegistry
-from ..prompts.worker_prompt import build_worker_prompt
 from ..utils.logger import get_logger
 from .run import Run, TaskResult, TaskStatus
 from .tools import CompleteWorkTool, AbortWorkTool
@@ -23,7 +26,7 @@ if TYPE_CHECKING:
     from webtask.llm.llm import LLM
 
 # Type alias for message pairs
-MessagePair = Tuple[AssistantMessage, ToolResultMessage]
+MessagePair = Tuple[AssistantMessage, AgentToolResultMessage]
 
 
 class TaskRunner:
@@ -37,18 +40,21 @@ class TaskRunner:
         self,
         llm: "LLM",
         tools: List[Tool],
-        get_context: Callable[[], Awaitable[List[Content]]],
+        get_context: Callable[[], Awaitable[List[AgentContent]]],
+        system_prompt: str,
     ):
         """Initialize TaskRunner.
 
         Args:
             llm: LLM instance for making tool calls
             tools: List of browser tools (click, fill, goto, etc.)
-            get_context: Async callback that returns page context as Content list
+            get_context: Async callback that returns page context as AgentContent list
+            system_prompt: System prompt to use for the LLM
         """
         self._llm = llm
         self._tools = tools
         self._get_context = get_context
+        self._system_prompt = system_prompt
         self._logger = get_logger(__name__)
 
     async def run(
@@ -100,7 +106,7 @@ class TaskRunner:
             # Get page context after tool execution
             page_context = await self._get_context()
 
-            tool_result_msg = ToolResultMessage(
+            tool_result_msg = AgentToolResultMessage(
                 results=tool_results,
                 content=page_context,
             )
@@ -126,19 +132,6 @@ class TaskRunner:
             messages.append(assistant_msg)
             messages.append(tool_result_msg)
 
-        # Extract final state from last pair
-        final_dom = ""
-        final_screenshot = None
-        if pairs:
-            _, last_tool_result = pairs[-1]
-            if last_tool_result.content:
-                for content in last_tool_result.content:
-                    if hasattr(content, "tag"):
-                        if content.tag == "dom_snapshot" and hasattr(content, "text"):
-                            final_dom = content.text
-                        elif content.tag == "screenshot" and hasattr(content, "data"):
-                            final_screenshot = content.data
-
         # Build and return Run with embedded Result
         return Run(
             result=result,
@@ -146,8 +139,6 @@ class TaskRunner:
             task_description=task,
             steps_used=steps_used,
             max_steps=max_steps,
-            final_dom=final_dom,
-            final_screenshot=final_screenshot,
         )
 
     ### Helper methods ###
@@ -178,14 +169,14 @@ class TaskRunner:
         task: str,
         previous_runs: Optional[List[Run]] = None,
     ) -> List[Message]:
-        user_content: List[Content] = []
+        user_content: List[AgentContent] = []
 
         # Add previous sessions if provided
         if previous_runs:
             formatted_sessions = self._format_previous_runs(previous_runs)
-            user_content.append(TextContent(text=formatted_sessions))
+            user_content.append(AgentTextContent(text=formatted_sessions))
 
-        user_content.append(TextContent(text=f"## Current task:\n{task}"))
+        user_content.append(AgentTextContent(text=f"## Current task:\n{task}"))
 
         # Add context (page state + files) via get_context callback
         context = await self._get_context()
@@ -193,8 +184,8 @@ class TaskRunner:
 
         # Build session start messages (never compacted)
         return [
-            SystemMessage(content=[TextContent(text=build_worker_prompt())]),
-            UserMessage(content=user_content),
+            SystemMessage(content=[TextContent(text=self._system_prompt)]),
+            AgentUserMessage(content=user_content),
         ]
 
     def _format_previous_runs(self, runs: List[Run]) -> str:
@@ -220,21 +211,59 @@ class TaskRunner:
         # Combine session start + tool messages
         all_messages = session_start_messages + tool_messages
 
-        # Purge old content (keep context size manageable)
-        all_messages = purge_messages_content(
-            all_messages,
-            by_tags=["tabs_context", "dom_snapshot"],
-            message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=1,
-        )
-        all_messages = purge_messages_content(
-            all_messages,
-            by_tags=["screenshot"],
-            message_types=[ToolResultMessage, UserMessage],
-            keep_last_messages=2,
-        )
+        # Purge old content based on lifespan values
+        return self._purge_by_lifespan(all_messages)
 
-        return all_messages
+    def _purge_by_lifespan(self, messages: List[Message]) -> List[Message]:
+        """Purge old content from message history based on lifespan values.
+
+        Content with lifespan=N is kept only in the last N messages that contain
+        content with that lifespan value. Content with lifespan=None is kept forever.
+        """
+        if not messages:
+            return messages
+
+        # Group message indices by lifespan value
+        lifespan_to_indices: dict[int, List[int]] = defaultdict(list)
+
+        for i, msg in enumerate(messages):
+            if not msg.content:
+                continue
+            for content_item in msg.content:
+                if isinstance(content_item, AgentContent) and content_item.lifespan is not None:
+                    if i not in lifespan_to_indices[content_item.lifespan]:
+                        lifespan_to_indices[content_item.lifespan].append(i)
+
+        # For each lifespan, determine which message indices should have content purged
+        indices_to_purge: dict[int, set[int]] = defaultdict(set)
+
+        for lifespan, indices in lifespan_to_indices.items():
+            if len(indices) > lifespan:
+                # Purge from older messages (keep last 'lifespan' messages)
+                cutoff = len(indices) - lifespan
+                for idx in indices[:cutoff]:
+                    indices_to_purge[idx].add(lifespan)
+
+        # Build purged message list
+        purged: List[Message] = []
+        for i, msg in enumerate(messages):
+            if i in indices_to_purge and msg.content:
+                lifespans_to_purge = indices_to_purge[i]
+                filtered_content = [
+                    content_item
+                    for content_item in msg.content
+                    if not isinstance(content_item, AgentContent)
+                    or content_item.lifespan not in lifespans_to_purge
+                ]
+                purged.append(
+                    msg.model_copy(
+                        update={"content": filtered_content if filtered_content else None}
+                    )
+                )
+            else:
+                purged.append(msg)
+
+        return purged
 
     def _extract_reasoning(self, assistant_msg: AssistantMessage) -> Optional[str]:
         if assistant_msg.content:

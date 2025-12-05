@@ -20,6 +20,7 @@ class TestTaskRunnerPreviousRuns:
             llm=mock_llm,
             tools=mock_tools,
             get_context=mock_get_context,
+            system_prompt="Test system prompt",
         )
 
     @pytest.mark.unit

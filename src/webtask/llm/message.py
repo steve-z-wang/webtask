@@ -25,9 +25,7 @@ class ToolResultStatus(str, Enum):
 class Content(BaseModel):
     """Base class for message content parts."""
 
-    tag: Optional[str] = (
-        None  # Tag for processing/filtering (e.g., "observation", "dom", "screenshot")
-    )
+    pass
 
 
 class TextContent(Content):

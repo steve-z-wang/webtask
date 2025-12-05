@@ -41,8 +41,5 @@ class Run:
     steps_used: int
     max_steps: int
 
-    final_dom: Optional[str] = None
-    final_screenshot: Optional[str] = None
-
     def __str__(self) -> str:
         return f"Run(task='{self.task_description}', steps={self.steps_used}/{self.max_steps}, status={self.result.status.value if self.result.status else 'pending'})"
