@@ -138,3 +138,26 @@ class PlaywrightElement(Element):
             file_path: Single file path or list of file paths
         """
         await self._locator.set_input_files(file_path, timeout=DEFAULT_ACTION_TIMEOUT)
+
+    async def select_option(
+        self,
+        value: Optional[str] = None,
+        label: Optional[str] = None,
+        index: Optional[int] = None,
+    ):
+        """
+        Select option(s) from a select element.
+
+        Args:
+            value: Option value attribute to select
+            label: Option visible text to select
+            index: Option index to select (0-based)
+        """
+        if label is not None:
+            await self._locator.select_option(label=label, timeout=DEFAULT_ACTION_TIMEOUT)
+        elif value is not None:
+            await self._locator.select_option(value=value, timeout=DEFAULT_ACTION_TIMEOUT)
+        elif index is not None:
+            await self._locator.select_option(index=index, timeout=DEFAULT_ACTION_TIMEOUT)
+        else:
+            raise ValueError("Must provide value, label, or index")

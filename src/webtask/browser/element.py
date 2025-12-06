@@ -116,3 +116,20 @@ class Element(ABC):
             file_path: Single file path (str) or multiple file paths (List[str])
         """
         pass
+
+    @abstractmethod
+    async def select_option(
+        self,
+        value: Optional[str] = None,
+        label: Optional[str] = None,
+        index: Optional[int] = None,
+    ):
+        """
+        Select option(s) from a select element.
+
+        Args:
+            value: Option value attribute to select
+            label: Option visible text to select
+            index: Option index to select (0-based)
+        """
+        pass

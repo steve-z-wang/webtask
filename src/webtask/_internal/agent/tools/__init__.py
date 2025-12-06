@@ -1,7 +1,7 @@
 """Agent tools organized by category."""
 
 # DOM-based tools (element ID)
-from .dom import ClickTool, TypeTool, UploadTool
+from .dom import ClickTool, TypeTool, SelectTool, UploadTool
 
 # Pixel-based tools (screen coordinates)
 from .pixel import (
@@ -32,6 +32,7 @@ __all__ = [
     # DOM
     "ClickTool",
     "TypeTool",
+    "SelectTool",
     "UploadTool",
     # Pixel
     "ClickAtTool",

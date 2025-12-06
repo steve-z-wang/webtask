@@ -80,6 +80,39 @@ class TypeTool(Tool):
         )
 
 
+class SelectTool(Tool):
+    """Select an option from a dropdown."""
+
+    name = "select"
+    description = "Select an option from a dropdown (select element)"
+
+    class Params(ToolParams):
+        """Parameters for select tool."""
+
+        element_id: str = Field(description="ID of the select element")
+        option: str = Field(
+            description="Option to select (by visible text or value)"
+        )
+        description: str = Field(
+            description="Human-readable description of what you're selecting (e.g., 'Country dropdown', 'Size option')"
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize select tool with browser."""
+        self.browser = browser
+
+    async def execute(self, params: Params) -> ToolResult:
+        """Execute select option from dropdown."""
+        element = await self.browser.select(params.element_id)
+        await element.select_option(label=params.option)
+        await self.browser.wait()
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Selected '{params.option}' in {params.description}",
+        )
+
+
 class UploadTool(Tool):
     """Upload files to a file input element."""
 

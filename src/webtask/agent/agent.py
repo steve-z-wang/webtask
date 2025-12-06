@@ -14,6 +14,7 @@ from webtask._internal.agent.tools import (
     GotoTool,
     ClickTool,
     TypeTool,
+    SelectTool,
     UploadTool,
     OpenTabTool,
     SwitchTabTool,
@@ -117,6 +118,7 @@ class Agent:
         dom_tools: List[Tool] = [
             ClickTool(self.browser),
             TypeTool(self.browser),
+            SelectTool(self.browser),
         ]
 
         # Pixel mode: coordinate-based tools
