@@ -3,7 +3,7 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING
-from .message import Message, Role
+from .message import Message
 
 if TYPE_CHECKING:
     from webtask.llm.tool import Tool

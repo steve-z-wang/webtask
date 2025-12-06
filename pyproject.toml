@@ -112,8 +112,7 @@ test-cov = "pytest tests/ --cov=webtask --cov-report=html"
 test-unit = "pytest tests/unit/ -v --tb=short -m unit"
 test-integration = "pytest tests/integration/ -v --tb=short -m integration"
 test-e2e = "pytest tests/e2e/ -v --tb=short -m e2e"
-test-e2e-record = {shell = "WEBTASK_TEST_MODE=record pytest tests/e2e/ -v --tb=short -m e2e"}
-test-e2e-replay = {shell = "WEBTASK_TEST_MODE=replay pytest tests/e2e/ -v --tb=short -m e2e"}
+test-e2e-verbose = "pytest tests/e2e/ -v -s --tb=short -m e2e --log-cli-level=INFO"
 
 # Documentation
 docs = "mkdocs serve"

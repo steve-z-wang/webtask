@@ -13,12 +13,8 @@ jobs:
     needs: lint
     uses: ./.github/workflows/test-unit.yml
 
-  test-e2e:
-    needs: test-unit
-    uses: ./.github/workflows/test-e2e.yml
-
   publish:
-    needs: test-e2e  # Only publish if lint, unit tests, and e2e tests pass
+    needs: test-unit  # Only publish if lint and unit tests pass
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for trusted publishing

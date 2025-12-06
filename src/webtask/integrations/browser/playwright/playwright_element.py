@@ -154,10 +154,16 @@ class PlaywrightElement(Element):
             index: Option index to select (0-based)
         """
         if label is not None:
-            await self._locator.select_option(label=label, timeout=DEFAULT_ACTION_TIMEOUT)
+            await self._locator.select_option(
+                label=label, timeout=DEFAULT_ACTION_TIMEOUT
+            )
         elif value is not None:
-            await self._locator.select_option(value=value, timeout=DEFAULT_ACTION_TIMEOUT)
+            await self._locator.select_option(
+                value=value, timeout=DEFAULT_ACTION_TIMEOUT
+            )
         elif index is not None:
-            await self._locator.select_option(index=index, timeout=DEFAULT_ACTION_TIMEOUT)
+            await self._locator.select_option(
+                index=index, timeout=DEFAULT_ACTION_TIMEOUT
+            )
         else:
             raise ValueError("Must provide value, label, or index")

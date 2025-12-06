@@ -14,8 +14,6 @@ class Config:
                       Values: 1, true, True, yes
         WEBTASK_DEBUG_DIR: Directory for debug output (default: "debug")
                           Example: "debug/test_case_42"
-        WEBTASK_TEST_MODE: Test recording/replay mode
-                          Values: "record", "replay", or unset for live mode
 
     Usage:
         from webtask._internal.config import Config
@@ -34,7 +32,6 @@ class Config:
             debug_value = os.getenv("WEBTASK_DEBUG", "").lower()
             cls._instance._debug = debug_value in ("1", "true", "yes")
             cls._instance._debug_dir = os.getenv("WEBTASK_DEBUG_DIR", "debug")
-            cls._instance._test_mode = os.getenv("WEBTASK_TEST_MODE")
         return cls._instance
 
     def is_debug_enabled(self) -> bool:
@@ -48,15 +45,3 @@ class Config:
         Get the debug output directory.
         """
         return self._debug_dir
-
-    def is_recording(self) -> bool:
-        """
-        Check if test recording mode is enabled.
-        """
-        return self._test_mode == "record"
-
-    def is_replaying(self) -> bool:
-        """
-        Check if test replay mode is enabled.
-        """
-        return self._test_mode == "replay"

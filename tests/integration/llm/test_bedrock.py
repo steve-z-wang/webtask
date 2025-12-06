@@ -71,12 +71,12 @@ def sample_tools():
 async def test_bedrock_call_tools_returns_tool_call(bedrock_llm, sample_tools):
     """Test that Bedrock returns a tool call for a simple request."""
     messages = [
-        Message(role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]),
+        Message(
+            role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]
+        ),
         Message(
             role=Role.USER,
-            content=[
-                Text(text="Navigate to https://example.com and click button-5")
-            ],
+            content=[Text(text="Navigate to https://example.com and click button-5")],
         ),
     ]
 
@@ -127,7 +127,9 @@ async def test_bedrock_call_tools_with_text_content(bedrock_llm, sample_tools):
 async def test_bedrock_handles_multiple_tools(bedrock_llm, sample_tools):
     """Test that Bedrock can call multiple tools in sequence."""
     messages = [
-        Message(role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]),
+        Message(
+            role=Role.SYSTEM, content=[Text(text="You are a web automation agent.")]
+        ),
         Message(
             role=Role.USER,
             content=[

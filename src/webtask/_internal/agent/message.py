@@ -1,7 +1,7 @@
 """Agent-specific content types with lifespan for context management."""
 
 from typing import Optional
-from webtask.llm.message import Content, Text, Image, ImageMimeType
+from webtask.llm.message import Content, Text, Image
 
 
 class AgentContent(Content):

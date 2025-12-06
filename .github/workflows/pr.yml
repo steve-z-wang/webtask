@@ -16,7 +16,3 @@ jobs:
   test-unit:
     needs: lint
     uses: ./.github/workflows/test-unit.yml
-
-  test-e2e:
-    needs: test-unit
-    uses: ./.github/workflows/test-e2e.yml

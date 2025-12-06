@@ -218,7 +218,10 @@ class TaskRunner:
             if not msg.content:
                 continue
             for content_item in msg.content:
-                if isinstance(content_item, AgentContent) and content_item.lifespan is not None:
+                if (
+                    isinstance(content_item, AgentContent)
+                    and content_item.lifespan is not None
+                ):
                     if i not in lifespan_to_indices[content_item.lifespan]:
                         lifespan_to_indices[content_item.lifespan].append(i)
 
@@ -245,11 +248,12 @@ class TaskRunner:
                 ]
                 purged.append(
                     msg.model_copy(
-                        update={"content": filtered_content if filtered_content else None}
+                        update={
+                            "content": filtered_content if filtered_content else None
+                        }
                     )
                 )
             else:
                 purged.append(msg)
 
         return purged
-

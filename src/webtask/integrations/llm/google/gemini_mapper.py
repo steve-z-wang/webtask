@@ -210,7 +210,11 @@ def gemini_response_to_message(response) -> Message:
     """Convert Gemini response to Message with Role.MODEL."""
     content = []
 
-    if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+    if (
+        response.candidates
+        and response.candidates[0].content
+        and response.candidates[0].content.parts
+    ):
         for part in response.candidates[0].content.parts:
             # Check for text content
             if hasattr(part, "text") and part.text:
