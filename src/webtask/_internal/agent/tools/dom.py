@@ -4,6 +4,7 @@ from typing import List, TYPE_CHECKING
 from pydantic import Field
 from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
+from webtask._internal.utils.wait import wait
 
 if TYPE_CHECKING:
     from webtask._internal.agent.agent_browser import AgentBrowser
@@ -24,15 +25,16 @@ class ClickTool(Tool):
             description="Human-readable description of what element you're clicking (e.g., 'Submit button', 'Login link')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize click tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute click on element."""
         element = await self.browser.select(params.element_id)
         await element.click()
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -59,9 +61,10 @@ class TypeTool(Tool):
             description="Human-readable description of what you're typing (e.g., 'Search query', 'Email address')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize type tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type into element (clicks to focus, then types)."""
@@ -71,7 +74,7 @@ class TypeTool(Tool):
             await element.fill("")  # Clear using Playwright's fill
         page = self.browser.get_current_page()
         await page.keyboard_type(params.text)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -90,22 +93,21 @@ class SelectTool(Tool):
         """Parameters for select tool."""
 
         element_id: str = Field(description="ID of the select element")
-        option: str = Field(
-            description="Option to select (by visible text or value)"
-        )
+        option: str = Field(description="Option to select (by visible text or value)")
         description: str = Field(
             description="Human-readable description of what you're selecting (e.g., 'Country dropdown', 'Size option')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize select tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute select option from dropdown."""
         element = await self.browser.select(params.element_id)
         await element.select_option(label=params.option)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -136,10 +138,12 @@ class UploadTool(Tool):
         self,
         browser: "AgentBrowser",
         file_manager: "FileManager",
+        wait_after_action: float,
     ):
         """Initialize upload tool with browser and file manager."""
         self.browser = browser
         self.file_manager = file_manager
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute file upload."""
@@ -148,7 +152,7 @@ class UploadTool(Tool):
 
         element = await self.browser.select(params.element_id)
         await element.upload_file(file_path)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
 
         indexes_str = ", ".join(f"[{i}]" for i in params.file_indexes)
         return ToolResult(

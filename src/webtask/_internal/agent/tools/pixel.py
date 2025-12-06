@@ -4,6 +4,7 @@ from typing import Literal, TYPE_CHECKING
 from pydantic import Field
 from webtask.llm.tool import Tool, ToolParams
 from webtask.llm.message import ToolResult, ToolResultStatus
+from webtask._internal.utils.wait import wait
 
 if TYPE_CHECKING:
     from webtask._internal.agent.agent_browser import AgentBrowser
@@ -24,16 +25,17 @@ class ClickAtTool(Tool):
             description="What you're clicking (e.g., 'Submit button', 'Login link')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize click_at tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute click at coordinates."""
         page = self.browser.get_current_page()
         x, y = self.browser.scale_coordinates(params.x, params.y)
         await page.mouse_click(x, y)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -45,7 +47,9 @@ class TypeAtTool(Tool):
     """Type text at screen coordinates."""
 
     name = "type_at"
-    description = "Type text at specific screen coordinates (clicks to focus, then types)"
+    description = (
+        "Type text at specific screen coordinates (clicks to focus, then types)"
+    )
 
     class Params(ToolParams):
         """Parameters for type_at tool."""
@@ -61,9 +65,10 @@ class TypeAtTool(Tool):
             description="What you're typing into (e.g., 'Search box', 'Email field')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize type_at tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type at coordinates (clicks to focus, then types)."""
@@ -71,7 +76,7 @@ class TypeAtTool(Tool):
         x, y = self.browser.scale_coordinates(params.x, params.y)
         await page.mouse_click(x, y)
         await page.keyboard_type(params.text, clear=params.clear)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -97,16 +102,17 @@ class HoverAtTool(Tool):
             description="What you're hovering over (e.g., 'Dropdown menu', 'Tooltip trigger')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize hover_at tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute hover at coordinates."""
         page = self.browser.get_current_page()
         x, y = self.browser.scale_coordinates(params.x, params.y)
         await page.mouse_move(x, y)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -133,9 +139,10 @@ class ScrollAtTool(Tool):
         )
         magnitude: int = Field(default=800, description="Scroll amount in pixels")
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize scroll_at tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute scroll at coordinates."""
@@ -151,7 +158,7 @@ class ScrollAtTool(Tool):
         elif params.direction == "right":
             delta_x = params.magnitude
         await page.mouse_wheel(x, y, delta_x, delta_y)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -175,9 +182,10 @@ class ScrollDocumentTool(Tool):
             description="Why you're scrolling (e.g., 'Scroll to see more results')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize scroll_document tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute document scroll using 50% viewport scroll."""
@@ -194,7 +202,7 @@ class ScrollDocumentTool(Tool):
         elif params.direction == "left":
             await page.evaluate(f"window.scrollBy(-{width // 2}, 0)")
 
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,
@@ -219,9 +227,10 @@ class DragAndDropTool(Tool):
             description="What you're dragging (e.g., 'Drag slider to 50%', 'Move file to folder')"
         )
 
-    def __init__(self, browser: "AgentBrowser"):
+    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
         """Initialize drag_and_drop tool with browser."""
         self.browser = browser
+        self.wait_after_action = wait_after_action
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute drag and drop."""
@@ -229,7 +238,7 @@ class DragAndDropTool(Tool):
         x, y = self.browser.scale_coordinates(params.x, params.y)
         dest_x, dest_y = self.browser.scale_coordinates(params.dest_x, params.dest_y)
         await page.mouse_drag(x, y, dest_x, dest_y)
-        await self.browser.wait()
+        await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
             status=ToolResultStatus.SUCCESS,

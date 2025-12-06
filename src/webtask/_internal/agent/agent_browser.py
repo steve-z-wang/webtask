@@ -5,7 +5,6 @@ from webtask.browser import Page, Context, Element
 from webtask.llm.message import Content, ImageMimeType
 from .message import AgentText, AgentImage
 from ..context import LLMDomContext
-from ..utils.wait import wait
 import base64
 
 
@@ -15,12 +14,10 @@ class AgentBrowser:
     def __init__(
         self,
         context: Optional[Context] = None,
-        wait_after_action: float = 1.0,
         mode: str = "accessibility",
         coordinate_scale: Optional[int] = None,
     ):
         self._context = context
-        self._wait_after_action = wait_after_action
         self._mode = mode
         self._coordinate_scale = coordinate_scale
         self._pages: List[Page] = []
@@ -32,10 +29,6 @@ class AgentBrowser:
     def set_context(self, context: Context) -> None:
         """Set or update the context."""
         self._context = context
-
-    def set_wait_after_action(self, wait_after_action: float) -> None:
-        """Set wait_after_action duration."""
-        self._wait_after_action = wait_after_action
 
     def set_mode(self, mode: str) -> None:
         """Set DOM snapshot mode."""
@@ -177,12 +170,6 @@ class AgentBrowser:
             int(x / self._coordinate_scale * viewport[0]),
             int(y / self._coordinate_scale * viewport[1]),
         )
-
-    # Wait helper
-
-    async def wait(self) -> None:
-        """Wait for configured wait_after_action duration."""
-        await wait(self._wait_after_action)
 
     # Private methods
 

@@ -93,12 +93,16 @@ class Agent:
         self._previous_runs = []
 
     def _create_browser_tools(
-        self, mode: str, file_manager: Optional[FileManager] = None
+        self,
+        mode: str,
+        wait_after_action: float,
+        file_manager: Optional[FileManager] = None,
     ) -> List[Tool]:
         """Create browser tools based on agent mode.
 
         Args:
             mode: Agent mode - "dom" or "pixel"
+            wait_after_action: Wait time after each action in seconds
             file_manager: Optional FileManager for upload tool
 
         Returns:
@@ -106,29 +110,29 @@ class Agent:
         """
         # Common tools for all modes (navigation + keyboard)
         common_tools: List[Tool] = [
-            GotoTool(self.browser),
-            GoBackTool(self.browser),
-            GoForwardTool(self.browser),
+            GotoTool(self.browser, wait_after_action),
+            GoBackTool(self.browser, wait_after_action),
+            GoForwardTool(self.browser, wait_after_action),
             OpenTabTool(self.browser),
             SwitchTabTool(self.browser),
-            KeyCombinationTool(self.browser),
+            KeyCombinationTool(self.browser, wait_after_action),
         ]
 
         # DOM mode: element ID-based tools
         dom_tools: List[Tool] = [
-            ClickTool(self.browser),
-            TypeTool(self.browser),
-            SelectTool(self.browser),
+            ClickTool(self.browser, wait_after_action),
+            TypeTool(self.browser, wait_after_action),
+            SelectTool(self.browser, wait_after_action),
         ]
 
         # Pixel mode: coordinate-based tools
         pixel_tools: List[Tool] = [
-            ClickAtTool(self.browser),
-            TypeAtTool(self.browser),
-            HoverAtTool(self.browser),
-            ScrollAtTool(self.browser),
-            ScrollDocumentTool(self.browser),
-            DragAndDropTool(self.browser),
+            ClickAtTool(self.browser, wait_after_action),
+            TypeAtTool(self.browser, wait_after_action),
+            HoverAtTool(self.browser, wait_after_action),
+            ScrollAtTool(self.browser, wait_after_action),
+            ScrollDocumentTool(self.browser, wait_after_action),
+            DragAndDropTool(self.browser, wait_after_action),
         ]
 
         # Build tool list based on mode
@@ -139,7 +143,7 @@ class Agent:
 
         # Add upload tool only if file_manager is provided (dom mode only)
         if file_manager is not None and mode == "dom":
-            tools.append(UploadTool(self.browser, file_manager))
+            tools.append(UploadTool(self.browser, file_manager, wait_after_action))
 
         return tools
 
@@ -186,14 +190,13 @@ class Agent:
                 f"Invalid mode '{mode}'. Must be one of: {self.VALID_MODES}"
             )
 
-        self.browser.set_wait_after_action(wait_after_action)
         self.browser.set_mode("dom")
 
         # Create file manager for this run
         file_manager = FileManager(files) if files else None
 
         # Create browser tools (including upload tool if files provided)
-        tools = self._create_browser_tools(mode, file_manager)
+        tools = self._create_browser_tools(mode, wait_after_action, file_manager)
 
         # Determine context flags based on mode
         # Both modes get screenshots, only dom mode gets DOM context
