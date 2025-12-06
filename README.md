@@ -81,6 +81,16 @@ class ProductInfo(BaseModel):
 product = await agent.extract("product information", ProductInfo)
 ```
 
+**Natural language element selection**
+
+```python
+element = await agent.select("the login button")
+await element.click()
+
+input_field = await agent.select("email input")
+await input_field.fill("user@example.com")
+```
+
 **Error handling**
 
 ```python

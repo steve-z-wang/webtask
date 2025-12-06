@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from webtask.llm import LLM
 from webtask.llm.tool import Tool
 from webtask.llm.message import Content, Text
-from webtask.browser import Context, Page
+from webtask.browser import Context, Page, Element
 from webtask._internal.agent.task_runner import TaskRunner
 from webtask._internal.agent.run import Run, TaskStatus
 from webtask._internal.agent.file_manager import FileManager
@@ -378,6 +378,38 @@ class Agent:
             return run.result.output
         else:
             return run.result.output.value if run.result.output else ""
+
+    async def select(
+        self,
+        description: str,
+        max_steps: int = 5,
+    ) -> Element:
+        """
+        Select an element using natural language description.
+
+        Uses the LLM to identify the element matching the description
+        and returns the Element for direct interaction.
+
+        Args:
+            description: Natural language description of the element
+                        (e.g., "the login button", "email input field")
+            max_steps: Maximum steps to execute (default: 5)
+
+        Returns:
+            Element instance for direct interaction (click, fill, etc.)
+
+        Raises:
+            TaskAbortedError: If element cannot be found
+            KeyError: If the identified element ID doesn't exist
+
+        Example:
+            element = await agent.select("the submit button")
+            await element.click()
+        """
+        from webtask._internal.agent.selector import Selector
+
+        selector = Selector(self.llm, self.browser)
+        return await selector.select(description, max_steps)
 
     async def goto(self, url: str) -> None:
         """
