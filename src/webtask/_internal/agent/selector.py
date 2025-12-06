@@ -1,9 +1,8 @@
 """Selector - natural language element selection using LLM."""
 
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
 from webtask.llm import LLM
-from webtask.llm.tool import Tool
 from webtask.llm.message import Content
 from webtask.browser import Element
 from webtask.exceptions import TaskAbortedError
