@@ -18,12 +18,18 @@ playwright install chromium
 
 ```python
 from webtask import Webtask
-from webtask.integrations.llm import GeminiComputerUse
+from webtask.integrations.llm import Gemini
 
 wt = Webtask()
-agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
+agent = await wt.create_agent(
+    llm=Gemini(model="gemini-2.5-flash"),
+    wait_after_action=1.0,  # Adjust for slower sites
+)
 
-await agent.do("Go to practicesoftwaretesting.com and add 2 Flat-Head Wood Screws to the cart")
+await agent.goto("https://practicesoftwaretesting.com")
+await agent.wait(3)
+
+await agent.do("add 2 Flat-Head Wood Screws to the cart")
 
 verdict = await agent.verify("the cart contains 2 items")
 if verdict:

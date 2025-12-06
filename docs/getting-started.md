@@ -12,13 +12,19 @@ playwright install chromium
 ```python
 import asyncio
 from webtask import Webtask
-from webtask.integrations.llm import GeminiComputerUse
+from webtask.integrations.llm import Gemini
 
 async def main():
     wt = Webtask()
-    agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
+    agent = await wt.create_agent(
+        llm=Gemini(model="gemini-2.5-flash"),
+        wait_after_action=1.0,  # Adjust for slower sites
+    )
 
-    await agent.do("Go to practicesoftwaretesting.com and add 2 Flat-Head Wood Screws to the cart")
+    await agent.goto("https://practicesoftwaretesting.com")
+    await agent.wait(3)
+
+    await agent.do("add 2 Flat-Head Wood Screws to the cart")
 
     verdict = await agent.verify("the cart contains 2 items")
     if verdict:
@@ -31,12 +37,11 @@ asyncio.run(main())
 
 ## Configuration
 
-### Three Modes
+### Two Modes
 
 ```python
-agent = await wt.create_agent(llm=llm, mode="text")     # DOM-based (default)
-agent = await wt.create_agent(llm=llm, mode="visual")   # Screenshots
-agent = await wt.create_agent(llm=llm, mode="full")     # Both
+agent = await wt.create_agent(llm=llm, mode="dom")     # Element IDs (default)
+agent = await wt.create_agent(llm=llm, mode="pixel")   # Screen coordinates
 ```
 
 ### Headless Mode
@@ -59,16 +64,23 @@ agent.clear_history()  # Start fresh when needed
 
 ### Timing Control
 
+!!! warning "Important for Single Page Applications (SPAs)"
+    Modern websites often use SPAs where clicking a link changes content without a full page reload. The default `wait_after_action=1.0` second may not be enough for the new content to load, causing the agent to see stale DOM content and make incorrect decisions.
+
+    **Recommendation**: For SPAs, increase `wait_after_action` to 2-3 seconds or use explicit waits.
+
 ```python
 # Set default wait time for agent (default: 1.0s)
-agent = await wt.create_agent(llm=llm, wait_after_action=2.0)
+# Increase for SPAs or slow-loading sites
+agent = await wt.create_agent(llm=llm, wait_after_action=3.0)
 
 # Override per task
-await agent.do("Click submit", wait_after_action=3.0)
+await agent.do("Click submit", wait_after_action=5.0)
 
-# Explicit waits for SPAs
-await agent.wait_for_load()          # Wait for page load
-await agent.wait_for_network_idle()  # Wait for network idle
+# Explicit waits
+await agent.wait(3)                  # Simple wait (seconds)
+await agent.wait_for_load()          # Wait for page load event
+await agent.wait_for_network_idle()  # Wait for network idle (best for SPAs)
 ```
 
 ## Next Steps

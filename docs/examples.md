@@ -5,7 +5,7 @@
 ```python
 import asyncio
 from webtask import Webtask
-from webtask.integrations.llm import GeminiComputerUse
+from webtask.integrations.llm import Gemini
 from pydantic import BaseModel
 
 class CartSummary(BaseModel):
@@ -14,10 +14,16 @@ class CartSummary(BaseModel):
 
 async def main():
     wt = Webtask()
-    agent = await wt.create_agent(llm=GeminiComputerUse(), mode="visual")
+    agent = await wt.create_agent(
+        llm=Gemini(model="gemini-2.5-flash"),
+        wait_after_action=1.0,  # Adjust for slower sites
+    )
+
+    # Navigate first
+    await agent.goto("https://practicesoftwaretesting.com")
+    await agent.wait(3)
 
     # do() - Execute tasks
-    await agent.do("Go to practicesoftwaretesting.com")
     await agent.do("Add 2 Flat-Head Wood Screws to the cart")
     await agent.do("Add 5 Cross-head screws to the cart")
     await agent.do("Go to the cart page")
@@ -61,16 +67,22 @@ except TaskAbortedError as e:
 
 ```python
 from playwright.async_api import async_playwright
-from webtask.integrations.llm import GeminiComputerUse
+from webtask.integrations.llm import Gemini
 
 async def with_existing_browser():
     wt = Webtask()
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
-        agent = await wt.create_agent_with_browser(llm=GeminiComputerUse(), browser=browser)
+        agent = await wt.create_agent_with_browser(
+            llm=Gemini(model="gemini-2.5-flash"),
+            browser=browser,
+            wait_after_action=1.0,
+        )
 
-        await agent.do("Go to practicesoftwaretesting.com and add 2 screws to the cart")
+        await agent.goto("https://practicesoftwaretesting.com")
+        await agent.wait(3)
+        await agent.do("add 2 screws to the cart")
 
         await browser.close()
 
