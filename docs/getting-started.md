@@ -18,17 +18,25 @@ async def main():
     wt = Webtask()
     agent = await wt.create_agent(
         llm=Gemini(model="gemini-2.5-flash"),
-        wait_after_action=1.0,  # Adjust for slower sites
+        wait_after_action=1.0,
     )
 
     await agent.goto("https://practicesoftwaretesting.com")
     await agent.wait(3)
 
-    await agent.do("add 2 Flat-Head Wood Screws to the cart")
+    # select: pick elements with natural language
+    search = await agent.select("the search input")
+    await search.fill("pliers")
 
-    verdict = await agent.verify("the cart contains 2 items")
-    if verdict:
-        print("Success!")
+    # do: simple or complex tasks — agent figures out the steps
+    await agent.do("click search and add the first product to cart")
+
+    # extract: get structured data from the page
+    price = await agent.extract("the cart total price")
+    print(f"Cart total: {price}")
+
+    # verify: check conditions
+    assert await agent.verify("cart has 1 item")
 
     await wt.close()
 
@@ -60,6 +68,24 @@ await agent.do("Add 5 more screws")  # Remembers previous actions
 await agent.do("Go to cart")
 
 agent.clear_history()  # Start fresh when needed
+```
+
+### Element Selection
+
+Use `select()` to find elements using natural language and interact with them directly:
+
+```python
+# Select and click a button
+button = await agent.select("the login button")
+await button.click()
+
+# Select and fill an input field
+email_field = await agent.select("email input")
+await email_field.fill("user@example.com")
+
+# Select and interact with any element
+menu = await agent.select("the navigation menu")
+await menu.click()
 ```
 
 ### Timing Control

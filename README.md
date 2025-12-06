@@ -5,7 +5,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://steve-z-wang.github.io/webtask/)
 
-Easy-to-use LLM-powered web automation.
+Easy-to-use LLM-powered browser automation — from autonomous tasks to element-level control.
+
+## Why webtask?
+
+- **High-level tasks**: Describe what you want done — the agent figures out the steps
+- **Low-level control**: Select any element with natural language — no CSS/XPath selectors needed
 
 ## Installation
 
@@ -23,84 +28,53 @@ from webtask.integrations.llm import Gemini
 wt = Webtask()
 agent = await wt.create_agent(
     llm=Gemini(model="gemini-2.5-flash"),
-    wait_after_action=1.0,  # Adjust for slower sites
+    wait_after_action=1.0,
 )
 
 await agent.goto("https://practicesoftwaretesting.com")
 await agent.wait(3)
 
-await agent.do("add 2 Flat-Head Wood Screws to the cart")
+# select: pick elements with natural language
+search = await agent.select("the search input")
+await search.fill("pliers")
 
-verdict = await agent.verify("the cart contains 2 items")
-if verdict:
-    print("Success!")
+# do: simple or complex tasks — agent figures out the steps
+await agent.do("click search and add the first product to cart")
+
+# extract: get structured data from the page
+price = await agent.extract("the cart total price")
+
+# verify: check conditions
+assert await agent.verify("cart has 1 item")
 ```
 
 ## Features
 
-**Simple or complex tasks**
+**Four core operations**
 
 ```python
-await agent.do("Click the login button")                            # Single action
-await agent.do("Find the blue shirt, add to cart, and checkout")    # Multi-step task
+await agent.do("click search and add first product to cart")  # Autonomous tasks
+element = await agent.select("the search input")              # Element selection
+data = await agent.extract("the cart total", MySchema)        # Data extraction
+assert await agent.verify("cart has 1 item")                  # Verification
 ```
 
-**Stateful agents**
+**Stateful agents** — Agent remembers context across tasks
 
 ```python
-# Agent remembers context across tasks
-await agent.do("Add 2 wood screws to cart")
-await agent.do("Add 5 cross-head screws")
-await agent.do("Go to cart and verify")
-
-agent.clear_history()  # Start fresh
+await agent.do("Add pliers to cart")
+await agent.do("Add a hammer too")  # Remembers previous action
+agent.clear_history()               # Reset when needed
 ```
 
-**Two modes**
+**Two modes** — DOM-based or pixel-based interaction
 
 ```python
 agent = await wt.create_agent(llm=llm, mode="dom")     # Element IDs (default)
 agent = await wt.create_agent(llm=llm, mode="pixel")   # Screen coordinates
 ```
 
-**Verification**
-
-```python
-verdict = await agent.verify("the cart contains 7 items")
-if verdict:
-    print("Success!")
-```
-
-**Data extraction**
-
-```python
-class ProductInfo(BaseModel):
-    name: str
-    price: float
-
-product = await agent.extract("product information", ProductInfo)
-```
-
-**Natural language element selection**
-
-```python
-element = await agent.select("the login button")
-await element.click()
-
-input_field = await agent.select("email input")
-await input_field.fill("user@example.com")
-```
-
-**Error handling**
-
-```python
-try:
-    await agent.do("Add item to cart")
-except TaskAbortedError as e:
-    print(f"Task failed: {e}")
-```
-
-**Easy integration**
+**Browser integration** — Works with new or existing browsers
 
 ```python
 agent = await wt.create_agent(llm=llm)                                  # New browser
@@ -109,18 +83,13 @@ agent = wt.create_agent_with_context(llm=llm, context=context)          # Existi
 agent = wt.create_agent_with_page(llm=llm, page=page)                   # Existing page
 ```
 
-**Timing control**
+**Error handling** — Handle task failures gracefully
 
 ```python
-# Set default wait time for agent
-agent = await wt.create_agent(llm=llm, wait_after_action=2.0)
-
-# Override per task
-await agent.do("Click submit", wait_after_action=3.0)
-
-# Explicit waits
-await agent.wait_for_load()          # Wait for page load
-await agent.wait_for_network_idle()  # Wait for network idle
+try:
+    await agent.do("Add item to cart")
+except TaskAbortedError as e:
+    print(f"Task failed: {e}")
 ```
 
 ## Supported LLMs
@@ -132,6 +101,8 @@ Gemini(model="gemini-2.5-flash")                                # 2.5 Flash
 GeminiComputerUse(model="gemini-2.5-computer-use-preview")      # Visual mode
 Bedrock(model="anthropic.claude-sonnet-4-20250514-v1:0")        # Claude 4 Sonnet (WIP)
 ```
+
+You can also use your own LLM by implementing the `LLM` interface. See the [custom LLM guide](https://steve-z-wang.github.io/webtask/guides/custom-llm/).
 
 ## Links
 

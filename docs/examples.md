@@ -42,6 +42,38 @@ async def main():
 asyncio.run(main())
 ```
 
+## Element Selection
+
+Use `select()` to find elements with natural language and interact with them directly:
+
+```python
+async def form_example():
+    wt = Webtask()
+    agent = await wt.create_agent(
+        llm=Gemini(model="gemini-2.5-flash"),
+        wait_after_action=1.0,
+    )
+
+    await agent.goto("https://practicesoftwaretesting.com")
+    await agent.wait(3)
+
+    # Select and use the search input
+    search_input = await agent.select("the search input field")
+    await search_input.fill("screws")
+
+    # Select and click the search button
+    search_btn = await agent.select("the search button")
+    await search_btn.click()
+
+    await agent.wait(2)
+
+    # Select the first product
+    product = await agent.select("the first product in the list")
+    await product.click()
+
+    await wt.close()
+```
+
 ## Error Handling
 
 ```python
