@@ -13,10 +13,12 @@ from webtask._internal.agent.file_manager import FileManager
 from webtask._internal.agent.tools import (
     GotoTool,
     ClickTool,
+    TypeTool,
     UploadTool,
     OpenTabTool,
     SwitchTabTool,
     ClickAtTool,
+    TypeAtTool,
     HoverAtTool,
     ScrollAtTool,
     ScrollDocumentTool,
@@ -24,7 +26,6 @@ from webtask._internal.agent.tools import (
     GoBackTool,
     GoForwardTool,
     KeyCombinationTool,
-    KeyboardTypeTool,
 )
 from webtask.exceptions import TaskAbortedError
 from .result import Result, Verdict
@@ -110,17 +111,18 @@ class Agent:
             OpenTabTool(self.browser),
             SwitchTabTool(self.browser),
             KeyCombinationTool(self.browser),
-            KeyboardTypeTool(self.browser),
         ]
 
         # DOM mode: element ID-based tools
         dom_tools: List[Tool] = [
             ClickTool(self.browser),
+            TypeTool(self.browser),
         ]
 
         # Pixel mode: coordinate-based tools
         pixel_tools: List[Tool] = [
             ClickAtTool(self.browser),
+            TypeAtTool(self.browser),
             HoverAtTool(self.browser),
             ScrollAtTool(self.browser),
             ScrollDocumentTool(self.browser),

@@ -41,6 +41,45 @@ class ClickAtTool(Tool):
         )
 
 
+class TypeAtTool(Tool):
+    """Type text at screen coordinates."""
+
+    name = "type_at"
+    description = "Type text at specific screen coordinates (clicks to focus, then types)"
+
+    class Params(ToolParams):
+        """Parameters for type_at tool."""
+
+        x: int = Field(description="X coordinate (pixels)")
+        y: int = Field(description="Y coordinate (pixels)")
+        text: str = Field(description="Text to type")
+        clear: bool = Field(
+            default=True,
+            description="Clear existing text before typing",
+        )
+        description: str = Field(
+            description="What you're typing into (e.g., 'Search box', 'Email field')"
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize type_at tool with browser."""
+        self.browser = browser
+
+    async def execute(self, params: Params) -> ToolResult:
+        """Execute type at coordinates (clicks to focus, then types)."""
+        page = self.browser.get_current_page()
+        x, y = self.browser.scale_coordinates(params.x, params.y)
+        await page.mouse_click(x, y)
+        await page.keyboard_type(params.text, clear=params.clear)
+        await self.browser.wait()
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Typed {params.description}"
+            + (" (cleared first)" if params.clear else ""),
+        )
+
+
 class HoverAtTool(Tool):
     """Hover at screen coordinates."""
 

@@ -40,6 +40,44 @@ class ClickTool(Tool):
         )
 
 
+class TypeTool(Tool):
+    """Type text into an element."""
+
+    name = "type"
+    description = "Type text into an input field or text area"
+
+    class Params(ToolParams):
+        """Parameters for type tool."""
+
+        element_id: str = Field(description="ID of the input element to type into")
+        text: str = Field(description="Text to type")
+        clear: bool = Field(
+            default=True,
+            description="Clear existing text before typing",
+        )
+        description: str = Field(
+            description="Human-readable description of what you're typing (e.g., 'Search query', 'Email address')"
+        )
+
+    def __init__(self, browser: "AgentBrowser"):
+        """Initialize type tool with browser."""
+        self.browser = browser
+
+    async def execute(self, params: Params) -> ToolResult:
+        """Execute type into element (clicks to focus, then types)."""
+        element = await self.browser.select(params.element_id)
+        await element.click()
+        page = self.browser.get_current_page()
+        await page.keyboard_type(params.text, clear=params.clear)
+        await self.browser.wait()
+        return ToolResult(
+            name=self.name,
+            status=ToolResultStatus.SUCCESS,
+            description=f"Typed {params.description}"
+            + (" (cleared first)" if params.clear else ""),
+        )
+
+
 class UploadTool(Tool):
     """Upload files to a file input element."""
 

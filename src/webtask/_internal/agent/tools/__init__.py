@@ -1,11 +1,12 @@
 """Agent tools organized by category."""
 
 # DOM-based tools (element ID)
-from .dom import ClickTool, UploadTool
+from .dom import ClickTool, TypeTool, UploadTool
 
 # Pixel-based tools (screen coordinates)
 from .pixel import (
     ClickAtTool,
+    TypeAtTool,
     HoverAtTool,
     ScrollAtTool,
     ScrollDocumentTool,
@@ -19,7 +20,6 @@ from .navigation import (
     GoForwardTool,
     SearchTool,
     KeyCombinationTool,
-    KeyboardTypeTool,
 )
 
 # Tab management tools
@@ -31,9 +31,11 @@ from .control import CompleteWorkTool, AbortWorkTool
 __all__ = [
     # DOM
     "ClickTool",
+    "TypeTool",
     "UploadTool",
     # Pixel
     "ClickAtTool",
+    "TypeAtTool",
     "HoverAtTool",
     "ScrollAtTool",
     "ScrollDocumentTool",
@@ -44,7 +46,6 @@ __all__ = [
     "GoForwardTool",
     "SearchTool",
     "KeyCombinationTool",
-    "KeyboardTypeTool",
     # Tab
     "OpenTabTool",
     "SwitchTabTool",
