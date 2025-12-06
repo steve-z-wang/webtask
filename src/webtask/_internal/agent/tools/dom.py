@@ -67,8 +67,10 @@ class TypeTool(Tool):
         """Execute type into element (clicks to focus, then types)."""
         element = await self.browser.select(params.element_id)
         await element.click()
+        if params.clear:
+            await element.fill("")  # Clear using Playwright's fill
         page = self.browser.get_current_page()
-        await page.keyboard_type(params.text, clear=params.clear)
+        await page.keyboard_type(params.text)
         await self.browser.wait()
         return ToolResult(
             name=self.name,

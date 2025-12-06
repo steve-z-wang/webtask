@@ -4,8 +4,8 @@ from typing import List, Optional, Union
 from playwright.async_api import Locator
 from ....browser import Element
 
-# Short timeout for element actions (ms) - fail fast but allow for rendering
-DEFAULT_ACTION_TIMEOUT = 100
+# Timeout for element actions (ms) - fail fast but allow for navigation
+DEFAULT_ACTION_TIMEOUT = 1000
 
 
 class PlaywrightElement(Element):

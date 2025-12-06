@@ -202,9 +202,8 @@ class PlaywrightPage(Page):
             delay: Delay between keystrokes in milliseconds (default: 80ms)
         """
         if clear:
-            # Select all text and delete
-            await self._page.keyboard.press("Control+A")
-            await self._page.keyboard.press("Backspace")
+            # Clear focused element using JavaScript (cross-platform)
+            await self._page.evaluate("document.activeElement.value = ''")
 
         # Type the text
         await self._page.keyboard.type(text, delay=delay)
