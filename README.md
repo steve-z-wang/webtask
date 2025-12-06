@@ -9,8 +9,10 @@ Easy-to-use LLM-powered browser automation — from autonomous tasks to element-
 
 ## Why webtask?
 
-- **High-level tasks**: Describe what you want done — the agent figures out the steps
-- **Low-level control**: Select any element with natural language — no CSS/XPath selectors needed
+- **Natural language tasks**: `agent.do("add 3 items to cart")`
+- **Natural language selectors**: `agent.select("the search input")`
+
+See [Features](#features) for more.
 
 ## Demo
 
@@ -22,14 +24,16 @@ await agent.do("add 3 Flat-Head Wood Screws to the cart")
 
 [View full example](examples/demo_video.py)
 
-## Installation
+## Quick Start
+
+Install webtask and Playwright:
 
 ```bash
 pip install pywebtask
 playwright install chromium
 ```
 
-## Quick Start
+Then run your first automation:
 
 ```python
 from webtask import Webtask
@@ -101,6 +105,14 @@ try:
 except TaskAbortedError as e:
     print(f"Task failed: {e}")
 ```
+
+## When to use webtask?
+
+Use webtask when you know **what** you want to automate but don't want to deal with **how** (finding selectors, handling dynamic DOM, etc.).
+
+**Not ideal for:**
+- High-volume scraping (use Scrapy, requests)
+- Fully autonomous agents for complex, open-ended tasks
 
 ## Supported LLMs
 
