@@ -4,6 +4,7 @@ from typing import Optional, Union, TYPE_CHECKING
 from .browser import Browser, Context, Page
 from .llm import LLM
 from .agent import Agent
+from .constants import DEFAULT_WAIT_AFTER_ACTION, DEFAULT_TYPING_DELAY
 
 if TYPE_CHECKING:
     from playwright.async_api import (
@@ -102,7 +103,8 @@ class Webtask:
         self,
         llm: LLM,
         mode: str = "dom",
-        wait_after_action: float = 1.0,
+        wait_after_action: float = DEFAULT_WAIT_AFTER_ACTION,
+        typing_delay: float = DEFAULT_TYPING_DELAY,
         headless: bool = False,
         browser_type: str = "chromium",
     ) -> Agent:
@@ -112,6 +114,7 @@ class Webtask:
             llm: LLM instance for reasoning
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
+            typing_delay: Delay between keystrokes in milliseconds (default: 80)
             headless: Run browser in headless mode without GUI (default: False, shows browser window)
             browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
 
@@ -127,6 +130,7 @@ class Webtask:
             context=context,
             mode=mode,
             wait_after_action=wait_after_action,
+            typing_delay=typing_delay,
         )
 
         return agent
@@ -136,7 +140,8 @@ class Webtask:
         llm: LLM,
         browser: Union[Browser, "PlaywrightBrowser"],
         mode: str = "dom",
-        wait_after_action: float = 1.0,
+        wait_after_action: float = DEFAULT_WAIT_AFTER_ACTION,
+        typing_delay: float = DEFAULT_TYPING_DELAY,
         use_existing_context: bool = True,
     ) -> Agent:
         """Create agent with existing browser.
@@ -149,6 +154,7 @@ class Webtask:
             browser: Browser instance or raw Playwright Browser (already launched)
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
+            typing_delay: Delay between keystrokes in milliseconds (default: 80)
             use_existing_context: Use existing context if available (default: True)
 
         Returns:
@@ -191,6 +197,7 @@ class Webtask:
             context=context,
             mode=mode,
             wait_after_action=wait_after_action,
+            typing_delay=typing_delay,
         )
 
         return agent
@@ -200,7 +207,8 @@ class Webtask:
         llm: LLM,
         context: Union[Context, "BrowserContext"],
         mode: str = "dom",
-        wait_after_action: float = 1.0,
+        wait_after_action: float = DEFAULT_WAIT_AFTER_ACTION,
+        typing_delay: float = DEFAULT_TYPING_DELAY,
     ) -> Agent:
         """Create agent with existing context.
 
@@ -212,6 +220,7 @@ class Webtask:
             context: Context instance or Playwright BrowserContext
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
+            typing_delay: Delay between keystrokes in milliseconds (default: 80)
 
         Returns:
             Agent instance with provided context
@@ -229,6 +238,7 @@ class Webtask:
             context=wrapped_context,
             mode=mode,
             wait_after_action=wait_after_action,
+            typing_delay=typing_delay,
         )
 
         return agent
@@ -238,7 +248,8 @@ class Webtask:
         llm: LLM,
         page: Union[Page, "PlaywrightPage"],
         mode: str = "dom",
-        wait_after_action: float = 1.0,
+        wait_after_action: float = DEFAULT_WAIT_AFTER_ACTION,
+        typing_delay: float = DEFAULT_TYPING_DELAY,
     ) -> Agent:
         """Create agent with existing page.
 
@@ -250,6 +261,7 @@ class Webtask:
             page: Page instance or Playwright Page
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
+            typing_delay: Delay between keystrokes in milliseconds (default: 80)
 
         Returns:
             Agent instance with context from the provided page
@@ -265,6 +277,7 @@ class Webtask:
             context=context,
             mode=mode,
             wait_after_action=wait_after_action,
+            typing_delay=typing_delay,
         )
 
         # Focus the provided tab

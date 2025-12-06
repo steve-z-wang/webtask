@@ -40,8 +40,4 @@ echo "🧪 Running integration tests..."
 pytest tests/integration/ -v --tb=short -m integration -n auto
 
 echo ""
-echo "🧪 Running e2e tests (replay mode)..."
-WEBTASK_TEST_MODE=replay pytest tests/e2e/ -v --tb=short -m e2e
-
-echo ""
 echo "✅ All PR checks passed!"

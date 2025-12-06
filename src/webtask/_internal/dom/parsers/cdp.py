@@ -74,6 +74,12 @@ def _create_element_nodes(
     attributes_arrays = nodes_data.get("attributes", [])
     backend_node_ids = nodes_data.get("backendNodeId", [])
 
+    # Form element values (live JS property values, not HTML attributes)
+    input_values = nodes_data.get("inputValue", {})  # {index: stringIndex}
+    text_values = nodes_data.get("textValue", {})  # {index: stringIndex}
+    input_checked = nodes_data.get("inputChecked", {})  # {index: bool}
+    option_selected = nodes_data.get("optionSelected", {})  # {index: bool}
+
     num_nodes = len(node_types)
     nodes: List[Optional[DomNode]] = [None] * num_nodes
 
@@ -108,6 +114,21 @@ def _create_element_nodes(
 
         # Get backend node ID from CDP
         backend_node_id = backend_node_ids[i] if i < len(backend_node_ids) else None
+
+        # Add live form values (JS properties, not HTML attributes)
+        # These are the actual current values, not the initial HTML attribute values
+        if i in input_values:
+            value = get_string(input_values[i])
+            if value:
+                node_attrs["data-value"] = value
+        if i in text_values:
+            value = get_string(text_values[i])
+            if value:
+                node_attrs["data-value"] = value
+        if i in input_checked:
+            node_attrs["data-checked"] = str(input_checked[i]).lower()
+        if i in option_selected:
+            node_attrs["data-selected"] = str(option_selected[i]).lower()
 
         # Create node
         node = DomNode(

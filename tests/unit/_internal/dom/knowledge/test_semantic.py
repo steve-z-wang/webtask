@@ -1,9 +1,12 @@
 """Tests for semantic knowledge functions."""
 
+import pytest
+
 from webtask._internal.dom.domnode import DomNode, Text
 from webtask._internal.dom.knowledge.semantic import has_semantic_value, SEMANTIC_TAGS
 
 
+@pytest.mark.unit
 class TestSemanticTags:
     """Test that semantic HTML tags are preserved."""
 
@@ -29,6 +32,7 @@ class TestSemanticTags:
         assert "ol" in SEMANTIC_TAGS
 
 
+@pytest.mark.unit
 class TestHasSemanticValue:
     """Test has_semantic_value function."""
 

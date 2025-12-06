@@ -198,6 +198,89 @@ class TestCreateElementNodes:
         assert nodes[0].metadata["cdp_index"] == 0
         assert nodes[0].backend_dom_node_id is None  # No backend_node_id provided
 
+    def test_parses_input_value(self):
+        """Test parses inputValue for input elements."""
+        nodes_data = {
+            "nodeType": [1],
+            "nodeName": [0],
+            "attributes": [[1, 2]],  # type="text"
+            "inputValue": {0: 3},  # Index 0 has value at string index 3
+        }
+        strings = ["input", "type", "text", "user typed text"]
+        layout_map = {}
+        resolve = _get_string_resolver(strings)
+
+        nodes = _create_element_nodes(nodes_data, layout_map, resolve)
+
+        assert nodes[0].attrib.get("data-value") == "user typed text"
+
+    def test_parses_text_value(self):
+        """Test parses textValue for textarea elements."""
+        nodes_data = {
+            "nodeType": [1],
+            "nodeName": [0],
+            "attributes": [[]],
+            "textValue": {0: 1},  # Index 0 has value at string index 1
+        }
+        strings = ["textarea", "multiline\ntext content"]
+        layout_map = {}
+        resolve = _get_string_resolver(strings)
+
+        nodes = _create_element_nodes(nodes_data, layout_map, resolve)
+
+        assert nodes[0].attrib.get("data-value") == "multiline\ntext content"
+
+    def test_parses_input_checked(self):
+        """Test parses inputChecked for checkbox/radio elements."""
+        nodes_data = {
+            "nodeType": [1, 1],
+            "nodeName": [0, 0],
+            "attributes": [[1, 2], [1, 3]],  # type="checkbox", type="radio"
+            "inputChecked": {0: True, 1: False},
+        }
+        strings = ["input", "type", "checkbox", "radio"]
+        layout_map = {}
+        resolve = _get_string_resolver(strings)
+
+        nodes = _create_element_nodes(nodes_data, layout_map, resolve)
+
+        assert nodes[0].attrib.get("data-checked") == "true"
+        assert nodes[1].attrib.get("data-checked") == "false"
+
+    def test_parses_option_selected(self):
+        """Test parses optionSelected for option elements."""
+        nodes_data = {
+            "nodeType": [1, 1, 1],
+            "nodeName": [0, 0, 0],
+            "attributes": [[], [], []],
+            "optionSelected": {0: False, 1: True, 2: False},
+        }
+        strings = ["option"]
+        layout_map = {}
+        resolve = _get_string_resolver(strings)
+
+        nodes = _create_element_nodes(nodes_data, layout_map, resolve)
+
+        assert nodes[0].attrib.get("data-selected") == "false"
+        assert nodes[1].attrib.get("data-selected") == "true"
+        assert nodes[2].attrib.get("data-selected") == "false"
+
+    def test_skips_empty_input_value(self):
+        """Test skips empty input values."""
+        nodes_data = {
+            "nodeType": [1],
+            "nodeName": [0],
+            "attributes": [[]],
+            "inputValue": {0: 1},  # Points to empty string
+        }
+        strings = ["input", ""]
+        layout_map = {}
+        resolve = _get_string_resolver(strings)
+
+        nodes = _create_element_nodes(nodes_data, layout_map, resolve)
+
+        assert "data-value" not in nodes[0].attrib
+
 
 @pytest.mark.unit
 class TestAddTextNodes:

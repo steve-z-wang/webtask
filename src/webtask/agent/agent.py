@@ -29,6 +29,7 @@ from webtask._internal.agent.tools import (
     KeyCombinationTool,
 )
 from webtask.exceptions import TaskAbortedError
+from webtask.constants import DEFAULT_WAIT_AFTER_ACTION, DEFAULT_TYPING_DELAY
 from .result import Result, Verdict
 from webtask._internal.agent.agent_browser import AgentBrowser
 from webtask._internal.prompts.worker_prompt import build_worker_prompt
@@ -53,7 +54,8 @@ class Agent:
         llm: LLM,
         context: Context,
         mode: str = "dom",
-        wait_after_action: float = 1.0,
+        wait_after_action: float = DEFAULT_WAIT_AFTER_ACTION,
+        typing_delay: float = DEFAULT_TYPING_DELAY,
     ):
         """
         Initialize agent.
@@ -63,6 +65,7 @@ class Agent:
             context: Context instance for browser management
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
+            typing_delay: Delay between keystrokes in milliseconds (default: 80)
         """
         if mode not in self.VALID_MODES:
             raise ValueError(
@@ -73,6 +76,7 @@ class Agent:
         self.context = context
         self.mode = mode
         self.wait_after_action = wait_after_action
+        self.typing_delay = typing_delay
         self.logger = logging.getLogger(__name__)
 
         # Get coordinate_scale from LLM if available (e.g., GeminiComputerUse)
@@ -96,6 +100,7 @@ class Agent:
         self,
         mode: str,
         wait_after_action: float,
+        typing_delay: float,
         file_manager: Optional[FileManager] = None,
     ) -> List[Tool]:
         """Create browser tools based on agent mode.
@@ -103,6 +108,7 @@ class Agent:
         Args:
             mode: Agent mode - "dom" or "pixel"
             wait_after_action: Wait time after each action in seconds
+            typing_delay: Delay between keystrokes in milliseconds
             file_manager: Optional FileManager for upload tool
 
         Returns:
@@ -121,14 +127,14 @@ class Agent:
         # DOM mode: element ID-based tools
         dom_tools: List[Tool] = [
             ClickTool(self.browser, wait_after_action),
-            TypeTool(self.browser, wait_after_action),
+            TypeTool(self.browser, wait_after_action, typing_delay),
             SelectTool(self.browser, wait_after_action),
         ]
 
         # Pixel mode: coordinate-based tools
         pixel_tools: List[Tool] = [
             ClickAtTool(self.browser, wait_after_action),
-            TypeAtTool(self.browser, wait_after_action),
+            TypeAtTool(self.browser, wait_after_action, typing_delay),
             HoverAtTool(self.browser, wait_after_action),
             ScrollAtTool(self.browser, wait_after_action),
             ScrollDocumentTool(self.browser, wait_after_action),
@@ -196,7 +202,9 @@ class Agent:
         file_manager = FileManager(files) if files else None
 
         # Create browser tools (including upload tool if files provided)
-        tools = self._create_browser_tools(mode, wait_after_action, file_manager)
+        tools = self._create_browser_tools(
+            mode, wait_after_action, self.typing_delay, file_manager
+        )
 
         # Determine context flags based on mode
         # Both modes get screenshots, only dom mode gets DOM context

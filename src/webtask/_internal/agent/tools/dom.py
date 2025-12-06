@@ -61,17 +61,22 @@ class TypeTool(Tool):
             description="Human-readable description of what you're typing (e.g., 'Search query', 'Email address')"
         )
 
-    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
+    def __init__(
+        self, browser: "AgentBrowser", wait_after_action: float, typing_delay: float
+    ):
         """Initialize type tool with browser."""
         self.browser = browser
         self.wait_after_action = wait_after_action
+        self.typing_delay = typing_delay
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type into element (clicks to focus, then types)."""
         element = await self.browser.select(params.element_id)
         await element.click()
         page = self.browser.get_current_page()
-        await page.keyboard_type(params.text, clear=params.clear)
+        await page.keyboard_type(
+            params.text, clear=params.clear, delay=self.typing_delay
+        )
         await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,

@@ -65,17 +65,22 @@ class TypeAtTool(Tool):
             description="What you're typing into (e.g., 'Search box', 'Email field')"
         )
 
-    def __init__(self, browser: "AgentBrowser", wait_after_action: float):
+    def __init__(
+        self, browser: "AgentBrowser", wait_after_action: float, typing_delay: float
+    ):
         """Initialize type_at tool with browser."""
         self.browser = browser
         self.wait_after_action = wait_after_action
+        self.typing_delay = typing_delay
 
     async def execute(self, params: Params) -> ToolResult:
         """Execute type at coordinates (clicks to focus, then types)."""
         page = self.browser.get_current_page()
         x, y = self.browser.scale_coordinates(params.x, params.y)
         await page.mouse_click(x, y)
-        await page.keyboard_type(params.text, clear=params.clear)
+        await page.keyboard_type(
+            params.text, clear=params.clear, delay=self.typing_delay
+        )
         await wait(self.wait_after_action)
         return ToolResult(
             name=self.name,
