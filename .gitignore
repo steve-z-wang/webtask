@@ -52,6 +52,9 @@ test-results/
 # Debug output
 debug/
 
+# Recorded videos
+videos/
+
 # Environment variables
 .env
 .env.test

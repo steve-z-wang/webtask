@@ -12,6 +12,16 @@ Easy-to-use LLM-powered browser automation — from autonomous tasks to element-
 - **High-level tasks**: Describe what you want done — the agent figures out the steps
 - **Low-level control**: Select any element with natural language — no CSS/XPath selectors needed
 
+## Demo
+
+```python
+await agent.do("add 3 Flat-Head Wood Screws to the cart")
+```
+
+![Demo](assets/demo.gif)
+
+[View full example](examples/demo_video.py)
+
 ## Installation
 
 ```bash
