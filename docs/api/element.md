@@ -48,12 +48,12 @@ Type text into the element character by character.
 
 **Parameters:**
 - `text` (str): Text to type
-- `delay` (float): Delay between keystrokes in milliseconds (None = instant)
+- `delay` (float): Delay between keystrokes in seconds (None = instant)
 
 **Example:**
 ```python
 input_field = await agent.select("search box")
-await input_field.type("web automation", delay=80)  # More realistic
+await input_field.type("web automation", delay=0.05)  # More realistic
 ```
 
 **Comparison: fill() vs type()**
@@ -62,7 +62,7 @@ await input_field.type("web automation", delay=80)  # More realistic
 await input_field.fill("web automation")  # Fast
 
 # type() - Character-by-character with delays
-await input_field.type("web automation", delay=80)  # Slower, more realistic
+await input_field.type("web automation", delay=0.05)  # Slower, more realistic
 ```
 
 Use `fill()` for speed, `type()` for simulating human-like interaction.
@@ -239,7 +239,7 @@ async def main():
     print(f"Tag: {tag}, Attributes: {attrs}")
 
     # Interact with element
-    await input_field.type("user@example.com", delay=80)
+    await input_field.type("user@example.com", delay=0.05)
 
     # Click submit
     button = await agent.select("submit button")

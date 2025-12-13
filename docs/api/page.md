@@ -52,13 +52,13 @@ Select a single element matching the selector.
 ### `wait_for_load()`
 
 ```python
-async def wait_for_load(timeout: int = 10000) -> None
+async def wait_for_load(timeout: float = 10.0) -> None
 ```
 
 Wait for page to fully load.
 
 **Parameters:**
-- `timeout` - Maximum time to wait in milliseconds (default: 10000)
+- `timeout` - Maximum time to wait in seconds (default: 10.0)
 
 ### `screenshot()`
 
@@ -83,7 +83,7 @@ Take a screenshot of the current page.
 async def keyboard_type(
     text: str,
     clear: bool = False,
-    delay: float = 80
+    delay: float = 0.05
 ) -> None
 ```
 
@@ -92,7 +92,7 @@ Type text using keyboard into the currently focused element.
 **Parameters:**
 - `text` - Text to type
 - `clear` - Clear existing text before typing (default: False)
-- `delay` - Delay between keystrokes in milliseconds (default: 80)
+- `delay` - Delay between keystrokes in seconds (default: 0.05)
 
 ### `evaluate()`
 

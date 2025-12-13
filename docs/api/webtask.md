@@ -20,6 +20,7 @@ async def create_agent(
     llm: LLM,
     mode: str = "dom",
     wait_after_action: float = 1.0,
+    typing_delay: float = 0.05,
     headless: bool = False,
     browser_type: str = "chromium"
 ) -> Agent
@@ -31,6 +32,7 @@ Create agent with new browser context.
 - `llm` - LLM instance (Gemini, GeminiComputerUse, or Bedrock)
 - `mode` - Agent mode: "dom" (element IDs) or "pixel" (screen coordinates)
 - `wait_after_action` - Wait time in seconds after each action (default: 1.0)
+- `typing_delay` - Delay between keystrokes in seconds (default: 0.05)
 - `headless` - Run browser without GUI (default: False)
 - `browser_type` - "chromium", "firefox", or "webkit" (default: "chromium")
 
@@ -54,6 +56,7 @@ async def create_agent_with_browser(
     browser: Browser,
     mode: str = "dom",
     wait_after_action: float = 1.0,
+    typing_delay: float = 0.05,
     use_existing_context: bool = True
 ) -> Agent
 ```
@@ -75,7 +78,8 @@ def create_agent_with_context(
     llm: LLM,
     context: Context,
     mode: str = "dom",
-    wait_after_action: float = 1.0
+    wait_after_action: float = 1.0,
+    typing_delay: float = 0.05
 ) -> Agent
 ```
 
@@ -93,8 +97,9 @@ agent = wt.create_agent_with_context(llm=llm, context=context, mode="dom")
 def create_agent_with_page(
     llm: LLM,
     page: Page,
-    mode: str = "text",
-    wait_after_action: float = 1.0
+    mode: str = "dom",
+    wait_after_action: float = 1.0,
+    typing_delay: float = 0.05
 ) -> Agent
 ```
 

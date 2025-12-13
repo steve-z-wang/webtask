@@ -10,7 +10,8 @@ Agent(
     llm: LLM,
     context: Context,
     mode: str = "dom",
-    wait_after_action: float = 1.0
+    wait_after_action: float = 1.0,
+    typing_delay: float = 0.05
 )
 ```
 
@@ -19,6 +20,7 @@ Agent(
 - `context` - Browser context
 - `mode` - Agent mode: "dom" (element IDs) or "pixel" (screen coordinates)
 - `wait_after_action` - Default wait time after each action in seconds (default: 1.0)
+- `typing_delay` - Delay between keystrokes in seconds (default: 0.05)
 
 ## Methods
 
@@ -202,13 +204,13 @@ await agent.wait(2.0)  # Wait 2 seconds
 ### `wait_for_load()`
 
 ```python
-async def wait_for_load(timeout: int = 10000) -> None
+async def wait_for_load(timeout: float = 10.0) -> None
 ```
 
 Wait for the current page to fully load.
 
 **Parameters:**
-- `timeout` - Maximum time to wait in milliseconds (default: 10000ms = 10s)
+- `timeout` - Maximum time to wait in seconds (default: 10.0)
 
 **Raises:**
 - `RuntimeError` if no page is active
@@ -223,13 +225,13 @@ await agent.wait_for_load()
 ### `wait_for_network_idle()`
 
 ```python
-async def wait_for_network_idle(timeout: int = 10000) -> None
+async def wait_for_network_idle(timeout: float = 10.0) -> None
 ```
 
 Wait for network to be idle (no requests for 500ms). Useful for SPAs and pages with AJAX requests.
 
 **Parameters:**
-- `timeout` - Maximum time to wait in milliseconds (default: 10000ms = 10s)
+- `timeout` - Maximum time to wait in seconds (default: 10.0)
 
 **Raises:**
 - `RuntimeError` if no page is active
