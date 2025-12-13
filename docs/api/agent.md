@@ -204,43 +204,57 @@ await agent.wait(2.0)  # Wait 2 seconds
 ### `wait_for_load()`
 
 ```python
-async def wait_for_load(timeout: float = 10.0) -> None
+async def wait_for_load(
+    timeout: float = 10.0,
+    raise_on_timeout: bool = True
+) -> None
 ```
 
 Wait for the current page to fully load.
 
 **Parameters:**
 - `timeout` - Maximum time to wait in seconds (default: 10.0)
+- `raise_on_timeout` - If True, raise TimeoutError on timeout. If False, silently return (default: True)
 
 **Raises:**
 - `RuntimeError` if no page is active
-- `TimeoutError` if page doesn't load within timeout
+- `TimeoutError` if page doesn't load within timeout and `raise_on_timeout=True`
 
 **Example:**
 ```python
 await agent.goto("example.com")
 await agent.wait_for_load()
+
+# Lenient - continue even if timeout
+await agent.wait_for_load(timeout=5.0, raise_on_timeout=False)
 ```
 
 ### `wait_for_network_idle()`
 
 ```python
-async def wait_for_network_idle(timeout: float = 10.0) -> None
+async def wait_for_network_idle(
+    timeout: float = 10.0,
+    raise_on_timeout: bool = True
+) -> None
 ```
 
 Wait for network to be idle (no requests for 500ms). Useful for SPAs and pages with AJAX requests.
 
 **Parameters:**
 - `timeout` - Maximum time to wait in seconds (default: 10.0)
+- `raise_on_timeout` - If True, raise TimeoutError on timeout. If False, silently return (default: True)
 
 **Raises:**
 - `RuntimeError` if no page is active
-- `TimeoutError` if network doesn't become idle within timeout
+- `TimeoutError` if network doesn't become idle within timeout and `raise_on_timeout=True`
 
 **Example:**
 ```python
 await agent.do("Click the search button")
 await agent.wait_for_network_idle()  # Wait for results to load
+
+# Lenient - continue even if timeout
+await agent.wait_for_network_idle(timeout=5.0, raise_on_timeout=False)
 ```
 
 ### `clear_history()`

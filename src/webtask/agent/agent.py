@@ -466,25 +466,35 @@ class Agent:
 
         await wait(seconds)
 
-    async def wait_for_load(self, timeout: float = 10.0) -> None:
+    async def wait_for_load(
+        self, timeout: float = 10.0, raise_on_timeout: bool = True
+    ) -> None:
         """
         Wait for the current page to fully load.
 
         Args:
             timeout: Maximum time to wait in seconds (default: 10.0)
+            raise_on_timeout: If True, raise TimeoutError on timeout.
+                              If False, silently return after timeout (default: True)
 
         Raises:
             RuntimeError: If no page is active
-            TimeoutError: If page doesn't load within timeout
+            TimeoutError: If page doesn't load within timeout and raise_on_timeout=True
         """
         page = self.get_current_page()
         if page is None:
             raise RuntimeError(
                 "No active page. Use goto() to navigate to a page first."
             )
-        await page.wait_for_load(timeout=timeout)
+        try:
+            await page.wait_for_load(timeout=timeout)
+        except TimeoutError:
+            if raise_on_timeout:
+                raise
 
-    async def wait_for_network_idle(self, timeout: float = 10.0) -> None:
+    async def wait_for_network_idle(
+        self, timeout: float = 10.0, raise_on_timeout: bool = True
+    ) -> None:
         """
         Wait for network to be idle (no requests for 500ms).
 
@@ -492,17 +502,23 @@ class Agent:
 
         Args:
             timeout: Maximum time to wait in seconds (default: 10.0)
+            raise_on_timeout: If True, raise TimeoutError on timeout.
+                              If False, silently return after timeout (default: True)
 
         Raises:
             RuntimeError: If no page is active
-            TimeoutError: If network doesn't become idle within timeout
+            TimeoutError: If network doesn't become idle within timeout and raise_on_timeout=True
         """
         page = self.get_current_page()
         if page is None:
             raise RuntimeError(
                 "No active page. Use goto() to navigate to a page first."
             )
-        await page.wait_for_network_idle(timeout=timeout)
+        try:
+            await page.wait_for_network_idle(timeout=timeout)
+        except TimeoutError:
+            if raise_on_timeout:
+                raise
 
     def get_current_page(self) -> Optional[Page]:
         """
