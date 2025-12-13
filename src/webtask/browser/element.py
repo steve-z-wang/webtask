@@ -103,7 +103,7 @@ class Element(ABC):
 
         Args:
             text: Text to type
-            delay: Delay between keystrokes in milliseconds (None = instant)
+            delay: Delay between keystrokes in seconds (None = instant)
         """
         pass
 

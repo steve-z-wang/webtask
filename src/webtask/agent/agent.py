@@ -65,7 +65,7 @@ class Agent:
             context: Context instance for browser management
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
-            typing_delay: Delay between keystrokes in milliseconds (default: 80)
+            typing_delay: Delay between keystrokes in seconds (default: 0.05)
         """
         if mode not in self.VALID_MODES:
             raise ValueError(
@@ -108,7 +108,7 @@ class Agent:
         Args:
             mode: Agent mode - "dom" or "pixel"
             wait_after_action: Wait time after each action in seconds
-            typing_delay: Delay between keystrokes in milliseconds
+            typing_delay: Delay between keystrokes in seconds
             file_manager: Optional FileManager for upload tool
 
         Returns:
@@ -466,12 +466,12 @@ class Agent:
 
         await wait(seconds)
 
-    async def wait_for_load(self, timeout: int = 10000) -> None:
+    async def wait_for_load(self, timeout: float = 10.0) -> None:
         """
         Wait for the current page to fully load.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             RuntimeError: If no page is active
@@ -484,14 +484,14 @@ class Agent:
             )
         await page.wait_for_load(timeout=timeout)
 
-    async def wait_for_network_idle(self, timeout: int = 10000) -> None:
+    async def wait_for_network_idle(self, timeout: float = 10.0) -> None:
         """
         Wait for network to be idle (no requests for 500ms).
 
         Useful for SPAs and pages with AJAX requests.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             RuntimeError: If no page is active

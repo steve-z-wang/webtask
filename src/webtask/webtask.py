@@ -114,7 +114,7 @@ class Webtask:
             llm: LLM instance for reasoning
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
-            typing_delay: Delay between keystrokes in milliseconds (default: 80)
+            typing_delay: Delay between keystrokes in seconds (default: 0.05)
             headless: Run browser in headless mode without GUI (default: False, shows browser window)
             browser_type: Browser type - "chromium", "firefox", or "webkit" (default: "chromium")
 
@@ -154,7 +154,7 @@ class Webtask:
             browser: Browser instance or raw Playwright Browser (already launched)
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
-            typing_delay: Delay between keystrokes in milliseconds (default: 80)
+            typing_delay: Delay between keystrokes in seconds (default: 0.05)
             use_existing_context: Use existing context if available (default: True)
 
         Returns:
@@ -220,7 +220,7 @@ class Webtask:
             context: Context instance or Playwright BrowserContext
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
-            typing_delay: Delay between keystrokes in milliseconds (default: 80)
+            typing_delay: Delay between keystrokes in seconds (default: 0.05)
 
         Returns:
             Agent instance with provided context
@@ -261,7 +261,7 @@ class Webtask:
             page: Page instance or Playwright Page
             mode: Agent mode - "dom" (element IDs) or "pixel" (screen coordinates)
             wait_after_action: Wait time in seconds after each action (default: 1.0)
-            typing_delay: Delay between keystrokes in milliseconds (default: 80)
+            typing_delay: Delay between keystrokes in seconds (default: 0.05)
 
         Returns:
             Agent instance with context from the provided page

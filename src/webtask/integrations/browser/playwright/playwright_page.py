@@ -144,7 +144,7 @@ class PlaywrightPage(Page):
 
         return elements[0]
 
-    async def wait_for_load(self, timeout: int = 10000):
+    async def wait_for_load(self, timeout: float = 10.0):
         """
         Wait for page to fully load.
 
@@ -152,24 +152,26 @@ class PlaywrightPage(Page):
         Reliable for modern sites with continuous background activity.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             TimeoutError: If page doesn't load within timeout
         """
-        await self._page.wait_for_load_state("load", timeout=timeout)
+        timeout_ms = int(timeout * 1000)
+        await self._page.wait_for_load_state("load", timeout=timeout_ms)
 
-    async def wait_for_network_idle(self, timeout: int = 10000):
+    async def wait_for_network_idle(self, timeout: float = 10.0):
         """
         Wait for network to be idle (no requests for 500ms).
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000ms = 10s)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             TimeoutError: If network doesn't become idle within timeout
         """
-        await self._page.wait_for_load_state("networkidle", timeout=timeout)
+        timeout_ms = int(timeout * 1000)
+        await self._page.wait_for_load_state("networkidle", timeout=timeout_ms)
 
     async def close(self):
         """Close the page."""
@@ -191,7 +193,7 @@ class PlaywrightPage(Page):
         return await self._page.screenshot(path=path, full_page=full_page)
 
     async def keyboard_type(
-        self, text: str, clear: bool = False, delay: float = 80
+        self, text: str, clear: bool = False, delay: float = 0.05
     ) -> None:
         """
         Type text using keyboard into the currently focused element.
@@ -199,14 +201,15 @@ class PlaywrightPage(Page):
         Args:
             text: Text to type
             clear: Clear existing text before typing (default: False)
-            delay: Delay between keystrokes in milliseconds (default: 80ms)
+            delay: Delay between keystrokes in seconds (default: 0.05)
         """
         if clear:
             # Clear focused element using JavaScript (cross-platform)
             await self._page.evaluate("document.activeElement.value = ''")
 
-        # Type the text
-        await self._page.keyboard.type(text, delay=delay)
+        # Type the text (Playwright expects milliseconds)
+        delay_ms = int(delay * 1000)
+        await self._page.keyboard.type(text, delay=delay_ms)
 
     async def evaluate(self, script: str) -> Any:
         """

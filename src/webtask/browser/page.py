@@ -101,12 +101,12 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def wait_for_load(self, timeout: int = 10000):
+    async def wait_for_load(self, timeout: float = 10.0):
         """
         Wait for page to fully load.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             TimeoutError: If page doesn't load within timeout
@@ -114,14 +114,14 @@ class Page(ABC):
         pass
 
     @abstractmethod
-    async def wait_for_network_idle(self, timeout: int = 10000):
+    async def wait_for_network_idle(self, timeout: float = 10.0):
         """
         Wait for network to be idle (no requests for 500ms).
 
         Useful for SPAs and pages with AJAX requests.
 
         Args:
-            timeout: Maximum time to wait in milliseconds (default: 10000)
+            timeout: Maximum time to wait in seconds (default: 10.0)
 
         Raises:
             TimeoutError: If network doesn't become idle within timeout
@@ -149,7 +149,7 @@ class Page(ABC):
 
     @abstractmethod
     async def keyboard_type(
-        self, text: str, clear: bool = False, delay: float = 80
+        self, text: str, clear: bool = False, delay: float = 0.05
     ) -> None:
         """
         Type text using keyboard into the currently focused element.
@@ -157,7 +157,7 @@ class Page(ABC):
         Args:
             text: Text to type
             clear: Clear existing text before typing (default: False)
-            delay: Delay between keystrokes in milliseconds (default: 80)
+            delay: Delay between keystrokes in seconds (default: 0.05)
 
         Example:
             >>> element = await page.select_one("#input")

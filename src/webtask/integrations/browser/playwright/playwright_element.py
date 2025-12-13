@@ -4,8 +4,9 @@ from typing import List, Optional, Union
 from playwright.async_api import Locator
 from ....browser import Element
 
-# Timeout for element actions (ms) - fail fast but allow for navigation
-DEFAULT_ACTION_TIMEOUT = 1000
+# Timeout for element actions in milliseconds - fail fast but allow for navigation
+# This is internal to Playwright and kept in ms to match Playwright's API
+DEFAULT_ACTION_TIMEOUT_MS = 1000
 
 
 class PlaywrightElement(Element):
@@ -109,7 +110,7 @@ class PlaywrightElement(Element):
 
     async def click(self):
         """Click the element."""
-        await self._locator.click(timeout=DEFAULT_ACTION_TIMEOUT)
+        await self._locator.click(timeout=DEFAULT_ACTION_TIMEOUT_MS)
 
     async def fill(self, text: str):
         """
@@ -118,7 +119,7 @@ class PlaywrightElement(Element):
         Args:
             text: Text to fill
         """
-        await self._locator.fill(text, timeout=DEFAULT_ACTION_TIMEOUT)
+        await self._locator.fill(text, timeout=DEFAULT_ACTION_TIMEOUT_MS)
 
     async def type(self, text: str, delay: float = None):
         """
@@ -126,9 +127,13 @@ class PlaywrightElement(Element):
 
         Args:
             text: Text to type
-            delay: Delay between keystrokes in milliseconds (None = instant)
+            delay: Delay between keystrokes in seconds (None = instant)
         """
-        await self._locator.type(text, delay=delay, timeout=DEFAULT_ACTION_TIMEOUT)
+        # Convert seconds to ms for Playwright
+        delay_ms = int(delay * 1000) if delay is not None else None
+        await self._locator.type(
+            text, delay=delay_ms, timeout=DEFAULT_ACTION_TIMEOUT_MS
+        )
 
     async def upload_file(self, file_path: Union[str, List[str]]):
         """
@@ -137,7 +142,9 @@ class PlaywrightElement(Element):
         Args:
             file_path: Single file path or list of file paths
         """
-        await self._locator.set_input_files(file_path, timeout=DEFAULT_ACTION_TIMEOUT)
+        await self._locator.set_input_files(
+            file_path, timeout=DEFAULT_ACTION_TIMEOUT_MS
+        )
 
     async def select_option(
         self,
@@ -155,15 +162,15 @@ class PlaywrightElement(Element):
         """
         if label is not None:
             await self._locator.select_option(
-                label=label, timeout=DEFAULT_ACTION_TIMEOUT
+                label=label, timeout=DEFAULT_ACTION_TIMEOUT_MS
             )
         elif value is not None:
             await self._locator.select_option(
-                value=value, timeout=DEFAULT_ACTION_TIMEOUT
+                value=value, timeout=DEFAULT_ACTION_TIMEOUT_MS
             )
         elif index is not None:
             await self._locator.select_option(
-                index=index, timeout=DEFAULT_ACTION_TIMEOUT
+                index=index, timeout=DEFAULT_ACTION_TIMEOUT_MS
             )
         else:
             raise ValueError("Must provide value, label, or index")
